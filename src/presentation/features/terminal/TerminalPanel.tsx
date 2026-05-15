@@ -10,9 +10,10 @@ const DEFAULT_ROWS = 24;
 
 type Props = {
   workspaceId: string;
+  onClose?: () => void;
 };
 
-export function TerminalPanel({ workspaceId }: Props) {
+export function TerminalPanel({ workspaceId, onClose }: Props) {
   const { terminals, isLoading, addTerminal, removeTerminal } = useTerminalList(workspaceId);
 
   const activeTerminalId = useWorkspaceStore(
@@ -66,6 +67,16 @@ export function TerminalPanel({ workspaceId }: Props) {
     <div className="flex h-full w-full flex-col bg-black">
       <div className="flex items-center justify-between border-b border-slate-700 bg-slate-900 px-3 py-1.5">
         <span className="text-sm text-slate-300">Terminal Panel</span>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded px-2 py-0.5 text-xs text-slate-300 hover:bg-slate-700"
+            title="터미널 패널 닫기"
+          >
+            닫기
+          </button>
+        ) : null}
       </div>
       <div className="min-h-0 flex-1">
         <Split direction="horizontal" initialFirstSize={22} minFirstSize={12} maxFirstSize={50}>

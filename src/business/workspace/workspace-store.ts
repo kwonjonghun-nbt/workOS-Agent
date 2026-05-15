@@ -10,10 +10,13 @@ type WorkspaceUiStore = {
   openIds: string[];
   activeId: string | null;
   activeTerminalIdByWorkspace: Record<string, string | undefined>;
+  terminalPanelOpenByWorkspace: Record<string, boolean | undefined>;
   openTab: (id: string) => void;
   closeTab: (id: string) => void;
   setActive: (id: string | null) => void;
   setActiveTerminal: (workspaceId: string, sessionId: string | null) => void;
+  setTerminalPanelOpen: (workspaceId: string, open: boolean) => void;
+  toggleTerminalPanel: (workspaceId: string) => void;
   /** 메인 SSOT 에서 사라진 워크스페이스를 UI 상태에서 정리. */
   pruneMissing: (existingIds: ReadonlySet<string>) => void;
 };
@@ -22,6 +25,7 @@ export const useWorkspaceStore = create<WorkspaceUiStore>((set) => ({
   openIds: [],
   activeId: null,
   activeTerminalIdByWorkspace: {},
+  terminalPanelOpenByWorkspace: {},
 
   openTab: (id) =>
     set((state) => {
@@ -40,7 +44,14 @@ export const useWorkspaceStore = create<WorkspaceUiStore>((set) => ({
       }
       const rest = { ...state.activeTerminalIdByWorkspace };
       delete rest[id];
-      return { openIds, activeId, activeTerminalIdByWorkspace: rest };
+      const restOpen = { ...state.terminalPanelOpenByWorkspace };
+      delete restOpen[id];
+      return {
+        openIds,
+        activeId,
+        activeTerminalIdByWorkspace: rest,
+        terminalPanelOpenByWorkspace: restOpen,
+      };
     }),
 
   setActive: (id) => set({ activeId: id }),
@@ -53,6 +64,25 @@ export const useWorkspaceStore = create<WorkspaceUiStore>((set) => ({
       },
     })),
 
+  setTerminalPanelOpen: (workspaceId, open) =>
+    set((state) => ({
+      terminalPanelOpenByWorkspace: {
+        ...state.terminalPanelOpenByWorkspace,
+        [workspaceId]: open,
+      },
+    })),
+
+  toggleTerminalPanel: (workspaceId) =>
+    set((state) => {
+      const current = state.terminalPanelOpenByWorkspace[workspaceId] ?? true;
+      return {
+        terminalPanelOpenByWorkspace: {
+          ...state.terminalPanelOpenByWorkspace,
+          [workspaceId]: !current,
+        },
+      };
+    }),
+
   pruneMissing: (existingIds) =>
     set((state) => {
       const openIds = state.openIds.filter((id) => existingIds.has(id));
@@ -64,6 +94,10 @@ export const useWorkspaceStore = create<WorkspaceUiStore>((set) => ({
       for (const [k, v] of Object.entries(state.activeTerminalIdByWorkspace)) {
         if (existingIds.has(k)) activeTerminalIdByWorkspace[k] = v;
       }
-      return { openIds, activeId, activeTerminalIdByWorkspace };
+      const terminalPanelOpenByWorkspace: Record<string, boolean | undefined> = {};
+      for (const [k, v] of Object.entries(state.terminalPanelOpenByWorkspace)) {
+        if (existingIds.has(k)) terminalPanelOpenByWorkspace[k] = v;
+      }
+      return { openIds, activeId, activeTerminalIdByWorkspace, terminalPanelOpenByWorkspace };
     }),
 }));

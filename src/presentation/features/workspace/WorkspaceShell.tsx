@@ -5,7 +5,9 @@ import {
   useWorkspaceList,
 } from '../../../business/workspace/use-workspace';
 import { TerminalPanel } from '../terminal/TerminalPanel';
+import { Split } from '../../shared/Split';
 import { WorkspaceTabBar } from './WorkspaceTabBar';
+import { WorkspaceContent } from './WorkspaceContent';
 
 export function WorkspaceShell() {
   const listQuery = useWorkspaceList();
@@ -57,13 +59,37 @@ export function WorkspaceShell() {
                 className="absolute inset-0"
                 style={{ display: id === activeId ? 'block' : 'none' }}
               >
-                <TerminalPanel workspaceId={id} />
+                <WorkspacePane workspaceId={id} />
               </div>
             );
           })
         )}
       </div>
     </div>
+  );
+}
+
+function WorkspacePane({ workspaceId }: { workspaceId: string }) {
+  const terminalOpen = useWorkspaceStore(
+    (s) => s.terminalPanelOpenByWorkspace[workspaceId] ?? true,
+  );
+  const toggleTerminalPanel = useWorkspaceStore((s) => s.toggleTerminalPanel);
+  const onToggle = () => toggleTerminalPanel(workspaceId);
+
+  if (!terminalOpen) {
+    return (
+      <WorkspaceContent
+        workspaceId={workspaceId}
+        terminalOpen={false}
+        onToggleTerminal={onToggle}
+      />
+    );
+  }
+  return (
+    <Split direction="horizontal" initialFirstSize={60} minFirstSize={20} maxFirstSize={85}>
+      <WorkspaceContent workspaceId={workspaceId} terminalOpen onToggleTerminal={onToggle} />
+      <TerminalPanel workspaceId={workspaceId} onClose={onToggle} />
+    </Split>
   );
 }
 
