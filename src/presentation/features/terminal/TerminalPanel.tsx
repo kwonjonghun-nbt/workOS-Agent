@@ -1,83 +1,80 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Split } from '../../shared/Split';
 import { TerminalList } from './TerminalList';
 import { TerminalView } from './TerminalView';
-import { useTerminalStore } from '../../../business/terminal/terminal-store';
+import { useTerminalList } from '../../../business/terminal/use-terminal-list';
+import { useWorkspaceStore } from '../../../business/workspace/workspace-store';
 
-// NOTE: 터미널 목록은 현재 렌더러 zustand 스토어로 관리한다.
-// 렌더러가 terminal:create / dispose 를 직접 호출하므로 어떤 sessionId 가 살아있는지
-// 렌더러가 SSOT 를 가진다 (메인은 pty 자체의 소유권만 가짐).
-//
-// 아래 상황이 생기면 메인 프로세스에 `terminal:list` IPC 채널을 도입해 받아오는 방향으로 전환한다:
-//   1) 멀티 윈도우 — 한 윈도우에서 만든 세션을 다른 윈도우에서 보여줘야 할 때
-//   2) 렌더러 리로드/크래시 후 살아있는 pty 세션 재연결 (recovery)
-//   3) 렌더러 외부(메뉴/CLI/스케줄러 등)에서 세션을 만들거나 종료할 수 있을 때
-//   4) 세션 메타데이터(cwd, 시작 시각, exit 상태 등)를 메인이 권위 있게 관리해야 할 때
+const DEFAULT_COLS = 80;
+const DEFAULT_ROWS = 24;
 
 type Props = {
-  onClosePanel?: () => void;
+  workspaceId: string;
 };
 
-export function TerminalPanel({ onClosePanel }: Props) {
-  const terminals = useTerminalStore((s) => s.terminals);
-  const addTerminal = useTerminalStore((s) => s.addTerminal);
-  const removeTerminal = useTerminalStore((s) => s.removeTerminal);
-  const renameTerminal = useTerminalStore((s) => s.renameTerminal);
+export function TerminalPanel({ workspaceId }: Props) {
+  const { terminals, isLoading, addTerminal, removeTerminal } = useTerminalList(workspaceId);
 
-  // 활성 탭은 UI 관심사이므로 presentation 로컬 상태로 관리.
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeTerminalId = useWorkspaceStore(
+    (s) => s.activeTerminalIdByWorkspace[workspaceId] ?? null,
+  );
+  const setActiveTerminal = useWorkspaceStore((s) => s.setActiveTerminal);
 
-  // 패널이 열렸을 때 비어있으면 첫 터미널을 자동 생성.
+  // 최초 로딩이 끝났고 비어있으면 첫 터미널 자동 생성.
+  // mutation 이 동시에 여러 번 발사되지 않도록 ref 가드를 둔다.
+  const autoCreatedRef = useRef(false);
+  useEffect(() => {
+    if (isLoading) return;
+    if (terminals.length > 0) {
+      autoCreatedRef.current = false;
+      return;
+    }
+    if (autoCreatedRef.current) return;
+    autoCreatedRef.current = true;
+    void addTerminal(DEFAULT_COLS, DEFAULT_ROWS).then((sessionId) => {
+      setActiveTerminal(workspaceId, sessionId);
+    });
+  }, [isLoading, terminals.length, addTerminal, workspaceId, setActiveTerminal]);
+
+  // 활성 터미널이 목록에 없으면 마지막 항목으로 폴백.
   useEffect(() => {
     if (terminals.length === 0) {
-      const id = addTerminal();
-      setActiveId(id);
+      if (activeTerminalId !== null) setActiveTerminal(workspaceId, null);
+      return;
     }
-  }, [terminals.length, addTerminal]);
+    const exists = terminals.some((t) => t.sessionId === activeTerminalId);
+    if (!exists) {
+      setActiveTerminal(workspaceId, terminals[terminals.length - 1].sessionId);
+    }
+  }, [terminals, activeTerminalId, workspaceId, setActiveTerminal]);
 
-  // 활성 탭이 목록에서 사라졌으면 마지막 항목으로 폴백.
-  // functional setter 로 activeId 를 deps 에 넣지 않아 자기 트리거를 막는다.
-  useEffect(() => {
-    setActiveId((current) => {
-      if (current && !terminals.some((t) => t.id === current)) {
-        return terminals[terminals.length - 1]?.id ?? null;
-      }
-      if (!current && terminals.length > 0) {
-        return terminals[terminals.length - 1].id;
-      }
-      return current;
-    });
-  }, [terminals]);
-
-  const handleAdd = () => {
-    const id = addTerminal();
-    setActiveId(id);
+  const handleAdd = async () => {
+    const sessionId = await addTerminal(DEFAULT_COLS, DEFAULT_ROWS);
+    setActiveTerminal(workspaceId, sessionId);
   };
+
+  const handleClose = (sessionId: string) => {
+    void removeTerminal(sessionId);
+  };
+
+  const listItems = terminals.map((t, i) => ({
+    id: t.sessionId,
+    name: `terminal${i + 1}`,
+  }));
 
   return (
     <div className="flex h-full w-full flex-col bg-black">
       <div className="flex items-center justify-between border-b border-slate-700 bg-slate-900 px-3 py-1.5">
         <span className="text-sm text-slate-300">Terminal Panel</span>
-        {onClosePanel && (
-          <button
-            type="button"
-            onClick={onClosePanel}
-            className="rounded px-2 py-0.5 text-slate-300 hover:bg-slate-700"
-            aria-label="Close terminal panel"
-          >
-            ✕
-          </button>
-        )}
       </div>
       <div className="min-h-0 flex-1">
         <Split direction="horizontal" initialFirstSize={22} minFirstSize={12} maxFirstSize={50}>
           <TerminalList
-            items={terminals}
-            activeId={activeId}
-            onSelect={setActiveId}
+            items={listItems}
+            activeId={activeTerminalId}
+            onSelect={(id) => setActiveTerminal(workspaceId, id)}
             onAdd={handleAdd}
-            onClose={removeTerminal}
-            onRename={renameTerminal}
+            onClose={handleClose}
           />
           <div className="relative h-full w-full bg-black">
             {terminals.length === 0 ? (
@@ -87,11 +84,14 @@ export function TerminalPanel({ onClosePanel }: Props) {
             ) : (
               terminals.map((t) => (
                 <div
-                  key={t.id}
+                  key={t.sessionId}
                   className="absolute inset-0"
-                  style={{ display: t.id === activeId ? 'block' : 'none' }}
+                  style={{ display: t.sessionId === activeTerminalId ? 'block' : 'none' }}
                 >
-                  <TerminalView terminalId={t.id} isActive={t.id === activeId} />
+                  <TerminalView
+                    sessionId={t.sessionId}
+                    isActive={t.sessionId === activeTerminalId}
+                  />
                 </div>
               ))
             )}

@@ -4,11 +4,22 @@ import type {
   CreateTerminalRequest,
   CreateTerminalResponse,
   DisposeTerminalRequest,
+  ListTerminalsRequest,
   ResizeTerminalRequest,
   TerminalDataEvent,
   TerminalExitEvent,
+  TerminalSummary,
   WriteTerminalRequest,
 } from './contracts/terminal';
+import type {
+  AddWorkspaceRequest,
+  OpenDialogResponse,
+  RemoveWorkspaceRequest,
+  RenameWorkspaceRequest,
+  SetActiveWorkspaceRequest,
+  Workspace,
+  WorkspaceChangedEvent,
+} from './contracts/workspace';
 
 const terminal = {
   create: (req: CreateTerminalRequest): Promise<CreateTerminalResponse> =>
@@ -19,6 +30,8 @@ const terminal = {
     ipcRenderer.invoke(CHANNELS.terminal.resize, req),
   dispose: (req: DisposeTerminalRequest): Promise<void> =>
     ipcRenderer.invoke(CHANNELS.terminal.dispose, req),
+  list: (req: ListTerminalsRequest): Promise<TerminalSummary[]> =>
+    ipcRenderer.invoke(CHANNELS.terminal.list, req),
   onData: (listener: (event: TerminalDataEvent) => void): (() => void) => {
     const wrapped = (_e: IpcRendererEvent, payload: TerminalDataEvent) => listener(payload);
     ipcRenderer.on(CHANNELS.terminalEvents.data, wrapped);
@@ -31,6 +44,24 @@ const terminal = {
   },
 };
 
-contextBridge.exposeInMainWorld('electronAPI', { terminal });
+const workspace = {
+  list: (): Promise<Workspace[]> => ipcRenderer.invoke(CHANNELS.workspace.list),
+  add: (req: AddWorkspaceRequest): Promise<Workspace> =>
+    ipcRenderer.invoke(CHANNELS.workspace.add, req),
+  remove: (req: RemoveWorkspaceRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.workspace.remove, req),
+  rename: (req: RenameWorkspaceRequest): Promise<Workspace> =>
+    ipcRenderer.invoke(CHANNELS.workspace.rename, req),
+  setActive: (req: SetActiveWorkspaceRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.workspace.setActive, req),
+  openDialog: (): Promise<OpenDialogResponse> => ipcRenderer.invoke(CHANNELS.workspace.openDialog),
+  onChanged: (listener: (event: WorkspaceChangedEvent) => void): (() => void) => {
+    const wrapped = (_e: IpcRendererEvent, payload: WorkspaceChangedEvent) => listener(payload);
+    ipcRenderer.on(CHANNELS.workspaceEvents.changed, wrapped);
+    return () => ipcRenderer.off(CHANNELS.workspaceEvents.changed, wrapped);
+  },
+};
 
-export type ElectronAPI = { terminal: typeof terminal };
+contextBridge.exposeInMainWorld('electronAPI', { terminal, workspace });
+
+export type ElectronAPI = { terminal: typeof terminal; workspace: typeof workspace };

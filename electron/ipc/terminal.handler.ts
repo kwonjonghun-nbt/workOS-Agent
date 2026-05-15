@@ -3,34 +3,20 @@ import { CHANNELS } from '../contracts/channels';
 import {
   createTerminalRequestSchema,
   disposeTerminalRequestSchema,
+  listTerminalsRequestSchema,
   resizeTerminalRequestSchema,
   writeTerminalRequestSchema,
   type CreateTerminalResponse,
-  type TerminalDataEvent,
-  type TerminalExitEvent,
+  type TerminalSummary,
 } from '../contracts/terminal';
-import { NodePtyRepository } from '../repositories/pty.repo';
-import { TerminalService } from '../services/terminal.service';
-import { eventBus } from '../infra/event-bus';
+import type { TerminalService } from '../services/terminal.service';
 import { toApiError } from '../infra/error';
 
-export function registerTerminalHandlers(): void {
-  const repo = new NodePtyRepository();
-  const service = new TerminalService(repo, {
-    onData(sessionId, data) {
-      const payload: TerminalDataEvent = { sessionId, data };
-      eventBus.broadcast(CHANNELS.terminalEvents.data, payload);
-    },
-    onExit(sessionId, exitCode, signal) {
-      const payload: TerminalExitEvent = { sessionId, exitCode, signal };
-      eventBus.broadcast(CHANNELS.terminalEvents.exit, payload);
-    },
-  });
-
+export function registerTerminalHandlers(service: TerminalService): void {
   ipcMain.handle(CHANNELS.terminal.create, async (_e, raw): Promise<CreateTerminalResponse> => {
     try {
       const req = createTerminalRequestSchema.parse(raw);
-      const sessionId = service.create({ cols: req.cols, rows: req.rows });
+      const sessionId = await service.create(req.workspaceId, { cols: req.cols, rows: req.rows });
       return { sessionId };
     } catch (err) {
       throw toApiError(err);
@@ -59,6 +45,15 @@ export function registerTerminalHandlers(): void {
     try {
       const { sessionId } = disposeTerminalRequestSchema.parse(raw);
       service.dispose(sessionId);
+    } catch (err) {
+      throw toApiError(err);
+    }
+  });
+
+  ipcMain.handle(CHANNELS.terminal.list, async (_e, raw): Promise<TerminalSummary[]> => {
+    try {
+      const { workspaceId } = listTerminalsRequestSchema.parse(raw);
+      return service.list(workspaceId);
     } catch (err) {
       throw toApiError(err);
     }

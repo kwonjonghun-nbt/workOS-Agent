@@ -1,7 +1,15 @@
+export type TerminalSummary = {
+  sessionId: string;
+  workspaceId: string;
+  cwd: string;
+  shell: string;
+  createdAt: number;
+};
+
 export type CreateTerminalRequest = {
+  workspaceId: string;
   cols: number;
   rows: number;
-  cwd?: string;
 };
 
 export type CreateTerminalResponse = {
@@ -23,6 +31,10 @@ export type DisposeTerminalRequest = {
   sessionId: string;
 };
 
+export type ListTerminalsRequest = {
+  workspaceId: string;
+};
+
 export type TerminalDataEvent = {
   sessionId: string;
   data: string;
@@ -30,6 +42,7 @@ export type TerminalDataEvent = {
 
 export type TerminalExitEvent = {
   sessionId: string;
+  workspaceId: string;
   exitCode: number;
   signal: number | null;
 };

@@ -6,8 +6,11 @@ export type TerminalSize = {
 export class TerminalSession {
   constructor(
     public readonly id: string,
+    public readonly workspaceId: string,
     public readonly shell: string,
+    public readonly cwd: string,
     public size: TerminalSize,
+    public readonly createdAt: number,
   ) {}
 
   resize(size: TerminalSize): void {

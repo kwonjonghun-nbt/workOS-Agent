@@ -2,26 +2,14 @@ import type {
   CreateTerminalRequest,
   CreateTerminalResponse,
   DisposeTerminalRequest,
+  ListTerminalsRequest,
   ResizeTerminalRequest,
   TerminalDataEvent,
   TerminalExitEvent,
+  TerminalSummary,
   WriteTerminalRequest,
 } from './types';
-
-type TerminalApi = {
-  create: (req: CreateTerminalRequest) => Promise<CreateTerminalResponse>;
-  write: (req: WriteTerminalRequest) => Promise<void>;
-  resize: (req: ResizeTerminalRequest) => Promise<void>;
-  dispose: (req: DisposeTerminalRequest) => Promise<void>;
-  onData: (listener: (event: TerminalDataEvent) => void) => () => void;
-  onExit: (listener: (event: TerminalExitEvent) => void) => () => void;
-};
-
-declare global {
-  interface Window {
-    electronAPI: { terminal: TerminalApi };
-  }
-}
+import type { TerminalApi } from '../electronAPI';
 
 function api(): TerminalApi {
   return window.electronAPI.terminal;
@@ -32,6 +20,7 @@ export const terminalApi = {
   write: (req: WriteTerminalRequest) => api().write(req),
   resize: (req: ResizeTerminalRequest) => api().resize(req),
   dispose: (req: DisposeTerminalRequest) => api().dispose(req),
+  list: (req: ListTerminalsRequest) => api().list(req),
   onData: (listener: (event: TerminalDataEvent) => void) => api().onData(listener),
   onExit: (listener: (event: TerminalExitEvent) => void) => api().onExit(listener),
 };
@@ -42,6 +31,8 @@ export type {
   WriteTerminalRequest,
   ResizeTerminalRequest,
   DisposeTerminalRequest,
+  ListTerminalsRequest,
+  TerminalSummary,
   TerminalDataEvent,
   TerminalExitEvent,
 };

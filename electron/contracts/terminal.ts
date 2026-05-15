@@ -1,9 +1,18 @@
 import { z } from 'zod';
 
+export const terminalSummarySchema = z.object({
+  sessionId: z.string(),
+  workspaceId: z.string(),
+  cwd: z.string(),
+  shell: z.string(),
+  createdAt: z.number().int(),
+});
+export type TerminalSummary = z.infer<typeof terminalSummarySchema>;
+
 export const createTerminalRequestSchema = z.object({
+  workspaceId: z.string().min(1),
   cols: z.number().int().positive(),
   rows: z.number().int().positive(),
-  cwd: z.string().optional(),
 });
 export type CreateTerminalRequest = z.infer<typeof createTerminalRequestSchema>;
 
@@ -30,6 +39,11 @@ export const disposeTerminalRequestSchema = z.object({
 });
 export type DisposeTerminalRequest = z.infer<typeof disposeTerminalRequestSchema>;
 
+export const listTerminalsRequestSchema = z.object({
+  workspaceId: z.string().min(1),
+});
+export type ListTerminalsRequest = z.infer<typeof listTerminalsRequestSchema>;
+
 export type TerminalDataEvent = {
   sessionId: string;
   data: string;
@@ -37,6 +51,7 @@ export type TerminalDataEvent = {
 
 export type TerminalExitEvent = {
   sessionId: string;
+  workspaceId: string;
   exitCode: number;
   signal: number | null;
 };

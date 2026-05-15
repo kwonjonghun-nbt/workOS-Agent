@@ -28,7 +28,10 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  registerIpcHandlers();
+  const container = registerIpcHandlers();
+  app.on('before-quit', () => {
+    container.terminalService.disposeAll();
+  });
   createWindow();
 });
 

@@ -25,7 +25,7 @@ export class NodePtyRepository implements PtyRepository {
       name: 'xterm-color',
       cols: session.size.cols,
       rows: session.size.rows,
-      cwd: process.env.HOME,
+      cwd: session.cwd,
       env: process.env as Record<string, string>,
     });
 
