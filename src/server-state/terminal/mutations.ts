@@ -12,25 +12,28 @@ import type {
 // 그래도 레이어 규칙(Business → Server State → API)을 지키기 위해 mutationOptions 로 래핑한다.
 // onSuccess 의 invalidation 은 없음 — 캐시할 대상이 없다.
 // 스트리밍 수신(onData/onExit)은 캐시가 아닌 pub/sub 이므로 ./events.ts 에서 노출한다.
+//
+// 옵션 객체는 dynamic 의존성이 없어 모듈 상수로 둔다 (불필요한 객체 재생성 방지).
+
+const createOptions = mutationOptions<CreateTerminalResponse, Error, CreateTerminalRequest>({
+  mutationFn: (req) => terminalApi.create(req),
+});
+
+const writeOptions = mutationOptions<void, Error, WriteTerminalRequest>({
+  mutationFn: (req) => terminalApi.write(req),
+});
+
+const resizeOptions = mutationOptions<void, Error, ResizeTerminalRequest>({
+  mutationFn: (req) => terminalApi.resize(req),
+});
+
+const disposeOptions = mutationOptions<void, Error, DisposeTerminalRequest>({
+  mutationFn: (req) => terminalApi.dispose(req),
+});
 
 export const terminalMutations = {
-  create: () =>
-    mutationOptions<CreateTerminalResponse, Error, CreateTerminalRequest>({
-      mutationFn: (req) => terminalApi.create(req),
-    }),
-
-  write: () =>
-    mutationOptions<void, Error, WriteTerminalRequest>({
-      mutationFn: (req) => terminalApi.write(req),
-    }),
-
-  resize: () =>
-    mutationOptions<void, Error, ResizeTerminalRequest>({
-      mutationFn: (req) => terminalApi.resize(req),
-    }),
-
-  dispose: () =>
-    mutationOptions<void, Error, DisposeTerminalRequest>({
-      mutationFn: (req) => terminalApi.dispose(req),
-    }),
+  create: () => createOptions,
+  write: () => writeOptions,
+  resize: () => resizeOptions,
+  dispose: () => disposeOptions,
 };

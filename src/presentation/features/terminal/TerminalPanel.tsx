@@ -36,13 +36,18 @@ export function TerminalPanel({ onClosePanel }: Props) {
   }, [terminals.length, addTerminal]);
 
   // 활성 탭이 목록에서 사라졌으면 마지막 항목으로 폴백.
+  // functional setter 로 activeId 를 deps 에 넣지 않아 자기 트리거를 막는다.
   useEffect(() => {
-    if (activeId && !terminals.some((t) => t.id === activeId)) {
-      setActiveId(terminals[terminals.length - 1]?.id ?? null);
-    } else if (!activeId && terminals.length > 0) {
-      setActiveId(terminals[terminals.length - 1].id);
-    }
-  }, [terminals, activeId]);
+    setActiveId((current) => {
+      if (current && !terminals.some((t) => t.id === current)) {
+        return terminals[terminals.length - 1]?.id ?? null;
+      }
+      if (!current && terminals.length > 0) {
+        return terminals[terminals.length - 1].id;
+      }
+      return current;
+    });
+  }, [terminals]);
 
   const handleAdd = () => {
     const id = addTerminal();

@@ -170,6 +170,8 @@ function RenameInput({
   const [value, setValue] = useState(initial);
   const ref = useRef<HTMLInputElement | null>(null);
 
+  // 마운트 시 1회만 focus/select. 의도된 빈 deps.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     ref.current?.focus();
     ref.current?.select();
