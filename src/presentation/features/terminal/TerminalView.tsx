@@ -31,6 +31,10 @@ export function TerminalView({ terminalId, isActive }: Props) {
   resizeRef.current = session.resize;
   disposeRef.current = session.dispose;
 
+  // xterm 인스턴스는 마운트 1회만 생성한다.
+  // terminalId 가 deps 에 없는 것은 안전한가? — TerminalPanel 이 `key={t.id}` 로 렌더하므로
+  // terminalId 가 바뀔 일이 없다(다른 id 면 별개 컴포넌트로 unmount→mount). 의도된 빈 deps.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -57,7 +61,7 @@ export function TerminalView({ terminalId, isActive }: Props) {
       try {
         fit.fit();
       } catch {
-        // ignore
+        // fit() 은 컨테이너가 분리되었거나 측정 불가일 때 throw — 무시해도 안전.
       }
     });
     ro.observe(containerRef.current);
@@ -81,7 +85,7 @@ export function TerminalView({ terminalId, isActive }: Props) {
         fitRef.current?.fit();
         termRef.current?.focus();
       } catch {
-        // ignore
+        // fit() 은 컨테이너가 분리되었거나 측정 불가일 때 throw — 무시해도 안전.
       }
     });
   }, [isActive]);
