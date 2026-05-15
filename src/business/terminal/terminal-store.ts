@@ -17,11 +17,9 @@ export type Terminal = {
 
 type TerminalStore = {
   terminals: Terminal[];
-  activeId: string | null;
   addTerminal: () => string;
   removeTerminal: (id: string) => void;
   renameTerminal: (id: string, name: string) => void;
-  setActive: (id: string) => void;
   setSessionId: (id: string, sessionId: string) => void;
 };
 
@@ -34,26 +32,25 @@ const nextDefaultName = (terminals: Terminal[]) => {
   return `section${n}`;
 };
 
+// "지금 어떤 탭이 선택됐는지" 는 UI 관심사이므로 presentation 레이어에서 관리한다.
+// (TerminalPanel 의 useState 참고.) 이 스토어는 도메인 상태(목록·이름·sessionId)만 가진다.
+
 export const useTerminalStore = create<TerminalStore>((set) => ({
   terminals: [],
-  activeId: null,
 
   addTerminal: () => {
     const id = crypto.randomUUID();
     set((state) => ({
-      terminals: [...state.terminals, { id, name: nextDefaultName(state.terminals), sessionId: null }],
-      activeId: id,
+      terminals: [
+        ...state.terminals,
+        { id, name: nextDefaultName(state.terminals), sessionId: null },
+      ],
     }));
     return id;
   },
 
   removeTerminal: (id) => {
-    set((state) => {
-      const next = state.terminals.filter((t) => t.id !== id);
-      const activeId =
-        state.activeId === id ? next[next.length - 1]?.id ?? null : state.activeId;
-      return { terminals: next, activeId };
-    });
+    set((state) => ({ terminals: state.terminals.filter((t) => t.id !== id) }));
   },
 
   renameTerminal: (id, name) => {
@@ -63,8 +60,6 @@ export const useTerminalStore = create<TerminalStore>((set) => ({
       terminals: state.terminals.map((t) => (t.id === id ? { ...t, name: trimmed } : t)),
     }));
   },
-
-  setActive: (id) => set({ activeId: id }),
 
   setSessionId: (id, sessionId) => {
     set((state) => ({

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Split } from '../../shared/Split';
 import { TerminalList } from './TerminalList';
 import { TerminalView } from './TerminalView';
@@ -20,18 +20,34 @@ type Props = {
 
 export function TerminalPanel({ onClosePanel }: Props) {
   const terminals = useTerminalStore((s) => s.terminals);
-  const activeId = useTerminalStore((s) => s.activeId);
   const addTerminal = useTerminalStore((s) => s.addTerminal);
   const removeTerminal = useTerminalStore((s) => s.removeTerminal);
   const renameTerminal = useTerminalStore((s) => s.renameTerminal);
-  const setActive = useTerminalStore((s) => s.setActive);
+
+  // 활성 탭은 UI 관심사이므로 presentation 로컬 상태로 관리.
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   // 패널이 열렸을 때 비어있으면 첫 터미널을 자동 생성.
   useEffect(() => {
     if (terminals.length === 0) {
-      addTerminal();
+      const id = addTerminal();
+      setActiveId(id);
     }
   }, [terminals.length, addTerminal]);
+
+  // 활성 탭이 목록에서 사라졌으면 마지막 항목으로 폴백.
+  useEffect(() => {
+    if (activeId && !terminals.some((t) => t.id === activeId)) {
+      setActiveId(terminals[terminals.length - 1]?.id ?? null);
+    } else if (!activeId && terminals.length > 0) {
+      setActiveId(terminals[terminals.length - 1].id);
+    }
+  }, [terminals, activeId]);
+
+  const handleAdd = () => {
+    const id = addTerminal();
+    setActiveId(id);
+  };
 
   return (
     <div className="flex h-full w-full flex-col bg-black">
@@ -53,10 +69,8 @@ export function TerminalPanel({ onClosePanel }: Props) {
           <TerminalList
             items={terminals}
             activeId={activeId}
-            onSelect={setActive}
-            onAdd={() => {
-              addTerminal();
-            }}
+            onSelect={setActiveId}
+            onAdd={handleAdd}
             onClose={removeTerminal}
             onRename={renameTerminal}
           />
