@@ -24,6 +24,7 @@ export class TerminalService {
 
   async create(workspaceId: string, size: TerminalSize): Promise<string> {
     const cwd = await this.cwdResolver.resolveCwd(workspaceId);
+    const name = this.nextDefaultName(workspaceId);
     const session = new TerminalSession(
       randomUUID(),
       workspaceId,
@@ -31,6 +32,7 @@ export class TerminalService {
       cwd,
       size,
       Date.now(),
+      name,
     );
     this.sessions.set(session.id, session);
     this.ptys.spawn(session);
@@ -47,6 +49,28 @@ export class TerminalService {
       throw new ApiError('NOT_FOUND', `terminal session not found: ${sessionId}`);
     }
     this.ptys.write(sessionId, data);
+  }
+
+  rename(sessionId: string, name: string): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new ApiError('NOT_FOUND', `terminal session not found: ${sessionId}`);
+    }
+    const trimmed = name.trim();
+    if (trimmed.length === 0) {
+      throw new ApiError('VALIDATION', 'terminal name must not be empty');
+    }
+    session.rename(trimmed);
+  }
+
+  private nextDefaultName(workspaceId: string): string {
+    const used = new Set<string>();
+    for (const s of this.sessions.values()) {
+      if (s.workspaceId === workspaceId) used.add(s.name);
+    }
+    let n = 1;
+    while (used.has(`terminal${n}`)) n += 1;
+    return `terminal${n}`;
   }
 
   resize(sessionId: string, size: TerminalSize): void {
@@ -90,6 +114,7 @@ export class TerminalService {
           cwd: s.cwd,
           shell: s.shell,
           createdAt: s.createdAt,
+          name: s.name,
         });
       }
     }

@@ -20,6 +20,7 @@ export function useTerminalList(workspaceId: string) {
 
   const createMut = useMutation(terminalMutations.create());
   const disposeMut = useMutation(terminalMutations.dispose());
+  const renameMut = useMutation(terminalMutations.rename());
 
   useEffect(() => {
     const off = terminalEvents.subscribeExit((evt) => {
@@ -44,10 +45,20 @@ export function useTerminalList(workspaceId: string) {
     );
   };
 
+  const renameTerminal = async (sessionId: string, name: string): Promise<void> => {
+    const trimmed = name.trim();
+    if (trimmed.length === 0) return;
+    await renameMut.mutateAsync({ sessionId, name: trimmed });
+    queryClient.setQueryData<TerminalSummary[] | undefined>(listKey, (prev) =>
+      prev?.map((t) => (t.sessionId === sessionId ? { ...t, name: trimmed } : t)),
+    );
+  };
+
   return {
     terminals: listQuery.data ?? [],
     isLoading: listQuery.isLoading,
     addTerminal,
     removeTerminal,
+    renameTerminal,
   };
 }

@@ -6,8 +6,15 @@ export const terminalSummarySchema = z.object({
   cwd: z.string(),
   shell: z.string(),
   createdAt: z.number().int(),
+  name: z.string(),
 });
 export type TerminalSummary = z.infer<typeof terminalSummarySchema>;
+
+export const renameTerminalRequestSchema = z.object({
+  sessionId: z.string(),
+  name: z.string().min(1).max(64),
+});
+export type RenameTerminalRequest = z.infer<typeof renameTerminalRequestSchema>;
 
 export const createTerminalRequestSchema = z.object({
   workspaceId: z.string().min(1),

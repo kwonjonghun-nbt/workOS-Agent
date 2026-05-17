@@ -4,6 +4,7 @@ import type {
   CreateTerminalRequest,
   CreateTerminalResponse,
   DisposeTerminalRequest,
+  RenameTerminalRequest,
   ResizeTerminalRequest,
   WriteTerminalRequest,
 } from '../../api/terminal';
@@ -31,9 +32,14 @@ const disposeOptions = mutationOptions<void, Error, DisposeTerminalRequest>({
   mutationFn: (req) => terminalApi.dispose(req),
 });
 
+const renameOptions = mutationOptions<void, Error, RenameTerminalRequest>({
+  mutationFn: (req) => terminalApi.rename(req),
+});
+
 export const terminalMutations = {
   create: () => createOptions,
   write: () => writeOptions,
   resize: () => resizeOptions,
   dispose: () => disposeOptions,
+  rename: () => renameOptions,
 };
