@@ -3,6 +3,7 @@ import type {
   CreateTerminalResponse,
   DisposeTerminalRequest,
   ListTerminalsRequest,
+  RenameTerminalRequest,
   ResizeTerminalRequest,
   TerminalDataEvent,
   TerminalExitEvent,
@@ -24,6 +25,7 @@ export type TerminalApi = {
   write: (req: WriteTerminalRequest) => Promise<void>;
   resize: (req: ResizeTerminalRequest) => Promise<void>;
   dispose: (req: DisposeTerminalRequest) => Promise<void>;
+  rename: (req: RenameTerminalRequest) => Promise<void>;
   list: (req: ListTerminalsRequest) => Promise<TerminalSummary[]>;
   onData: (listener: (event: TerminalDataEvent) => void) => () => void;
   onExit: (listener: (event: TerminalExitEvent) => void) => () => void;

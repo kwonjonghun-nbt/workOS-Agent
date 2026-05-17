@@ -14,7 +14,8 @@ type Props = {
 };
 
 export function TerminalPanel({ workspaceId, onClose }: Props) {
-  const { terminals, isLoading, addTerminal, removeTerminal } = useTerminalList(workspaceId);
+  const { terminals, isLoading, addTerminal, removeTerminal, renameTerminal } =
+    useTerminalList(workspaceId);
 
   const activeTerminalId = useWorkspaceStore(
     (s) => s.activeTerminalIdByWorkspace[workspaceId] ?? null,
@@ -58,10 +59,14 @@ export function TerminalPanel({ workspaceId, onClose }: Props) {
     void removeTerminal(sessionId);
   };
 
-  const listItems = terminals.map((t, i) => ({
+  const listItems = terminals.map((t) => ({
     id: t.sessionId,
-    name: `terminal${i + 1}`,
+    name: t.name,
   }));
+
+  const handleRename = (sessionId: string, name: string) => {
+    void renameTerminal(sessionId, name);
+  };
 
   return (
     <div className="flex h-full w-full flex-col bg-black">
@@ -86,6 +91,7 @@ export function TerminalPanel({ workspaceId, onClose }: Props) {
             onSelect={(id) => setActiveTerminal(workspaceId, id)}
             onAdd={handleAdd}
             onClose={handleClose}
+            onRename={handleRename}
           />
           <div className="relative h-full w-full bg-black">
             {terminals.length === 0 ? (

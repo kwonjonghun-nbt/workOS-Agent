@@ -16,6 +16,7 @@ export const CHANNELS = {
     resize: 'terminal:resize',
     dispose: 'terminal:dispose',
     list: 'terminal:list',
+    rename: 'terminal:rename',
   },
   terminalEvents: {
     data: 'terminal:data',

@@ -5,6 +5,7 @@ import type {
   CreateTerminalResponse,
   DisposeTerminalRequest,
   ListTerminalsRequest,
+  RenameTerminalRequest,
   ResizeTerminalRequest,
   TerminalDataEvent,
   TerminalExitEvent,
@@ -30,6 +31,8 @@ const terminal = {
     ipcRenderer.invoke(CHANNELS.terminal.resize, req),
   dispose: (req: DisposeTerminalRequest): Promise<void> =>
     ipcRenderer.invoke(CHANNELS.terminal.dispose, req),
+  rename: (req: RenameTerminalRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.terminal.rename, req),
   list: (req: ListTerminalsRequest): Promise<TerminalSummary[]> =>
     ipcRenderer.invoke(CHANNELS.terminal.list, req),
   onData: (listener: (event: TerminalDataEvent) => void): (() => void) => {

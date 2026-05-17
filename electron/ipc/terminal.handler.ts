@@ -4,6 +4,7 @@ import {
   createTerminalRequestSchema,
   disposeTerminalRequestSchema,
   listTerminalsRequestSchema,
+  renameTerminalRequestSchema,
   resizeTerminalRequestSchema,
   writeTerminalRequestSchema,
   type CreateTerminalResponse,
@@ -45,6 +46,15 @@ export function registerTerminalHandlers(service: TerminalService): void {
     try {
       const { sessionId } = disposeTerminalRequestSchema.parse(raw);
       service.dispose(sessionId);
+    } catch (err) {
+      throw toApiError(err);
+    }
+  });
+
+  ipcMain.handle(CHANNELS.terminal.rename, async (_e, raw): Promise<void> => {
+    try {
+      const { sessionId, name } = renameTerminalRequestSchema.parse(raw);
+      service.rename(sessionId, name);
     } catch (err) {
       throw toApiError(err);
     }

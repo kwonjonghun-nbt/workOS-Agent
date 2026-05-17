@@ -11,10 +11,15 @@ export class TerminalSession {
     public readonly cwd: string,
     public size: TerminalSize,
     public readonly createdAt: number,
+    public name: string,
   ) {}
 
   resize(size: TerminalSize): void {
     this.size = size;
+  }
+
+  rename(name: string): void {
+    this.name = name;
   }
 }
 

@@ -4,6 +4,12 @@ export type TerminalSummary = {
   cwd: string;
   shell: string;
   createdAt: number;
+  name: string;
+};
+
+export type RenameTerminalRequest = {
+  sessionId: string;
+  name: string;
 };
 
 export type CreateTerminalRequest = {
