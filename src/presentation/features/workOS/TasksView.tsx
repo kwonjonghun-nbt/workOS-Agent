@@ -758,12 +758,11 @@ function KanbanCard({
   item: TaskItem;
   step: Step | null;
 }) {
-  const update = useUpdateTaskItem();
   const del = useDeleteTaskItem();
   const execute = useExecuteTaskItem();
   const setActiveTerminal = useWorkspaceStore((s) => s.setActiveTerminal);
   const setTerminalPanelOpen = useWorkspaceStore((s) => s.setTerminalPanelOpen);
-  const [expanded, setExpanded] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const handleRun = async () => {
     try {
@@ -777,109 +776,214 @@ function KanbanCard({
   };
 
   return (
-    <li className="rounded border border-ink-850 bg-ink-900/70">
-      <div className="flex flex-col gap-1 p-2">
-        <input
-          value={item.name}
-          onChange={(e) =>
-            void update.mutateAsync({
-              workspaceId,
-              id: item.id,
-              patch: { name: e.target.value },
-            })
-          }
-          className="w-full bg-transparent text-sm font-medium outline-none"
-        />
-        <div className="flex flex-wrap items-center gap-1 text-[10px] text-ink-500">
-          <span className="rounded bg-ink-850 px-1.5 py-0.5">{item.agentName}</span>
-          {step && <span className="text-ink-600">{step.name}</span>}
-          {item.sessionId && (
-            <span className="text-blue-300">▶ {item.sessionId.slice(0, 6)}…</span>
-          )}
-        </div>
-        <div className="mt-1 flex items-center justify-between gap-1">
+    <>
+      <li className="rounded border border-ink-850 bg-ink-900/70">
+        <button
+          type="button"
+          onClick={() => setDetailOpen(true)}
+          className="flex w-full flex-col gap-1 p-2 text-left hover:bg-ink-850/40"
+        >
+          <div className="truncate text-sm font-medium text-white">{item.name}</div>
+          <div className="flex flex-wrap items-center gap-1 text-[10px] text-ink-500">
+            <span className="rounded bg-ink-850 px-1.5 py-0.5">{item.agentName}</span>
+            {step && <span className="text-ink-600">{step.name}</span>}
+            {item.sessionId && (
+              <span className="text-blue-300">▶ {item.sessionId.slice(0, 6)}…</span>
+            )}
+          </div>
+        </button>
+        <div className="flex items-center justify-end gap-1 border-t border-ink-850/50 px-2 py-1">
           <button
             type="button"
-            onClick={() => setExpanded((x) => !x)}
+            onClick={() => setDetailOpen(true)}
             className="rounded px-2 py-0.5 text-[11px] text-ink-300 hover:bg-ink-850"
           >
-            {expanded ? '접기' : '편집'}
+            상세
           </button>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              disabled={execute.isPending}
-              onClick={() => void handleRun()}
-              className="rounded bg-claude-500/90 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-claude-400 disabled:opacity-50"
-              title="새 터미널 세션에서 Claude CLI 로 실행"
-            >
-              ▶ 실행
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm(`TaskItem '${item.name}'을 삭제할까요?`)) {
-                  void del.mutateAsync({ workspaceId, id: item.id });
-                }
-              }}
-              className="rounded px-1 py-0.5 text-ink-400 hover:bg-ink-850 hover:text-white"
-              aria-label="Delete task item"
-            >
-              ✕
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={execute.isPending}
+            onClick={() => void handleRun()}
+            className="rounded bg-claude-500/90 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-claude-400 disabled:opacity-50"
+            title="새 터미널 세션에서 Claude CLI 로 실행"
+          >
+            ▶ 실행
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm(`TaskItem '${item.name}'을 삭제할까요?`)) {
+                void del.mutateAsync({ workspaceId, id: item.id });
+              }
+            }}
+            className="rounded px-1 py-0.5 text-ink-400 hover:bg-ink-850 hover:text-white"
+            aria-label="Delete task item"
+          >
+            ✕
+          </button>
         </div>
-      </div>
-      {expanded && (
-        <div className="border-t border-ink-850 px-2 py-2">
-          <label className="block text-[10px] font-semibold uppercase tracking-wide text-ink-500">
-            프롬프트
-          </label>
-          <textarea
-            value={item.prompt}
-            onChange={(e) =>
-              void update.mutateAsync({
-                workspaceId,
-                id: item.id,
-                patch: { prompt: e.target.value },
-              })
-            }
-            rows={8}
-            className="mt-1 w-full resize-y rounded border border-ink-850 bg-ink-950 px-2 py-1 font-mono text-[11px] text-ink-300 outline-none focus:border-claude-500"
-          />
-          <div className="mt-2 grid grid-cols-2 gap-1.5">
-            <select
-              value={item.status}
-              onChange={(e) =>
-                void update.mutateAsync({
-                  workspaceId,
-                  id: item.id,
-                  patch: { status: e.target.value as ItemStatus },
-                })
-              }
-              className="rounded border border-ink-850 bg-ink-950 px-2 py-1 text-[11px] outline-none"
-            >
-              {(['pending', 'running', 'completed', 'failed', 'skipped'] as const).map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+      </li>
+      {detailOpen && (
+        <TaskItemDetailModal
+          workspaceId={workspaceId}
+          item={item}
+          step={step}
+          onClose={() => setDetailOpen(false)}
+          onRun={() => void handleRun()}
+          running={execute.isPending}
+        />
+      )}
+    </>
+  );
+}
+
+function TaskItemDetailModal({
+  workspaceId,
+  item,
+  step,
+  onClose,
+  onRun,
+  running,
+}: {
+  workspaceId: string;
+  item: TaskItem;
+  step: Step | null;
+  onClose: () => void;
+  onRun: () => void;
+  running: boolean;
+}) {
+  const update = useUpdateTaskItem();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-ink-700 bg-ink-900 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="flex items-center justify-between border-b border-ink-850 px-5 py-3">
+          <div className="min-w-0 flex-1">
             <input
-              value={item.agentName}
+              autoFocus
+              value={item.name}
               onChange={(e) =>
                 void update.mutateAsync({
                   workspaceId,
                   id: item.id,
-                  patch: { agentName: e.target.value },
+                  patch: { name: e.target.value },
                 })
               }
-              className="rounded border border-ink-850 bg-ink-950 px-2 py-1 text-[11px] outline-none"
-              placeholder="agentName"
+              className="w-full bg-transparent text-base font-semibold text-white outline-none"
+            />
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-ink-500">
+              <StatusBadge status={item.status} />
+              {step && <span className="rounded bg-ink-850 px-1.5 py-0.5">{step.name}</span>}
+              {item.sessionId && (
+                <span className="text-blue-300">▶ {item.sessionId.slice(0, 8)}…</span>
+              )}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-3 rounded px-2 py-0.5 text-ink-400 hover:bg-ink-850 hover:text-white"
+            aria-label="닫기"
+          >
+            ✕
+          </button>
+        </header>
+
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-400">
+              프롬프트
+            </label>
+            <textarea
+              value={item.prompt}
+              onChange={(e) =>
+                void update.mutateAsync({
+                  workspaceId,
+                  id: item.id,
+                  patch: { prompt: e.target.value },
+                })
+              }
+              rows={14}
+              className="w-full resize-y rounded border border-ink-700 bg-ink-950 px-3 py-2 font-mono text-xs text-ink-200 outline-none focus:border-claude-500"
             />
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-400">
+                상태
+              </label>
+              <select
+                value={item.status}
+                onChange={(e) =>
+                  void update.mutateAsync({
+                    workspaceId,
+                    id: item.id,
+                    patch: { status: e.target.value as ItemStatus },
+                  })
+                }
+                className="w-full rounded border border-ink-700 bg-ink-950 px-3 py-2 text-sm outline-none focus:border-claude-500"
+              >
+                {(['pending', 'running', 'completed', 'failed', 'skipped'] as const).map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-400">
+                Agent
+              </label>
+              <input
+                value={item.agentName}
+                onChange={(e) =>
+                  void update.mutateAsync({
+                    workspaceId,
+                    id: item.id,
+                    patch: { agentName: e.target.value },
+                  })
+                }
+                className="w-full rounded border border-ink-700 bg-ink-950 px-3 py-2 text-sm outline-none focus:border-claude-500"
+                placeholder="agentName"
+              />
+            </div>
+          </div>
         </div>
-      )}
-    </li>
+
+        <footer className="flex items-center justify-end gap-2 border-t border-ink-850 bg-ink-900/60 px-5 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded border border-ink-700 px-3 py-1.5 text-sm text-ink-300 hover:bg-ink-850"
+          >
+            닫기
+          </button>
+          <button
+            type="button"
+            disabled={running}
+            onClick={onRun}
+            className="rounded bg-claude-500/90 px-3 py-1.5 text-sm font-medium text-white hover:bg-claude-400 disabled:opacity-50"
+          >
+            ▶ 실행
+          </button>
+        </footer>
+      </div>
+    </div>
   );
 }
