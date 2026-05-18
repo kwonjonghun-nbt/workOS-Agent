@@ -92,7 +92,7 @@ function WorkflowList({
           <button
             type="button"
             onClick={() => void handleCreate()}
-            className="rounded bg-claude-500/90 px-2 py-1 text-xs font-medium text-white hover:bg-claude-400"
+            className="rounded border border-transparent bg-claude-500/90 px-2.5 py-1 text-sm font-medium text-white hover:bg-claude-400"
             title="빈 워크플로를 추가하고 직접 Step 을 끼웁니다."
           >
             추가
@@ -398,7 +398,7 @@ function StepLibrary({ workspaceId }: { workspaceId: string }) {
           <button
             type="button"
             onClick={() => void onCreate()}
-            className="rounded bg-claude-500/90 px-3 py-1 text-sm font-medium text-white hover:bg-claude-400 disabled:opacity-40"
+            className="rounded border border-transparent bg-claude-500/90 px-3 py-1 text-sm font-medium text-white hover:bg-claude-400 disabled:opacity-40"
             disabled={!draft.name.trim() || (!draft.agent && agentChoices.length === 0)}
           >
             Step 추가
