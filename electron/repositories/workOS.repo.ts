@@ -165,6 +165,7 @@ export class WorkOSRepository {
   };
 
   // Prompts (실행 시 임시 파일) — 평문 텍스트로 저장.
+  // claude CLI 가 곧바로(≈250ms 내) 파일을 읽어 처리하므로 10초 후 자동 삭제한다.
   async writePromptFile(taskItemId: string, content: string): Promise<string> {
     await this.ensure();
     if (!isValidId(taskItemId))
@@ -175,6 +176,14 @@ export class WorkOSRepository {
     const tmp = `${file}.tmp`;
     await fs.writeFile(tmp, content, 'utf-8');
     await fs.rename(tmp, file);
+    const t = setTimeout(() => {
+      void fs.unlink(file).catch((err) => {
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+          // best-effort cleanup — leave file on unexpected error, don't crash main.
+        }
+      });
+    }, 10_000);
+    t.unref?.();
     return file;
   }
 }
