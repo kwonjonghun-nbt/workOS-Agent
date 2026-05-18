@@ -64,6 +64,12 @@ export const MCP_TOOLS: McpToolDescriptor[] = [
     description: 'TaskItem 상태를 completed 로 전환하고 결과 요약을 저장한다.',
   },
   {
+    name: 'workos_taskitem_run_next',
+    title: '다음 TaskItem 실행',
+    description:
+      '같은 Task 의 pending TaskItem 중 createdAt 이 가장 빠른 항목을 새 터미널 세션에서 자동 실행한다. complete 직후 호출해 체이닝.',
+  },
+  {
     name: 'workos_taskitem_fail',
     title: '실패 처리',
     description: 'TaskItem 상태를 failed 로 전환하고 에러 메시지를 저장한다.',

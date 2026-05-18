@@ -131,6 +131,22 @@ const TOOLS = [
     route: '/v1/taskitem/complete',
   },
   {
+    name: 'workos_taskitem_run_next',
+    description:
+      'Pick the next pending TaskItem in the same Task (oldest createdAt first) and start it in a fresh terminal session. Call this AFTER workos_taskitem_complete to chain execution. Returns { nextTaskItemId, sessionId } or { nextTaskItemId: null } when no pending items remain.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskItemId: {
+          type: 'string',
+          description: 'The TaskItem you just finished — used to locate siblings in the same Task.',
+        },
+      },
+      required: ['taskItemId'],
+    },
+    route: '/v1/taskitem/run-next',
+  },
+  {
     name: 'workos_taskitem_fail',
     description: 'Mark the TaskItem as failed with an error message.',
     inputSchema: {

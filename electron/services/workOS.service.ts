@@ -428,6 +428,47 @@ export class WorkOSService {
     return next;
   }
 
+  /**
+   * Pick the next pending TaskItem in the same Task as `taskItemId` and execute it.
+   * "다음" 정의: 같은 Task 의 TaskItem 중 status === 'pending' 이고 createdAt 이 가장 빠른 항목.
+   * 다음 항목이 없으면 nextTaskItemId === null 로 반환한다 (예외 X — CLI 가 종료 신호로 사용).
+   */
+  async mcpRunNext(
+    workspaceId: string,
+    taskItemId: string,
+  ): Promise<{
+    nextTaskItemId: string | null;
+    sessionId: string | null;
+    promptFilePath: string | null;
+  }> {
+    const r = await this.repo(workspaceId);
+    const current = await r.readTaskItem(taskItemId);
+    if (!current) throw new ApiError('NOT_FOUND', `task item not found: ${taskItemId}`);
+    const task = await r.readTask(current.taskId);
+    if (!task) throw new ApiError('NOT_FOUND', `task not found: ${current.taskId}`);
+
+    const candidates: TaskItem[] = [];
+    for (const id of task.taskItemIds) {
+      if (id === taskItemId) continue;
+      const it = await r.readTaskItem(id);
+      if (it && it.status === 'pending') candidates.push(it);
+    }
+    if (candidates.length === 0) {
+      return { nextTaskItemId: null, sessionId: null, promptFilePath: null };
+    }
+    candidates.sort((a, b) => a.createdAt - b.createdAt);
+    const next = candidates[0];
+
+    // MCP-driven trigger → 실제 PTY 크기 없음. 화면 크기와 무관한 합리적 기본값.
+    const { sessionId, promptFilePath } = await this.executeTaskItem(
+      workspaceId,
+      next.id,
+      120,
+      30,
+    );
+    return { nextTaskItemId: next.id, sessionId, promptFilePath };
+  }
+
   async mcpTaskContext(
     workspaceId: string,
     taskItemId: string,

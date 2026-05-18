@@ -255,6 +255,12 @@ function bindControlPlane(plane: McpControlPlane, svc: WorkOSService): void {
     ),
   );
   plane.on(
+    '/v1/taskitem/run-next',
+    wrap(async (ws, { taskItemId }: { taskItemId: string }) =>
+      svc.mcpRunNext(ws, taskItemId),
+    ),
+  );
+  plane.on(
     '/v1/taskitem/fail',
     wrap(async (ws, { taskItemId, error }: { taskItemId: string; error: string }) =>
       svc.mcpFail(ws, taskItemId, error),
