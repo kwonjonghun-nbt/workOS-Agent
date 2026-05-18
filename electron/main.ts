@@ -31,6 +31,7 @@ app.whenReady().then(() => {
   const container = registerIpcHandlers();
   app.on('before-quit', () => {
     container.terminalService.disposeAll();
+    container.mcpControlPlane.stop().catch(() => {});
   });
   createWindow();
 });
