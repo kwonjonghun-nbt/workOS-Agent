@@ -29,6 +29,7 @@ import type {
   SetupMcpRequest,
   SetupMcpResponse,
 } from './contracts/mcp';
+import type { Preferences, SetThemeRequest } from './contracts/preferences';
 import type {
   TaskItemProgressEvent,
 } from './contracts/workOS';
@@ -211,11 +212,24 @@ const mcp = {
   },
 };
 
-contextBridge.exposeInMainWorld('electronAPI', { terminal, workspace, workOS, mcp });
+const preferences = {
+  getSync: (): Preferences => ipcRenderer.sendSync(CHANNELS.preferences.getSync) as Preferences,
+  setTheme: (req: SetThemeRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.preferences.setTheme, req),
+};
+
+contextBridge.exposeInMainWorld('electronAPI', {
+  terminal,
+  workspace,
+  workOS,
+  mcp,
+  preferences,
+});
 
 export type ElectronAPI = {
   terminal: typeof terminal;
   workspace: typeof workspace;
   workOS: typeof workOS;
   mcp: typeof mcp;
+  preferences: typeof preferences;
 };

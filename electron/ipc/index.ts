@@ -14,16 +14,19 @@ import type { McpToastEvent } from '../contracts/mcp';
 import type { Workspace } from '../domain/workspace';
 import { NodePtyRepository } from '../repositories/pty.repo';
 import { JsonWorkspaceRepository } from '../repositories/workspace.repo';
+import { JsonPreferencesRepository } from '../repositories/preferences.repo';
 import { TerminalService } from '../services/terminal.service';
 import { WorkspaceService } from '../services/workspace.service';
 import { WorkOSService } from '../services/workOS.service';
 import { McpService } from '../services/mcp.service';
+import { PreferencesService } from '../services/preferences.service';
 import { eventBus } from '../infra/event-bus';
 import { McpControlPlane } from '../infra/mcp-control-plane';
 import { registerTerminalHandlers } from './terminal.handler';
 import { registerWorkspaceHandlers } from './workspace.handler';
 import { registerWorkOSHandlers } from './workOS.handler';
 import { registerMcpHandlers } from './mcp.handler';
+import { registerPreferencesHandlers } from './preferences.handler';
 
 export type Container = {
   workspaceService: WorkspaceService;
@@ -31,11 +34,14 @@ export type Container = {
   workOSService: WorkOSService;
   mcpService: McpService;
   mcpControlPlane: McpControlPlane;
+  preferencesService: PreferencesService;
 };
 
 export function registerIpcHandlers(): Container {
   const ptyRepo = new NodePtyRepository();
   const workspaceRepo = new JsonWorkspaceRepository(app.getPath('userData'));
+  const preferencesRepo = new JsonPreferencesRepository(app.getPath('userData'));
+  const preferencesService = new PreferencesService(preferencesRepo);
 
   let terminalServiceHolder: TerminalService | null = null;
 
@@ -105,6 +111,7 @@ export function registerIpcHandlers(): Container {
   registerTerminalHandlers(terminalService);
   registerWorkOSHandlers(workOSService);
   registerMcpHandlers(mcpService);
+  registerPreferencesHandlers(preferencesService);
 
   void bootstrapMcp(plane, mcpService, workOSService);
 
@@ -114,6 +121,7 @@ export function registerIpcHandlers(): Container {
     workOSService,
     mcpService,
     mcpControlPlane: plane,
+    preferencesService,
   };
 }
 

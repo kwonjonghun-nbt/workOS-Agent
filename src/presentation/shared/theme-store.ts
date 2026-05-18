@@ -2,12 +2,30 @@ import { create } from 'zustand';
 
 export type ThemeMode = 'dark' | 'light';
 
-const STORAGE_KEY = 'workos-agent.theme';
+const LEGACY_STORAGE_KEY = 'workos-agent.theme';
 
 function readInitial(): ThemeMode {
   if (typeof window === 'undefined') return 'dark';
-  const saved = window.localStorage.getItem(STORAGE_KEY);
-  if (saved === 'light' || saved === 'dark') return saved;
+
+  // Prefer the main-process JSON (survives Electron's file:// localStorage quirks).
+  try {
+    const prefs = window.electronAPI?.preferences?.getSync?.();
+    if (prefs?.theme === 'light' || prefs?.theme === 'dark') return prefs.theme;
+  } catch {
+    /* preload not ready / non-Electron context */
+  }
+
+  // Fallback: migrate from legacy localStorage value if present.
+  try {
+    const legacy = window.localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (legacy === 'light' || legacy === 'dark') {
+      void window.electronAPI?.preferences?.setTheme({ theme: legacy });
+      return legacy;
+    }
+  } catch {
+    /* localStorage may be unavailable */
+  }
+
   return 'dark';
 }
 
@@ -27,9 +45,9 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   setMode: (mode) => {
     apply(mode);
     try {
-      window.localStorage.setItem(STORAGE_KEY, mode);
+      void window.electronAPI?.preferences?.setTheme({ theme: mode });
     } catch {
-      /* localStorage may be unavailable */
+      /* ignore — UI state already updated */
     }
     set({ mode });
   },

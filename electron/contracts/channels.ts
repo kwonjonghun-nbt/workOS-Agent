@@ -71,4 +71,8 @@ export const CHANNELS = {
     progress: 'mcp:progress',
     toast: 'mcp:toast',
   },
+  preferences: {
+    getSync: 'preferences:getSync',
+    setTheme: 'preferences:setTheme',
+  },
 } as const;

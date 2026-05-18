@@ -141,6 +141,13 @@ export type McpApi = {
   onToast: (listener: (event: McpToastEvent) => void) => () => void;
 };
 
+export type ThemeMode = 'dark' | 'light';
+export type Preferences = { theme?: ThemeMode };
+export type PreferencesApi = {
+  getSync: () => Preferences;
+  setTheme: (req: { theme: ThemeMode }) => Promise<void>;
+};
+
 declare global {
   interface Window {
     electronAPI: {
@@ -148,6 +155,7 @@ declare global {
       workspace: WorkspaceApi;
       workOS: WorkOSApi;
       mcp: McpApi;
+      preferences: PreferencesApi;
     };
   }
 }
