@@ -793,22 +793,17 @@ function KanbanCard({
           </div>
         </button>
         <div className="flex items-center justify-end gap-1 border-t border-ink-850/50 px-2 py-1">
-          <button
-            type="button"
-            onClick={() => setDetailOpen(true)}
-            className="rounded px-2 py-0.5 text-[11px] text-ink-300 hover:bg-ink-850"
-          >
-            상세
-          </button>
-          <button
-            type="button"
-            disabled={execute.isPending}
-            onClick={() => void handleRun()}
-            className="rounded bg-claude-500/90 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-claude-400 disabled:opacity-50"
-            title="새 터미널 세션에서 Claude CLI 로 실행"
-          >
-            ▶ 실행
-          </button>
+          {item.status !== 'completed' && (
+            <button
+              type="button"
+              disabled={execute.isPending}
+              onClick={() => void handleRun()}
+              className="rounded bg-claude-500/90 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-claude-400 disabled:opacity-50"
+              title="새 터미널 세션에서 Claude CLI 로 실행"
+            >
+              ▶ 실행
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -818,8 +813,25 @@ function KanbanCard({
             }}
             className="rounded px-1 py-0.5 text-ink-400 hover:bg-ink-850 hover:text-white"
             aria-label="Delete task item"
+            title="삭제"
           >
-            ✕
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-3.5 w-3.5"
+              aria-hidden="true"
+            >
+              <path d="M3 6h18" />
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <path d="M10 11v6" />
+              <path d="M14 11v6" />
+            </svg>
           </button>
         </div>
       </li>
@@ -974,14 +986,16 @@ function TaskItemDetailModal({
           >
             닫기
           </button>
-          <button
-            type="button"
-            disabled={running}
-            onClick={onRun}
-            className="rounded bg-claude-500/90 px-3 py-1.5 text-sm font-medium text-white hover:bg-claude-400 disabled:opacity-50"
-          >
-            ▶ 실행
-          </button>
+          {item.status !== 'completed' && (
+            <button
+              type="button"
+              disabled={running}
+              onClick={onRun}
+              className="rounded bg-claude-500/90 px-3 py-1.5 text-sm font-medium text-white hover:bg-claude-400 disabled:opacity-50"
+            >
+              ▶ 실행
+            </button>
+          )}
         </footer>
       </div>
     </div>
