@@ -35,6 +35,11 @@ import type {
   GitCommitRequest,
   GitCommitResponse,
   GitDiffResponse,
+  GitFileDiffRequest,
+  GitFileDiffResponse,
+  GitStagePathsRequest,
+  GitStatusResponse,
+  GitUnstagePathsRequest,
   ImportDecompositionRequest,
   ImportWorkflowDraftRequest,
   ImportWorkflowDraftResponse,
@@ -111,6 +116,10 @@ export type WorkOSApi = {
 
   catalog: (req: ListByWorkspaceRequest) => Promise<CatalogResponse>;
   gitDiff: (req: ListByWorkspaceRequest) => Promise<GitDiffResponse>;
+  gitStatus: (req: ListByWorkspaceRequest) => Promise<GitStatusResponse>;
+  gitFileDiff: (req: GitFileDiffRequest) => Promise<GitFileDiffResponse>;
+  gitStagePaths: (req: GitStagePathsRequest) => Promise<void>;
+  gitUnstagePaths: (req: GitUnstagePathsRequest) => Promise<void>;
   gitCommit: (req: GitCommitRequest) => Promise<GitCommitResponse>;
 
   seedPreset: (req: SeedPresetRequest) => Promise<SeedPresetResponse>;

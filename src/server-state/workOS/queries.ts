@@ -39,4 +39,17 @@ export const workOSQueries = {
       queryFn: () => workOSApi.gitDiff({ workspaceId }),
       enabled: Boolean(workspaceId),
     }),
+  gitStatus: (workspaceId: string) =>
+    queryOptions({
+      queryKey: workOSKeys.gitStatus(workspaceId),
+      queryFn: () => workOSApi.gitStatus({ workspaceId }),
+      enabled: Boolean(workspaceId),
+    }),
+  gitFileDiff: (workspaceId: string, path: string | null, side: 'staged' | 'unstaged') =>
+    queryOptions({
+      queryKey: workOSKeys.gitFileDiff(workspaceId, path ?? '', side),
+      queryFn: () =>
+        workOSApi.gitFileDiff({ workspaceId, path: path as string, side }),
+      enabled: Boolean(workspaceId && path),
+    }),
 };

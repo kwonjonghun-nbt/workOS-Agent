@@ -137,6 +137,45 @@ export type GitDiffResponse = {
 export type GitCommitRequest = { workspaceId: string; message: string };
 export type GitCommitResponse = { commitSha: string };
 
+export type FileChangeKind =
+  | 'added'
+  | 'modified'
+  | 'deleted'
+  | 'renamed'
+  | 'untracked'
+  | 'unknown';
+
+export type FileChange = {
+  path: string;
+  oldPath?: string;
+  kind: FileChangeKind;
+  indexStatus: string;
+  worktreeStatus: string;
+  staged: boolean;
+  unstaged: boolean;
+};
+
+export type GitStatusResponse = {
+  files: FileChange[];
+  hasChanges: boolean;
+  hasStaged: boolean;
+};
+
+export type GitFileDiffRequest = {
+  workspaceId: string;
+  path: string;
+  side: 'staged' | 'unstaged';
+};
+export type GitFileDiffResponse = {
+  path: string;
+  side: 'staged' | 'unstaged';
+  diff: string;
+  isBinary: boolean;
+};
+
+export type GitStagePathsRequest = { workspaceId: string; paths: string[] };
+export type GitUnstagePathsRequest = { workspaceId: string; paths: string[] };
+
 export type SeedPresetRequest = { workspaceId: string };
 export type SeedPresetResponse = { workflowId: string };
 

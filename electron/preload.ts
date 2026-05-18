@@ -48,6 +48,11 @@ import type {
   GitCommitRequest,
   GitCommitResponse,
   GitDiffResponse,
+  GitFileDiffRequest,
+  GitFileDiffResponse,
+  GitStagePathsRequest,
+  GitStatusResponse,
+  GitUnstagePathsRequest,
   ImportDecompositionRequest,
   ImportWorkflowDraftRequest,
   ImportWorkflowDraftResponse,
@@ -159,6 +164,14 @@ const workOS = {
     ipcRenderer.invoke(CHANNELS.workOS.gitDiff, req),
   gitCommit: (req: GitCommitRequest): Promise<GitCommitResponse> =>
     ipcRenderer.invoke(CHANNELS.workOS.gitCommit, req),
+  gitStatus: (req: ListByWorkspaceRequest): Promise<GitStatusResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.gitStatus, req),
+  gitFileDiff: (req: GitFileDiffRequest): Promise<GitFileDiffResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.gitFileDiff, req),
+  gitStagePaths: (req: GitStagePathsRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.workOS.gitStagePaths, req),
+  gitUnstagePaths: (req: GitUnstagePathsRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.workOS.gitUnstagePaths, req),
 
   seedPreset: (req: SeedPresetRequest): Promise<SeedPresetResponse> =>
     ipcRenderer.invoke(CHANNELS.workOS.seedPreset, req),

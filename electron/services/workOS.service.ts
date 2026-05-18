@@ -1,5 +1,5 @@
 import { promises as fs } from 'node:fs';
-import { exec } from 'node:child_process';
+import { exec, execFile } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import type {
@@ -10,8 +10,12 @@ import type {
   CreateWorkflowRequest,
   DecompositionSubmitItem,
   ExecuteTaskItemResponse,
+  FileChange,
+  FileChangeKind,
   GitCommitResponse,
   GitDiffResponse,
+  GitFileDiffResponse,
+  GitStatusResponse,
   Step,
   Task,
   TaskItem,
@@ -27,6 +31,7 @@ import { WorkOSRepository } from '../repositories/workOS.repo';
 import type { TerminalService } from './terminal.service';
 
 const execP = promisify(exec);
+const execFileP = promisify(execFile);
 
 export type CwdResolver = { resolveCwd(workspaceId: string): Promise<string> };
 export type ChangeNotifier = {
@@ -1041,17 +1046,183 @@ export class WorkOSService {
 
   async gitCommit(workspaceId: string, message: string): Promise<GitCommitResponse> {
     const cwd = await this.cwd.resolveCwd(workspaceId);
+    // index 가 비어 있으면 의미 없는 빈 커밋 시도를 막는다 (DiffView 에서 staged 파일만 커밋).
     try {
-      await execP('git add -A', { cwd });
-      // 메시지에 따옴표 이스케이프
-      const safe = message.replace(/"/g, '\\"');
-      await execP(`git commit -m "${safe}"`, { cwd });
-      const { stdout } = await execP('git rev-parse HEAD', { cwd });
+      const { stdout: staged } = await execFileP(
+        'git',
+        ['diff', '--cached', '--name-only'],
+        { cwd, maxBuffer: 4 * 1024 * 1024 },
+      );
+      if (!staged.trim()) {
+        throw new ApiError(
+          'VALIDATION',
+          '스테이지된 파일이 없습니다. 커밋할 파일을 먼저 stage 하세요.',
+        );
+      }
+      await execFileP('git', ['commit', '-m', message], { cwd });
+      const { stdout } = await execFileP('git', ['rev-parse', 'HEAD'], { cwd });
       return { commitSha: stdout.trim() };
     } catch (err) {
+      if (err instanceof ApiError) throw err;
       throw new ApiError('INTERNAL', `git commit 실패: ${(err as Error).message}`);
     }
   }
+
+  async gitStatus(workspaceId: string): Promise<GitStatusResponse> {
+    const cwd = await this.cwd.resolveCwd(workspaceId);
+    try {
+      const { stdout } = await execFileP(
+        'git',
+        [
+          '-c',
+          'core.quotepath=false',
+          'status',
+          '--porcelain=v1',
+          '--untracked-files=all',
+        ],
+        { cwd, maxBuffer: 8 * 1024 * 1024 },
+      );
+      const files = parsePorcelain(stdout);
+      const hasStaged = files.some((f) => f.staged);
+      return { files, hasChanges: files.length > 0, hasStaged };
+    } catch (err) {
+      throw new ApiError('INTERNAL', `git status 실패: ${(err as Error).message}`);
+    }
+  }
+
+  async gitFileDiff(
+    workspaceId: string,
+    filePath: string,
+    side: 'staged' | 'unstaged',
+  ): Promise<GitFileDiffResponse> {
+    const cwd = await this.cwd.resolveCwd(workspaceId);
+    try {
+      // untracked 파일은 git diff 에 잡히지 않으므로 별도 처리.
+      const isUntracked = side === 'unstaged' && (await isUntrackedFile(cwd, filePath));
+      let diff = '';
+      let isBinary = false;
+      if (isUntracked) {
+        // /dev/null 과 비교 → 전체가 added 로 표현됨. exit code 1 정상.
+        try {
+          const { stdout } = await execFileP(
+            'git',
+            ['-c', 'core.quotepath=false', 'diff', '--no-color', '--no-index', '--', '/dev/null', filePath],
+            { cwd, maxBuffer: 16 * 1024 * 1024 },
+          );
+          diff = stdout;
+        } catch (e) {
+          const er = e as NodeJS.ErrnoException & { stdout?: string };
+          // exit code 1 == 차이 있음. stdout 사용.
+          if (typeof er.stdout === 'string') diff = er.stdout;
+          else throw e;
+        }
+      } else {
+        const args = ['-c', 'core.quotepath=false', 'diff', '--no-color'];
+        if (side === 'staged') args.push('--cached');
+        args.push('--', filePath);
+        const { stdout } = await execFileP('git', args, {
+          cwd,
+          maxBuffer: 16 * 1024 * 1024,
+        });
+        diff = stdout;
+      }
+      if (diff.includes('Binary files ') && diff.includes(' differ')) {
+        isBinary = true;
+      }
+      return { path: filePath, side, diff, isBinary };
+    } catch (err) {
+      throw new ApiError('INTERNAL', `git diff 실패: ${(err as Error).message}`);
+    }
+  }
+
+  async gitStagePaths(workspaceId: string, paths: string[]): Promise<void> {
+    if (paths.length === 0) return;
+    const cwd = await this.cwd.resolveCwd(workspaceId);
+    try {
+      await execFileP('git', ['add', '--', ...paths], { cwd });
+    } catch (err) {
+      throw new ApiError('INTERNAL', `git add 실패: ${(err as Error).message}`);
+    }
+  }
+
+  async gitUnstagePaths(workspaceId: string, paths: string[]): Promise<void> {
+    if (paths.length === 0) return;
+    const cwd = await this.cwd.resolveCwd(workspaceId);
+    try {
+      // 빈 트리(첫 커밋 전)에서는 reset HEAD 가 실패하므로 fallback.
+      try {
+        await execFileP('git', ['reset', 'HEAD', '--', ...paths], { cwd });
+      } catch {
+        await execFileP('git', ['rm', '--cached', '--', ...paths], { cwd });
+      }
+    } catch (err) {
+      throw new ApiError('INTERNAL', `git unstage 실패: ${(err as Error).message}`);
+    }
+  }
+}
+
+async function isUntrackedFile(cwd: string, filePath: string): Promise<boolean> {
+  try {
+    const { stdout } = await execFileP(
+      'git',
+      ['ls-files', '--error-unmatch', '--', filePath],
+      { cwd },
+    );
+    void stdout;
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+function parsePorcelain(out: string): FileChange[] {
+  const result: FileChange[] = [];
+  for (const raw of out.split('\n')) {
+    if (raw.length < 3) continue;
+    const x = raw[0];
+    const y = raw[1];
+    let rest = raw.slice(3);
+    let oldPath: string | undefined;
+    let path = rest;
+    if (x === 'R' || x === 'C') {
+      const arrow = rest.indexOf(' -> ');
+      if (arrow >= 0) {
+        oldPath = unquoteIfNeeded(rest.slice(0, arrow));
+        path = rest.slice(arrow + 4);
+      }
+    }
+    path = unquoteIfNeeded(path);
+    const kind = deriveKind(x, y);
+    const staged = x !== ' ' && x !== '?';
+    const unstaged = y !== ' ' || x === '?';
+    result.push({
+      path,
+      oldPath,
+      kind,
+      indexStatus: x,
+      worktreeStatus: y,
+      staged,
+      unstaged,
+    });
+  }
+  return result;
+}
+
+function deriveKind(x: string, y: string): FileChangeKind {
+  if (x === '?' && y === '?') return 'untracked';
+  if (x === 'R' || y === 'R') return 'renamed';
+  if (x === 'A' && y === ' ') return 'added';
+  if (x === 'D' || y === 'D') return 'deleted';
+  if (x === 'M' || y === 'M' || x === 'A') return 'modified';
+  return 'unknown';
+}
+
+function unquoteIfNeeded(p: string): string {
+  if (p.startsWith('"') && p.endsWith('"')) {
+    // 안전망: core.quotepath=false 를 줬으니 보통 따옴표 없음. 발생 시 단순 strip.
+    return p.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+  }
+  return p;
 }
 
 function buildSeedPrompt(

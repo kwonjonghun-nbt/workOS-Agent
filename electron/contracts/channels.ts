@@ -47,6 +47,10 @@ export const CHANNELS = {
 
     catalog: 'workOS:catalog',
     gitDiff: 'workOS:gitDiff',
+    gitStatus: 'workOS:gitStatus',
+    gitFileDiff: 'workOS:gitFileDiff',
+    gitStagePaths: 'workOS:gitStagePaths',
+    gitUnstagePaths: 'workOS:gitUnstagePaths',
     gitCommit: 'workOS:gitCommit',
 
     seedPreset: 'workOS:seedPreset',

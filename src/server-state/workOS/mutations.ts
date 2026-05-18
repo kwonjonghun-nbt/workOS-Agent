@@ -14,6 +14,8 @@ import type {
   ExecuteTaskItemResponse,
   GitCommitRequest,
   GitCommitResponse,
+  GitStagePathsRequest,
+  GitUnstagePathsRequest,
   Step,
   Task,
   TaskItem,
@@ -78,6 +80,14 @@ export const workOSMutations = {
   gitCommit: () =>
     mutationOptions<GitCommitResponse, Error, GitCommitRequest>({
       mutationFn: (r) => workOSApi.gitCommit(r),
+    }),
+  gitStagePaths: () =>
+    mutationOptions<void, Error, GitStagePathsRequest>({
+      mutationFn: (r) => workOSApi.gitStagePaths(r),
+    }),
+  gitUnstagePaths: () =>
+    mutationOptions<void, Error, GitUnstagePathsRequest>({
+      mutationFn: (r) => workOSApi.gitUnstagePaths(r),
     }),
 
   seedPreset: () =>

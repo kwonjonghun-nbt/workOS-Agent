@@ -13,6 +13,10 @@ import {
   executeTaskItemRequestSchema,
   gitCommitRequestSchema,
   gitDiffRequestSchema,
+  gitFileDiffRequestSchema,
+  gitStagePathsRequestSchema,
+  gitStatusRequestSchema,
+  gitUnstagePathsRequestSchema,
   importDecompositionRequestSchema,
   importWorkflowDraftRequestSchema,
   listByWorkspaceRequestSchema,
@@ -139,6 +143,31 @@ export function registerWorkOSHandlers(service: WorkOSService): void {
     wrap(async () => {
       const { workspaceId, message } = gitCommitRequestSchema.parse(raw);
       return service.gitCommit(workspaceId, message);
+    }),
+  );
+
+  ipcMain.handle(CHANNELS.workOS.gitStatus, async (_e, raw) =>
+    wrap(async () => {
+      const { workspaceId } = gitStatusRequestSchema.parse(raw);
+      return service.gitStatus(workspaceId);
+    }),
+  );
+  ipcMain.handle(CHANNELS.workOS.gitFileDiff, async (_e, raw) =>
+    wrap(async () => {
+      const { workspaceId, path, side } = gitFileDiffRequestSchema.parse(raw);
+      return service.gitFileDiff(workspaceId, path, side);
+    }),
+  );
+  ipcMain.handle(CHANNELS.workOS.gitStagePaths, async (_e, raw) =>
+    wrap(async () => {
+      const { workspaceId, paths } = gitStagePathsRequestSchema.parse(raw);
+      await service.gitStagePaths(workspaceId, paths);
+    }),
+  );
+  ipcMain.handle(CHANNELS.workOS.gitUnstagePaths, async (_e, raw) =>
+    wrap(async () => {
+      const { workspaceId, paths } = gitUnstagePathsRequestSchema.parse(raw);
+      await service.gitUnstagePaths(workspaceId, paths);
     }),
   );
 

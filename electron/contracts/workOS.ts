@@ -219,6 +219,63 @@ export const gitDiffResponseSchema = z.object({
 });
 export type GitDiffResponse = z.infer<typeof gitDiffResponseSchema>;
 
+// 파일 단위 상태 + 스테이징 — 신규/삭제/이름변경 포함.
+export const fileChangeKindSchema = z.enum([
+  'added',
+  'modified',
+  'deleted',
+  'renamed',
+  'untracked',
+  'unknown',
+]);
+export type FileChangeKind = z.infer<typeof fileChangeKindSchema>;
+
+export const fileChangeSchema = z.object({
+  path: z.string(),
+  oldPath: z.string().optional(),
+  kind: fileChangeKindSchema,
+  // X (index) / Y (worktree) 문자 그대로 보존 — UI 에서 staged/unstaged 구분.
+  indexStatus: z.string().length(1),
+  worktreeStatus: z.string().length(1),
+  // 아래 두 boolean 은 indexStatus / worktreeStatus 에서 파생된 편의값.
+  staged: z.boolean(),
+  unstaged: z.boolean(),
+});
+export type FileChange = z.infer<typeof fileChangeSchema>;
+
+export const gitStatusRequestSchema = workspaceIdReq;
+export const gitStatusResponseSchema = z.object({
+  files: z.array(fileChangeSchema),
+  hasChanges: z.boolean(),
+  hasStaged: z.boolean(),
+});
+export type GitStatusResponse = z.infer<typeof gitStatusResponseSchema>;
+
+export const gitFileDiffRequestSchema = workspaceIdReq.extend({
+  path: z.string().min(1),
+  // 'staged' 면 index↔HEAD diff, 'unstaged' 면 worktree↔index diff (untracked 포함).
+  side: z.enum(['staged', 'unstaged']),
+});
+export type GitFileDiffRequest = z.infer<typeof gitFileDiffRequestSchema>;
+
+export const gitFileDiffResponseSchema = z.object({
+  path: z.string(),
+  side: z.enum(['staged', 'unstaged']),
+  diff: z.string(),
+  isBinary: z.boolean(),
+});
+export type GitFileDiffResponse = z.infer<typeof gitFileDiffResponseSchema>;
+
+export const gitStagePathsRequestSchema = workspaceIdReq.extend({
+  paths: z.array(z.string().min(1)).min(1),
+});
+export type GitStagePathsRequest = z.infer<typeof gitStagePathsRequestSchema>;
+
+export const gitUnstagePathsRequestSchema = workspaceIdReq.extend({
+  paths: z.array(z.string().min(1)).min(1),
+});
+export type GitUnstagePathsRequest = z.infer<typeof gitUnstagePathsRequestSchema>;
+
 export const gitCommitRequestSchema = workspaceIdReq.extend({
   message: z.string().min(1),
 });

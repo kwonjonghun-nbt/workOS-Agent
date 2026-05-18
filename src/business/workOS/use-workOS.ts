@@ -105,8 +105,45 @@ export function useExecuteTaskItem() {
     onSuccess: (_data, vars) => invalidate(vars.workspaceId),
   });
 }
+function useInvalidateGitOnMutate() {
+  const qc = useQueryClient();
+  return (workspaceId: string) => {
+    qc.invalidateQueries({ queryKey: workOSKeys.gitStatus(workspaceId) });
+    qc.invalidateQueries({ queryKey: workOSKeys.gitDiff(workspaceId) });
+    qc.invalidateQueries({ queryKey: [...workOSKeys.all, 'git-file-diff', workspaceId] });
+  };
+}
+
+export function useGitStatus(workspaceId: string) {
+  return useQuery(workOSQueries.gitStatus(workspaceId));
+}
+export function useGitFileDiff(
+  workspaceId: string,
+  path: string | null,
+  side: 'staged' | 'unstaged',
+) {
+  return useQuery(workOSQueries.gitFileDiff(workspaceId, path, side));
+}
+export function useGitStagePaths() {
+  const invalidate = useInvalidateGitOnMutate();
+  return useMutation({
+    ...workOSMutations.gitStagePaths(),
+    onSuccess: (_d, vars) => invalidate(vars.workspaceId),
+  });
+}
+export function useGitUnstagePaths() {
+  const invalidate = useInvalidateGitOnMutate();
+  return useMutation({
+    ...workOSMutations.gitUnstagePaths(),
+    onSuccess: (_d, vars) => invalidate(vars.workspaceId),
+  });
+}
 export function useGitCommit() {
-  return useMutation(workOSMutations.gitCommit());
+  const invalidate = useInvalidateGitOnMutate();
+  return useMutation({
+    ...workOSMutations.gitCommit(),
+    onSuccess: (_d, vars) => invalidate(vars.workspaceId),
+  });
 }
 export function useSeedPreset() {
   return useMutation(workOSMutations.seedPreset());
