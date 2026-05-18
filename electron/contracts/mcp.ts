@@ -1,0 +1,111 @@
+import { z } from 'zod';
+
+export const mcpServerStatusSchema = z.object({
+  running: z.boolean(),
+  port: z.number().int().nullable(),
+  scriptPath: z.string(),
+});
+export type McpServerStatus = z.infer<typeof mcpServerStatusSchema>;
+
+export const mcpWorkspaceStatusSchema = z.object({
+  workspaceId: z.string(),
+  configPath: z.string(), // .mcp.json
+  sessionPath: z.string(), // .claude/workOS/.mcp-session.json
+  configured: z.boolean(),
+  sessionFresh: z.boolean(),
+});
+export type McpWorkspaceStatus = z.infer<typeof mcpWorkspaceStatusSchema>;
+
+export const setupMcpRequestSchema = z.object({
+  workspaceId: z.string().min(1),
+  force: z.boolean().default(false),
+});
+export type SetupMcpRequest = z.infer<typeof setupMcpRequestSchema>;
+
+export const setupMcpResponseSchema = z.object({
+  status: mcpWorkspaceStatusSchema,
+  actions: z.array(z.string()), // human-readable: ["wrote .mcp.json", "rotated session token", ...]
+});
+export type SetupMcpResponse = z.infer<typeof setupMcpResponseSchema>;
+
+export const mcpStatusRequestSchema = z.object({
+  workspaceId: z.string().min(1),
+});
+export type McpStatusRequest = z.infer<typeof mcpStatusRequestSchema>;
+
+export const mcpStatusResponseSchema = z.object({
+  server: mcpServerStatusSchema,
+  workspace: mcpWorkspaceStatusSchema,
+});
+export type McpStatusResponse = z.infer<typeof mcpStatusResponseSchema>;
+
+// Internal: tool list — surfaced to UI so users can see what is exposed.
+export const mcpToolDescriptorSchema = z.object({
+  name: z.string(),
+  title: z.string(),
+  description: z.string(),
+});
+export type McpToolDescriptor = z.infer<typeof mcpToolDescriptorSchema>;
+
+export const MCP_TOOLS: McpToolDescriptor[] = [
+  {
+    name: 'workos_taskitem_get',
+    title: 'TaskItem 조회',
+    description: '실행 중인 TaskItem 의 메타데이터(이름/설명/agent/prompt 등)를 가져온다.',
+  },
+  {
+    name: 'workos_taskitem_progress',
+    title: '진행 상황 보고',
+    description: '의미있는 단위로 진행 메시지를 한 줄 push 한다. UI 에 실시간 표시.',
+  },
+  {
+    name: 'workos_taskitem_complete',
+    title: '완료 처리',
+    description: 'TaskItem 상태를 completed 로 전환하고 결과 요약을 저장한다.',
+  },
+  {
+    name: 'workos_taskitem_fail',
+    title: '실패 처리',
+    description: 'TaskItem 상태를 failed 로 전환하고 에러 메시지를 저장한다.',
+  },
+  {
+    name: 'workos_task_context_get',
+    title: 'Task 컨텍스트',
+    description: '소속 Task + Workflow + 형제 TaskItem 요약을 가져온다.',
+  },
+  {
+    name: 'workos_decomposition_submit',
+    title: '분해 결과 제출',
+    description: '요구사항 자동 분해 결과(TaskItem 배열)를 직접 제출. 파일 작성 불필요.',
+  },
+  {
+    name: 'workos_workflow_draft_submit',
+    title: '워크플로 드래프트 제출',
+    description: '자동 생성된 워크플로(Step 시퀀스)를 직접 제출.',
+  },
+  {
+    name: 'workos_catalog_list',
+    title: '에이전트/스킬 카탈로그',
+    description: '워크스페이스에 등록된 .claude/agents/* 와 .claude/skills/* 를 조회.',
+  },
+  {
+    name: 'workos_notify',
+    title: 'UI 토스트',
+    description: '워크OS UI 에 토스트 메시지를 띄운다 (info/warn/error).',
+  },
+];
+
+// --------- Push events ---------------------------------------------------
+
+export type TaskItemProgressEvent = {
+  workspaceId: string;
+  taskItemId: string;
+  message: string;
+  at: number;
+};
+
+export type McpToastEvent = {
+  workspaceId: string;
+  level: 'info' | 'warn' | 'error';
+  message: string;
+};
