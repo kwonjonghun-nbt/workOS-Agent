@@ -26,11 +26,11 @@ type Props = { workspaceId: string };
 type ItemStatus = TaskItem['status'];
 
 const KANBAN_COLUMNS: { status: ItemStatus; label: string; tone: string }[] = [
-  { status: 'pending', label: '대기', tone: 'border-slate-700 bg-slate-800/30' },
+  { status: 'pending', label: '대기', tone: 'border-ink-700 bg-ink-850/30' },
   { status: 'running', label: '실행중', tone: 'border-blue-500/40 bg-blue-500/5' },
-  { status: 'completed', label: '완료', tone: 'border-emerald-500/40 bg-emerald-500/5' },
+  { status: 'completed', label: '완료', tone: 'border-claude-500/40 bg-claude-500/5' },
   { status: 'failed', label: '실패', tone: 'border-red-500/40 bg-red-500/5' },
-  { status: 'skipped', label: '건너뜀', tone: 'border-slate-700 bg-slate-900/40' },
+  { status: 'skipped', label: '건너뜀', tone: 'border-ink-700 bg-ink-900/40' },
 ];
 
 export function TasksView({ workspaceId }: Props) {
@@ -84,9 +84,9 @@ function EmptyTaskPane({
   const hasAnyWorkflow = workflows.length > 0;
 
   return (
-    <div className="flex h-full items-center justify-center p-8 text-center text-sm text-slate-500">
+    <div className="flex h-full items-center justify-center p-8 text-center text-sm text-ink-500">
       <div className="max-w-md space-y-3">
-        <div className="text-lg text-slate-300">왼쪽에서 Task를 선택하거나 새로 만드세요</div>
+        <div className="text-lg text-ink-300">왼쪽에서 Task를 선택하거나 새로 만드세요</div>
         <div>
           새 Task 는 <strong>제목 + 분해 프롬프트</strong> 를 한 번에 입력해 만듭니다.
           만든 뒤엔 칸반으로 실행 단위(TaskItem)를 관리합니다.
@@ -95,14 +95,14 @@ function EmptyTaskPane({
           <button
             type="button"
             onClick={onNewTask}
-            className="mt-3 rounded bg-emerald-500/90 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-emerald-400"
+            className="mt-3 rounded bg-claude-500/90 px-4 py-2 text-sm font-medium text-white hover:bg-claude-400"
           >
             ＋ 새 Task 만들기
           </button>
         ) : (
-          <div className="mt-6 rounded border border-emerald-500/30 bg-emerald-500/5 p-4 text-left">
-            <div className="mb-2 text-sm font-semibold text-emerald-300">💡 첫 사용자 가이드</div>
-            <p className="mb-3 text-xs text-slate-400">
+          <div className="mt-6 rounded border border-claude-500/30 bg-claude-500/5 p-4 text-left">
+            <div className="mb-2 text-sm font-semibold text-claude-300">💡 첫 사용자 가이드</div>
+            <p className="mb-3 text-xs text-ink-400">
               아직 워크플로가 없습니다. 한 번에 12-step 프론트엔드 샘플 워크플로를 만들고
               시작하세요.
             </p>
@@ -117,7 +117,7 @@ function EmptyTaskPane({
                   /* mutation cache가 토스트 처리 */
                 }
               }}
-              className="w-full rounded bg-emerald-500/90 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-emerald-400 disabled:opacity-50"
+              className="w-full rounded bg-claude-500/90 px-3 py-2 text-sm font-medium text-white hover:bg-claude-400 disabled:opacity-50"
             >
               {seed.isPending ? '생성 중…' : '✨ 샘플 워크플로 한 번에 만들기'}
             </button>
@@ -144,19 +144,19 @@ function TaskSidebar({
   const del = useDeleteTask();
 
   return (
-    <div className="flex h-full flex-col border-r border-slate-800 bg-slate-900/40">
-      <div className="border-b border-slate-800 p-2">
+    <div className="flex h-full flex-col border-r border-ink-850 bg-ink-900/40">
+      <div className="border-b border-ink-850 p-2">
         <button
           type="button"
           onClick={onNewTask}
           disabled={workflows.length === 0}
-          className="w-full rounded bg-emerald-500/90 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+          className="w-full rounded bg-claude-500/90 px-3 py-2 text-sm font-medium text-white hover:bg-claude-400 disabled:cursor-not-allowed disabled:opacity-40"
           title={workflows.length === 0 ? '워크플로를 먼저 만들어 주세요.' : '새 Task 생성'}
         >
           ＋ 새 Task
         </button>
         {workflows.length === 0 && (
-          <p className="mt-1 text-[10px] text-amber-400">
+          <p className="mt-1 text-[10px] text-amber-300">
             ⚠ 워크플로가 없습니다. ‘워크플로’ 탭에서 먼저 만들어주세요.
           </p>
         )}
@@ -182,7 +182,7 @@ function TaskSidebar({
             />
           ))}
         {tasks.length === 0 && (
-          <li className="px-3 py-4 text-center text-xs text-slate-500">
+          <li className="px-3 py-4 text-center text-xs text-ink-500">
             아직 Task가 없습니다. 위 ‘＋ 새 Task’ 를 눌러보세요.
           </li>
         )}
@@ -207,22 +207,22 @@ function TaskRow({
   return (
     <li>
       <div
-        className={`group flex items-start gap-2 border-b border-slate-800/50 px-3 py-2 text-sm ${
-          active ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/60'
+        className={`group flex items-start gap-2 border-b border-ink-850/50 px-3 py-2 text-sm ${
+          active ? 'bg-ink-850 text-white' : 'text-ink-300 hover:bg-ink-850/60'
         }`}
       >
         <button type="button" onClick={onSelect} className="min-w-0 flex-1 text-left">
           <div className="truncate">{task.title}</div>
-          <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-500">
-            <span className="rounded bg-slate-800 px-1.5 py-0.5">{workflowName}</span>
+          <div className="mt-0.5 flex items-center gap-2 text-[11px] text-ink-500">
+            <span className="rounded bg-ink-850 px-1.5 py-0.5">{workflowName}</span>
             <StatusBadge status={task.status} />
-            <span className="text-slate-600">{task.taskItemIds.length}개 단계</span>
+            <span className="text-ink-600">{task.taskItemIds.length}개 단계</span>
           </div>
         </button>
         <button
           type="button"
           onClick={onDelete}
-          className="opacity-0 group-hover:opacity-100 rounded px-1 text-slate-400 hover:bg-slate-700 hover:text-white"
+          className="opacity-0 group-hover:opacity-100 rounded px-1 text-ink-400 hover:bg-ink-700 hover:text-white"
           aria-label="Delete task"
         >
           ✕
@@ -234,13 +234,13 @@ function TaskRow({
 
 function StatusBadge({ status }: { status: Task['status'] | TaskItem['status'] }) {
   const map: Record<string, string> = {
-    pending: 'bg-slate-700 text-slate-300',
+    pending: 'bg-ink-700 text-ink-300',
     in_progress: 'bg-amber-500/20 text-amber-300',
     running: 'bg-blue-500/20 text-blue-300',
-    completed: 'bg-emerald-500/20 text-emerald-300',
+    completed: 'bg-claude-500/20 text-claude-300',
     failed: 'bg-red-500/20 text-red-300',
-    archived: 'bg-slate-700 text-slate-400',
-    skipped: 'bg-slate-700 text-slate-400',
+    archived: 'bg-ink-700 text-ink-400',
+    skipped: 'bg-ink-700 text-ink-400',
   };
   const label: Record<string, string> = {
     pending: '대기',
@@ -368,20 +368,20 @@ function NewTaskModal({
       aria-modal="true"
     >
       <div
-        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-900 shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-ink-700 bg-ink-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex items-center justify-between border-b border-slate-800 px-5 py-3">
+        <header className="flex items-center justify-between border-b border-ink-850 px-5 py-3">
           <div>
             <h2 className="text-base font-semibold text-white">＋ 새 Task</h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-ink-400">
               제목과 분해 프롬프트(요구사항)를 한 번에 입력하면 Task 생성 + 분해까지 한 단계로 진행됩니다.
             </p>
           </div>
           <button
             type="button"
             onClick={() => !submitting && onClose()}
-            className="rounded px-2 py-0.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+            className="rounded px-2 py-0.5 text-ink-400 hover:bg-ink-850 hover:text-white"
             aria-label="닫기"
           >
             ✕
@@ -390,7 +390,7 @@ function NewTaskModal({
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-400">
               제목
             </label>
             <input
@@ -398,18 +398,18 @@ function NewTaskModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="예) 결제 페이지 구현"
-              className="w-full rounded border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+              className="w-full rounded border border-ink-700 bg-ink-950 px-3 py-2 text-sm outline-none focus:border-claude-500"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-400">
               워크플로
             </label>
             <select
               value={workflowId}
               onChange={(e) => setWorkflowId(e.target.value)}
-              className="w-full rounded border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+              className="w-full rounded border border-ink-700 bg-ink-950 px-3 py-2 text-sm outline-none focus:border-claude-500"
             >
               {workflows.map((w) => (
                 <option key={w.id} value={w.id}>
@@ -420,7 +420,7 @@ function NewTaskModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-400">
               요구사항 / 분해 프롬프트
             </label>
             <textarea
@@ -430,15 +430,15 @@ function NewTaskModal({
                 '여기에 요구사항·Swagger·Figma 링크·시나리오 등을 자유롭게 적으세요.\n분해 시 각 TaskItem 의 컨텍스트로 사용됩니다.'
               }
               rows={10}
-              className="w-full resize-y rounded border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100 outline-none focus:border-emerald-500"
+              className="w-full resize-y rounded border border-ink-700 bg-ink-950 px-3 py-2 font-mono text-sm text-white outline-none focus:border-claude-500"
             />
-            <p className="mt-1 text-[11px] text-slate-500">
+            <p className="mt-1 text-[11px] text-ink-500">
               비워두면 Task 만 만들고 실행 단위는 나중에 분해할 수 있습니다.
             </p>
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-400">
               생성 직후 동작
             </label>
             <div className="grid grid-cols-3 gap-2 text-xs">
@@ -467,12 +467,12 @@ function NewTaskModal({
           </div>
         </div>
 
-        <footer className="flex items-center justify-end gap-2 border-t border-slate-800 bg-slate-900/60 px-5 py-3">
+        <footer className="flex items-center justify-end gap-2 border-t border-ink-850 bg-ink-900/60 px-5 py-3">
           <button
             type="button"
             onClick={() => !submitting && onClose()}
             disabled={submitting}
-            className="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+            className="rounded border border-ink-700 px-3 py-1.5 text-sm text-ink-300 hover:bg-ink-850 disabled:opacity-40"
           >
             취소
           </button>
@@ -480,7 +480,7 @@ function NewTaskModal({
             type="button"
             disabled={!canSubmit}
             onClick={() => void handleSubmit()}
-            className="rounded bg-emerald-500/90 px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded bg-claude-500/90 px-3 py-1.5 text-sm font-medium text-white hover:bg-claude-400 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {submitting ? '생성 중…' : '생성하기'}
           </button>
@@ -510,12 +510,12 @@ function ModeChoice({
       onClick={() => onSelect(value)}
       className={`rounded border px-2 py-2 text-left ${
         active
-          ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-200'
-          : 'border-slate-700 bg-slate-900/40 text-slate-300 hover:border-slate-500'
+          ? 'border-claude-500/60 bg-claude-500/10 text-claude-300'
+          : 'border-ink-700 bg-ink-900/40 text-ink-300 hover:border-ink-500'
       }`}
     >
       <div className="text-sm font-medium">{label}</div>
-      <div className="mt-0.5 text-[11px] text-slate-500">{desc}</div>
+      <div className="mt-0.5 text-[11px] text-ink-500">{desc}</div>
     </button>
   );
 }
@@ -536,7 +536,7 @@ function TaskDetail({ workspaceId, taskId }: { workspaceId: string; taskId: stri
 
   const [reqOpen, setReqOpen] = useState(false);
 
-  if (!task) return <div className="p-4 text-sm text-slate-500">Task를 찾을 수 없습니다.</div>;
+  if (!task) return <div className="p-4 text-sm text-ink-500">Task를 찾을 수 없습니다.</div>;
 
   const workflow = workflows.find((w) => w.id === task.workflowId);
   const taskItems = task.taskItemIds
@@ -545,7 +545,7 @@ function TaskDetail({ workspaceId, taskId }: { workspaceId: string; taskId: stri
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="border-b border-slate-800 p-3">
+      <div className="border-b border-ink-850 p-3">
         <input
           value={task.title}
           onChange={(e) =>
@@ -557,8 +557,8 @@ function TaskDetail({ workspaceId, taskId }: { workspaceId: string; taskId: stri
           }
           className="w-full bg-transparent text-lg font-semibold outline-none"
         />
-        <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
-          <span className="rounded bg-slate-800 px-1.5 py-0.5">
+        <div className="mt-1 flex items-center gap-2 text-xs text-ink-500">
+          <span className="rounded bg-ink-850 px-1.5 py-0.5">
             {workflow?.name ?? '워크플로 없음'}
           </span>
           <StatusBadge status={task.status} />
@@ -566,7 +566,7 @@ function TaskDetail({ workspaceId, taskId }: { workspaceId: string; taskId: stri
           <button
             type="button"
             onClick={() => setReqOpen((x) => !x)}
-            className="ml-auto rounded px-2 py-0.5 text-[11px] text-slate-300 hover:bg-slate-800"
+            className="ml-auto rounded px-2 py-0.5 text-[11px] text-ink-300 hover:bg-ink-850"
           >
             {reqOpen ? '요구사항 접기 ▴' : '요구사항 펼치기 ▾'}
           </button>
@@ -582,7 +582,7 @@ function TaskDetail({ workspaceId, taskId }: { workspaceId: string; taskId: stri
               })
             }
             placeholder="요구사항·Swagger·Figma·시나리오 등을 적어주세요. 분해 시 각 TaskItem 에 컨텍스트로 주입됩니다."
-            className="mt-2 w-full resize-y rounded border border-slate-800 bg-slate-950 px-2 py-1 text-sm font-mono text-slate-300 outline-none focus:border-emerald-500"
+            className="mt-2 w-full resize-y rounded border border-ink-850 bg-ink-950 px-2 py-1 text-sm font-mono text-ink-300 outline-none focus:border-claude-500"
             rows={6}
           />
         )}
@@ -609,7 +609,7 @@ function TaskDetail({ workspaceId, taskId }: { workspaceId: string; taskId: stri
                 /* */
               }
             }}
-            className="rounded border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded border border-ink-700 px-3 py-1.5 text-xs text-ink-200 hover:bg-ink-850 disabled:cursor-not-allowed disabled:opacity-40"
             title="워크플로의 각 Step마다 TaskItem 1개를 결정적으로 생성합니다."
           >
             {decompose.isPending ? '분해 중…' : '⚡ 빠른 분해'}
@@ -639,7 +639,7 @@ function TaskDetail({ workspaceId, taskId }: { workspaceId: string; taskId: stri
                 /* */
               }
             }}
-            className="rounded border border-sky-500/60 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-200 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded border border-sky-500/60 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {aiDecompose.isPending ? '요청 중…' : '🧠 AI 분해'}
           </button>
@@ -657,12 +657,12 @@ function TaskDetail({ workspaceId, taskId }: { workspaceId: string; taskId: stri
                 /* */
               }
             }}
-            className="rounded border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800 disabled:opacity-40"
+            className="rounded border border-ink-700 px-3 py-1.5 text-xs text-ink-200 hover:bg-ink-850 disabled:opacity-40"
           >
             {importDecomp.isPending ? '불러오는 중…' : '📥 분해 결과 가져오기'}
           </button>
           {workflow && workflow.stepIds.length === 0 && (
-            <span className="text-xs text-amber-400">
+            <span className="text-xs text-amber-300">
               ⚠ 선택된 워크플로에 Step이 없습니다.
             </span>
           )}
@@ -671,7 +671,7 @@ function TaskDetail({ workspaceId, taskId }: { workspaceId: string; taskId: stri
       <div className="flex-1 overflow-hidden p-3">
         {taskItems.length === 0 ? (
           <div className="flex h-full items-center justify-center">
-            <div className="max-w-md rounded border border-dashed border-slate-700 p-6 text-center text-sm text-slate-500">
+            <div className="max-w-md rounded border border-dashed border-ink-700 p-6 text-center text-sm text-ink-500">
               아직 분해되지 않았습니다. 위 ‘분해’ 버튼으로 실행 단위를 만들어 주세요.
             </div>
           </div>
@@ -719,11 +719,11 @@ function KanbanBoard({
             key={col.status}
             className={`flex h-full min-h-0 w-72 shrink-0 flex-col rounded border ${col.tone}`}
           >
-            <div className="flex items-center justify-between border-b border-slate-800/60 px-3 py-2 text-xs">
-              <span className="font-semibold uppercase tracking-wide text-slate-300">
+            <div className="flex items-center justify-between border-b border-ink-850/60 px-3 py-2 text-xs">
+              <span className="font-semibold uppercase tracking-wide text-ink-300">
                 {col.label}
               </span>
-              <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
+              <span className="rounded bg-ink-850 px-1.5 py-0.5 text-[10px] text-ink-400">
                 {colItems.length}
               </span>
             </div>
@@ -737,7 +737,7 @@ function KanbanBoard({
                 />
               ))}
               {colItems.length === 0 && (
-                <li className="rounded border border-dashed border-slate-800 px-2 py-3 text-center text-[11px] text-slate-600">
+                <li className="rounded border border-dashed border-ink-850 px-2 py-3 text-center text-[11px] text-ink-600">
                   비어 있음
                 </li>
               )}
@@ -777,7 +777,7 @@ function KanbanCard({
   };
 
   return (
-    <li className="rounded border border-slate-800 bg-slate-900/70">
+    <li className="rounded border border-ink-850 bg-ink-900/70">
       <div className="flex flex-col gap-1 p-2">
         <input
           value={item.name}
@@ -790,18 +790,18 @@ function KanbanCard({
           }
           className="w-full bg-transparent text-sm font-medium outline-none"
         />
-        <div className="flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
-          <span className="rounded bg-slate-800 px-1.5 py-0.5">{item.agentName}</span>
-          {step && <span className="text-slate-600">{step.name}</span>}
+        <div className="flex flex-wrap items-center gap-1 text-[10px] text-ink-500">
+          <span className="rounded bg-ink-850 px-1.5 py-0.5">{item.agentName}</span>
+          {step && <span className="text-ink-600">{step.name}</span>}
           {item.sessionId && (
-            <span className="text-blue-400">▶ {item.sessionId.slice(0, 6)}…</span>
+            <span className="text-blue-300">▶ {item.sessionId.slice(0, 6)}…</span>
           )}
         </div>
         <div className="mt-1 flex items-center justify-between gap-1">
           <button
             type="button"
             onClick={() => setExpanded((x) => !x)}
-            className="rounded px-2 py-0.5 text-[11px] text-slate-300 hover:bg-slate-800"
+            className="rounded px-2 py-0.5 text-[11px] text-ink-300 hover:bg-ink-850"
           >
             {expanded ? '접기' : '편집'}
           </button>
@@ -810,7 +810,7 @@ function KanbanCard({
               type="button"
               disabled={execute.isPending}
               onClick={() => void handleRun()}
-              className="rounded bg-emerald-500/90 px-2 py-0.5 text-[11px] font-medium text-slate-900 hover:bg-emerald-400 disabled:opacity-50"
+              className="rounded bg-claude-500/90 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-claude-400 disabled:opacity-50"
               title="새 터미널 세션에서 Claude CLI 로 실행"
             >
               ▶ 실행
@@ -822,7 +822,7 @@ function KanbanCard({
                   void del.mutateAsync({ workspaceId, id: item.id });
                 }
               }}
-              className="rounded px-1 py-0.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+              className="rounded px-1 py-0.5 text-ink-400 hover:bg-ink-850 hover:text-white"
               aria-label="Delete task item"
             >
               ✕
@@ -831,8 +831,8 @@ function KanbanCard({
         </div>
       </div>
       {expanded && (
-        <div className="border-t border-slate-800 px-2 py-2">
-          <label className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        <div className="border-t border-ink-850 px-2 py-2">
+          <label className="block text-[10px] font-semibold uppercase tracking-wide text-ink-500">
             프롬프트
           </label>
           <textarea
@@ -845,7 +845,7 @@ function KanbanCard({
               })
             }
             rows={8}
-            className="mt-1 w-full resize-y rounded border border-slate-800 bg-slate-950 px-2 py-1 font-mono text-[11px] text-slate-300 outline-none focus:border-emerald-500"
+            className="mt-1 w-full resize-y rounded border border-ink-850 bg-ink-950 px-2 py-1 font-mono text-[11px] text-ink-300 outline-none focus:border-claude-500"
           />
           <div className="mt-2 grid grid-cols-2 gap-1.5">
             <select
@@ -857,7 +857,7 @@ function KanbanCard({
                   patch: { status: e.target.value as ItemStatus },
                 })
               }
-              className="rounded border border-slate-800 bg-slate-950 px-2 py-1 text-[11px] outline-none"
+              className="rounded border border-ink-850 bg-ink-950 px-2 py-1 text-[11px] outline-none"
             >
               {(['pending', 'running', 'completed', 'failed', 'skipped'] as const).map((s) => (
                 <option key={s} value={s}>
@@ -874,7 +874,7 @@ function KanbanCard({
                   patch: { agentName: e.target.value },
                 })
               }
-              className="rounded border border-slate-800 bg-slate-950 px-2 py-1 text-[11px] outline-none"
+              className="rounded border border-ink-850 bg-ink-950 px-2 py-1 text-[11px] outline-none"
               placeholder="agentName"
             />
           </div>

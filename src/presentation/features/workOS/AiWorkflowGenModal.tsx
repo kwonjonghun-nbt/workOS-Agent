@@ -113,13 +113,13 @@ export function AiWorkflowGenModal({ workspaceId, onClose, onCreated }: Props) {
       aria-modal="true"
     >
       <div
-        className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-900 shadow-2xl"
+        className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-ink-700 bg-ink-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex items-center justify-between border-b border-slate-800 px-5 py-3">
+        <header className="flex items-center justify-between border-b border-ink-850 px-5 py-3">
           <div>
             <h2 className="text-base font-semibold text-white">🧠 AI로 워크플로 만들기</h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-ink-400">
               요구사항을 적으면 Claude CLI 가 Step 시퀀스를 자동으로 설계합니다. 모달을 닫아도
               진행 상태는 유지됩니다.
             </p>
@@ -127,7 +127,7 @@ export function AiWorkflowGenModal({ workspaceId, onClose, onCreated }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded px-2 py-0.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+            className="rounded px-2 py-0.5 text-ink-400 hover:bg-ink-850 hover:text-white"
             aria-label="닫기"
             title="닫기 (Esc)"
           >
@@ -138,15 +138,15 @@ export function AiWorkflowGenModal({ workspaceId, onClose, onCreated }: Props) {
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
           <ol className="mb-4 flex items-center gap-2 text-xs">
             <PhaseDot label="① 요구사항 작성" active={phase === 'compose'} done={phase !== 'compose'} />
-            <span className="h-px flex-1 bg-slate-700" />
+            <span className="h-px flex-1 bg-ink-700" />
             <PhaseDot label="② Claude 설계 중" active={phase === 'requested'} done={false} />
-            <span className="h-px flex-1 bg-slate-700" />
+            <span className="h-px flex-1 bg-ink-700" />
             <PhaseDot label="③ 드래프트 가져오기" active={false} done={false} />
           </ol>
 
           {phase === 'compose' && (
             <>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-400">
                 만들고 싶은 워크플로의 요구사항
               </label>
               <textarea
@@ -160,14 +160,14 @@ export function AiWorkflowGenModal({ workspaceId, onClose, onCreated }: Props) {
                   '- DB 마이그레이션 → 도메인 모델 → 서비스 레이어 → 핸들러 → 통합 테스트 → API 문서 → PR 순서가 필요하다.',
                   '- 각 단계는 한 명의 전담 에이전트가 책임지고, 회사 컨벤션을 강제했으면 좋겠다.',
                 ].join('\n')}
-                className="w-full min-h-[260px] resize-y rounded border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-500"
+                className="w-full min-h-[260px] resize-y rounded border border-ink-700 bg-ink-950 px-3 py-2 text-sm text-white outline-none focus:border-claude-500"
                 onKeyDown={(e) => {
                   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void handleSubmit();
                 }}
               />
-              <p className="mt-2 text-[11px] text-slate-500">
+              <p className="mt-2 text-[11px] text-ink-500">
                 팁: 분야 / 입력 자료 / 단계 수 / 산출물 / 강제하고 싶은 컨벤션 등을 적을수록 결과 품질이 올라갑니다.{' '}
-                <span className="mx-1 rounded bg-slate-800 px-1 py-0.5 text-slate-300">⌘+Enter</span>
+                <span className="mx-1 rounded bg-ink-850 px-1 py-0.5 text-ink-300">⌘+Enter</span>
                 로 즉시 요청.
               </p>
             </>
@@ -175,11 +175,11 @@ export function AiWorkflowGenModal({ workspaceId, onClose, onCreated }: Props) {
 
           {phase === 'requested' && draft && (
             <div className="space-y-3">
-              <div className="rounded border border-sky-500/30 bg-sky-500/5 p-4 text-sm text-slate-200">
-                <div className="mb-1 font-semibold text-sky-200">
+              <div className="rounded border border-sky-500/30 bg-sky-500/5 p-4 text-sm text-ink-200">
+                <div className="mb-1 font-semibold text-sky-300">
                   Claude 가 워크플로를 설계 중입니다.
                 </div>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-ink-400">
                   Claude 가 “파일을 읽어도 됩니까?” 처럼 확인을 요청하면, <strong>오른쪽 터미널에서 직접 응답</strong>해 주세요.
                   모달을 닫아도 진행은 끊기지 않으며, 워크플로 탭 상단의 “이어서 진행” 배너로 언제든
                   돌아올 수 있습니다.
@@ -187,20 +187,20 @@ export function AiWorkflowGenModal({ workspaceId, onClose, onCreated }: Props) {
                 <button
                   type="button"
                   onClick={focusTerminal}
-                  className="mt-3 rounded border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-200 hover:bg-sky-500/20"
+                  className="mt-3 rounded border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20"
                 >
                   → 터미널에 포커스 (모달 닫기)
                 </button>
               </div>
-              <div className="rounded border border-slate-800 bg-slate-950 p-3 text-[11px] text-slate-500">
-                <div className="mb-1 font-semibold text-slate-400">출력 파일</div>
+              <div className="rounded border border-ink-850 bg-ink-950 p-3 text-[11px] text-ink-500">
+                <div className="mb-1 font-semibold text-ink-400">출력 파일</div>
                 <code className="break-all">{draft.outputJsonPath}</code>
               </div>
               <details>
-                <summary className="cursor-pointer text-xs text-slate-400 hover:text-slate-200">
+                <summary className="cursor-pointer text-xs text-ink-400 hover:text-ink-200">
                   내가 보낸 요구사항 보기
                 </summary>
-                <pre className="mt-2 max-h-40 overflow-y-auto rounded bg-slate-950 p-2 text-[11px] text-slate-400 whitespace-pre-wrap">
+                <pre className="mt-2 max-h-40 overflow-y-auto rounded bg-ink-950 p-2 text-[11px] text-ink-400 whitespace-pre-wrap">
                   {draft.requirement}
                 </pre>
               </details>
@@ -208,14 +208,14 @@ export function AiWorkflowGenModal({ workspaceId, onClose, onCreated }: Props) {
           )}
         </div>
 
-        <footer className="flex items-center justify-between gap-2 border-t border-slate-800 bg-slate-900/60 px-5 py-3">
-          <div className="text-[11px] text-slate-500">
+        <footer className="flex items-center justify-between gap-2 border-t border-ink-850 bg-ink-900/60 px-5 py-3">
+          <div className="text-[11px] text-ink-500">
             {phase === 'compose' && (
-              <>모든 작업은 워크스페이스의 <code className="text-slate-400">.claude/workOS/</code> 안에 저장됩니다.</>
+              <>모든 작업은 워크스페이스의 <code className="text-ink-400">.claude/workOS/</code> 안에 저장됩니다.</>
             )}
             {phase === 'requested' && draft && (
               <>
-                draftId: <code className="text-slate-400">{draft.draftId.slice(0, 10)}…</code>
+                draftId: <code className="text-ink-400">{draft.draftId.slice(0, 10)}…</code>
               </>
             )}
           </div>
@@ -232,7 +232,7 @@ export function AiWorkflowGenModal({ workspaceId, onClose, onCreated }: Props) {
             <button
               type="button"
               onClick={onClose}
-              className="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
+              className="rounded border border-ink-700 px-3 py-1.5 text-sm text-ink-300 hover:bg-ink-850"
               title={phase === 'requested' ? '모달만 닫음 — 진행 상태는 유지됩니다.' : '취소'}
             >
               {phase === 'requested' ? '나중에 가져오기' : '취소'}
@@ -243,7 +243,7 @@ export function AiWorkflowGenModal({ workspaceId, onClose, onCreated }: Props) {
                 type="button"
                 disabled={!requirement.trim() || request.isPending}
                 onClick={() => void handleSubmit()}
-                className="rounded bg-emerald-500/90 px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-emerald-400 disabled:opacity-40"
+                className="rounded bg-claude-500/90 px-3 py-1.5 text-sm font-medium text-white hover:bg-claude-400 disabled:opacity-40"
               >
                 {request.isPending ? '요청 중…' : '🧠 Claude 에게 설계 요청'}
               </button>
@@ -254,7 +254,7 @@ export function AiWorkflowGenModal({ workspaceId, onClose, onCreated }: Props) {
                 type="button"
                 disabled={importDraft.isPending}
                 onClick={() => void handleImport()}
-                className="rounded bg-emerald-500/90 px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-emerald-400 disabled:opacity-40"
+                className="rounded bg-claude-500/90 px-3 py-1.5 text-sm font-medium text-white hover:bg-claude-400 disabled:opacity-40"
               >
                 {importDraft.isPending ? '불러오는 중…' : '📥 드래프트 가져오기'}
               </button>
@@ -275,7 +275,7 @@ function PhaseDot({
   active: boolean;
   done: boolean;
 }) {
-  const cls = done ? 'text-emerald-300' : active ? 'text-sky-300' : 'text-slate-500';
+  const cls = done ? 'text-claude-300' : active ? 'text-sky-300' : 'text-ink-500';
   const dot = done ? '●' : active ? '◉' : '○';
   return (
     <span className={`flex items-center gap-1 whitespace-nowrap ${cls}`}>
@@ -305,11 +305,11 @@ export function AiWorkflowResumeBanner({
 
   return (
     <div className="border-b border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs">
-      <div className="mb-1 flex items-center gap-2 font-semibold text-sky-200">
+      <div className="mb-1 flex items-center gap-2 font-semibold text-sky-300">
         <span>🧠 진행 중인 AI 워크플로 생성</span>
         <span className="rounded bg-sky-500/20 px-1.5 py-0.5 text-[10px]">{sinceMin}분 전 시작</span>
       </div>
-      <p className="mb-2 text-slate-300">
+      <p className="mb-2 text-ink-300">
         Claude 가 결과를 작성하면 “가져오기” 를 누르세요. 터미널에서 확인이 필요하면
         “터미널 보기” 로 이동.
       </p>
@@ -330,7 +330,7 @@ export function AiWorkflowResumeBanner({
               /* toasted */
             }
           }}
-          className="rounded bg-emerald-500/90 px-2 py-1 text-[11px] font-medium text-slate-900 hover:bg-emerald-400 disabled:opacity-40"
+          className="rounded bg-claude-500/90 px-2 py-1 text-[11px] font-medium text-white hover:bg-claude-400 disabled:opacity-40"
         >
           {importDraft.isPending ? '불러오는 중…' : '📥 가져오기'}
         </button>
@@ -340,7 +340,7 @@ export function AiWorkflowResumeBanner({
             setTerminalPanelOpen(workspaceId, true);
             setActiveTerminal(workspaceId, draft.sessionId);
           }}
-          className="rounded border border-sky-500/40 px-2 py-1 text-[11px] text-sky-200 hover:bg-sky-500/20"
+          className="rounded border border-sky-500/40 px-2 py-1 text-[11px] text-sky-300 hover:bg-sky-500/20"
           title="이 draft 작업을 수행 중인 터미널 세션으로 이동"
         >
           → 터미널 보기
@@ -348,7 +348,7 @@ export function AiWorkflowResumeBanner({
         <button
           type="button"
           onClick={onResume}
-          className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800"
+          className="rounded border border-ink-700 px-2 py-1 text-[11px] text-ink-300 hover:bg-ink-850"
         >
           모달 열기
         </button>
@@ -368,7 +368,7 @@ export function AiWorkflowResumeBanner({
           취소
         </button>
       </div>
-      <div className="mt-1.5 truncate text-[10px] text-slate-500" title={draft.outputJsonPath}>
+      <div className="mt-1.5 truncate text-[10px] text-ink-500" title={draft.outputJsonPath}>
         out: {draft.outputJsonPath}
       </div>
     </div>

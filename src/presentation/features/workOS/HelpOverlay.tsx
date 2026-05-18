@@ -37,7 +37,7 @@ export function HelpOverlay({ onClose }: Props) {
       aria-modal="true"
     >
       <div
-        className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 p-6 shadow-2xl"
+        className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-ink-700 bg-ink-900 p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
@@ -45,7 +45,7 @@ export function HelpOverlay({ onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded px-2 py-0.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+            className="rounded px-2 py-0.5 text-ink-400 hover:bg-ink-850 hover:text-white"
             aria-label="Close"
           >
             ✕
@@ -53,13 +53,13 @@ export function HelpOverlay({ onClose }: Props) {
         </div>
 
         <section className="mb-5">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-300">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-claude-300">
             E2E 작업 흐름
           </h3>
-          <ol className="space-y-1.5 text-sm text-slate-200">
+          <ol className="space-y-1.5 text-sm text-ink-200">
             {FLOW.map(([n, d]) => (
               <li key={n} className="flex gap-2">
-                <span className="w-6 shrink-0 text-slate-500">{n}</span>
+                <span className="w-6 shrink-0 text-ink-500">{n}</span>
                 <span>{d}</span>
               </li>
             ))}
@@ -67,23 +67,23 @@ export function HelpOverlay({ onClose }: Props) {
         </section>
 
         <section className="mb-5">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-300">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-claude-300">
             단축키
           </h3>
           <ul className="grid grid-cols-2 gap-1.5 text-sm">
             {SHORTCUTS.map(([k, d]) => (
               <li key={k} className="flex items-center gap-2">
-                <kbd className="min-w-[40px] rounded border border-slate-700 bg-slate-800 px-1.5 py-0.5 text-center text-xs text-slate-200">
+                <kbd className="min-w-[40px] rounded border border-ink-700 bg-ink-850 px-1.5 py-0.5 text-center text-xs text-ink-200">
                   {k}
                 </kbd>
-                <span className="text-slate-300">{d}</span>
+                <span className="text-ink-300">{d}</span>
               </li>
             ))}
           </ul>
         </section>
 
-        <section className="rounded border border-slate-800 bg-slate-950/60 p-3 text-xs text-slate-400">
-          <strong className="text-slate-200">왜 새 터미널 세션인가?</strong>{' '}
+        <section className="rounded border border-ink-850 bg-ink-950/60 p-3 text-xs text-ink-400">
+          <strong className="text-ink-200">왜 새 터미널 세션인가?</strong>{' '}
           매 TaskItem 실행마다 새 Claude CLI 세션을 띄워 컨텍스트를 격리합니다. 이전 단계의
           잔여 컨텍스트가 다음 단계 판단을 흐리지 않게 하기 위함입니다.
         </section>

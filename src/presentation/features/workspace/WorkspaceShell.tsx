@@ -37,7 +37,7 @@ export function WorkspaceShell() {
   };
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-slate-900 text-white">
+    <div className="flex h-screen w-screen flex-col bg-ink-900 text-white">
       <WorkspaceTabBar
         workspaces={workspaces}
         openIds={openIds}
@@ -95,15 +95,25 @@ function WorkspacePane({ workspaceId }: { workspaceId: string }) {
 
 function EmptyState({ onOpen }: { onOpen: () => void }) {
   return (
-    <div className="flex h-full w-full items-center justify-center">
-      <div className="space-y-4 text-center">
-        <h2 className="text-2xl font-semibold">워크스페이스를 여세요</h2>
-        <p className="text-slate-400">디렉토리를 선택해 작업을 시작합니다.</p>
+    <div className="flex h-full w-full items-center justify-center bg-ink-900">
+      <div className="max-w-md space-y-6 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-claude-500/15 text-3xl text-claude-300 shadow-soft">
+          ✱
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold tracking-tight text-ink-50">
+            워크스페이스를 여세요
+          </h2>
+          <p className="text-sm leading-relaxed text-ink-400">
+            프로젝트 폴더를 열어 Claude 에이전트와 함께 작업을 시작하세요.
+          </p>
+        </div>
         <button
           type="button"
           onClick={onOpen}
-          className="rounded-md bg-emerald-500 px-4 py-2 font-medium text-slate-900 hover:bg-emerald-400"
+          className="inline-flex items-center gap-2 rounded-full bg-claude-500 px-5 py-2.5 text-sm font-medium text-white shadow-soft transition-colors hover:bg-claude-400"
         >
+          <span className="text-base leading-none">＋</span>
           폴더 열기
         </button>
       </div>

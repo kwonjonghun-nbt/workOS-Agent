@@ -27,9 +27,9 @@ export function WorkOSShell({ workspaceId, terminalOpen, onToggleTerminal }: Pro
   useHotkey('shift+/', () => setHelpOpen((x) => !x));
 
   return (
-    <div className="flex h-full w-full flex-col bg-slate-950 text-slate-100">
-      <header className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-3 py-1.5">
-        <nav className="flex items-center gap-1">
+    <div className="flex h-full w-full flex-col bg-ink-900 text-white">
+      <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-ink-800 bg-ink-900/80 px-3 backdrop-blur">
+        <nav className="flex items-center gap-0.5 rounded-full bg-ink-850/60 p-0.5">
           <ViewTab
             label="태스크"
             shortcut="⌘1"
@@ -54,7 +54,7 @@ export function WorkOSShell({ workspaceId, terminalOpen, onToggleTerminal }: Pro
           <button
             type="button"
             onClick={() => setHelpOpen(true)}
-            className="rounded px-2 py-0.5 text-xs text-slate-400 hover:bg-slate-700 hover:text-slate-100"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-ink-400 transition-colors hover:bg-ink-850 hover:text-white"
             title="단축키 (?) "
             aria-label="단축키 도움말"
           >
@@ -63,14 +63,15 @@ export function WorkOSShell({ workspaceId, terminalOpen, onToggleTerminal }: Pro
           <button
             type="button"
             onClick={onToggleTerminal}
-            className="rounded px-2 py-0.5 text-xs text-slate-300 hover:bg-slate-700"
+            className="inline-flex items-center gap-1.5 rounded-full border border-ink-800 px-3 py-1 text-xs text-ink-300 transition-colors hover:border-ink-700 hover:bg-ink-850 hover:text-white"
             title={`${terminalOpen ? '터미널 패널 닫기' : '터미널 패널 열기'} (⌘J)`}
           >
-            {terminalOpen ? '터미널 닫기 →' : '← 터미널 열기'}
+            <span className="text-sm leading-none">▣</span>
+            {terminalOpen ? '터미널 숨기기' : '터미널 열기'}
           </button>
         </div>
       </header>
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden bg-ink-900">
         {view === 'tasks' && <TasksView workspaceId={workspaceId} />}
         {view === 'workflows' && <WorkflowsView workspaceId={workspaceId} />}
         {view === 'diff' && <DiffView workspaceId={workspaceId} />}
@@ -96,14 +97,18 @@ function ViewTab({
       type="button"
       onClick={onClick}
       title={`${label} (${shortcut})`}
-      className={`flex items-center gap-1.5 rounded px-3 py-1 text-sm transition-colors ${
+      className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-colors ${
         active
-          ? 'bg-emerald-500/15 font-medium text-emerald-300'
-          : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+          ? 'bg-ink-900 text-claude-300 shadow-soft'
+          : 'text-ink-400 hover:text-white'
       }`}
     >
-      <span>{label}</span>
-      <kbd className="hidden rounded bg-slate-800 px-1 text-[10px] text-slate-500 sm:inline">
+      <span className="font-medium">{label}</span>
+      <kbd
+        className={`hidden rounded px-1 text-[10px] sm:inline ${
+          active ? 'bg-claude-500/15 text-claude-300/80' : 'bg-ink-800/60 text-ink-500'
+        }`}
+      >
         {shortcut}
       </kbd>
     </button>

@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import './index.css';
+import './presentation/shared/theme-store';
 import { toast } from './presentation/shared/toast-store';
 import { ToastContainer } from './presentation/shared/ToastContainer';
 import { bindMcpEvents } from './server-state/mcp';

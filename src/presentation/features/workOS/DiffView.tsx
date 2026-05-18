@@ -53,15 +53,15 @@ export function DiffView({ workspaceId }: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-2 border-b border-slate-800 p-3">
+      <div className="flex items-center gap-2 border-b border-ink-850 p-3">
         <button
           type="button"
           onClick={() => void status.refetch()}
-          className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800"
+          className="rounded border border-ink-700 px-2 py-1 text-xs text-ink-300 hover:bg-ink-850"
         >
           🔄 새로고침
         </button>
-        <div className="text-sm text-slate-400">
+        <div className="text-sm text-ink-400">
           {status.isFetching
             ? '읽는 중…'
             : status.data
@@ -70,7 +70,7 @@ export function DiffView({ workspaceId }: Props) {
         </div>
       </div>
       <div className="grid min-h-0 flex-1 grid-cols-[320px_1fr]">
-        <aside className="overflow-y-auto border-r border-slate-800 bg-slate-900/40">
+        <aside className="overflow-y-auto border-r border-ink-850 bg-ink-900/40">
           <FileSection
             title="Staged (커밋 대상)"
             files={staged}
@@ -116,10 +116,10 @@ export function DiffView({ workspaceId }: Props) {
         </aside>
         <DiffPane workspaceId={workspaceId} target={selected} />
       </div>
-      <div className="border-t border-slate-800 bg-slate-900/40 p-3">
+      <div className="border-t border-ink-850 bg-ink-900/40 p-3">
         <div className="mb-1 flex items-center justify-between text-xs">
-          <span className="font-semibold uppercase tracking-wide text-slate-400">커밋 메시지</span>
-          <span className={`${hasStaged ? 'text-emerald-300' : 'text-amber-400'}`}>
+          <span className="font-semibold uppercase tracking-wide text-ink-400">커밋 메시지</span>
+          <span className={`${hasStaged ? 'text-claude-300' : 'text-amber-300'}`}>
             {hasStaged ? `staged ${staged.length}개 커밋 가능` : '⚠ 스테이지된 파일 없음'}
           </span>
         </div>
@@ -128,7 +128,7 @@ export function DiffView({ workspaceId }: Props) {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="예) feat: 결제 페이지 추가"
-            className="flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm outline-none focus:border-emerald-500"
+            className="flex-1 rounded border border-ink-700 bg-ink-950 px-2 py-1.5 text-sm outline-none focus:border-claude-500"
             onKeyDown={(e) => {
               if (e.key === 'Enter') void handleCommit();
             }}
@@ -137,7 +137,7 @@ export function DiffView({ workspaceId }: Props) {
             type="button"
             onClick={() => void handleCommit()}
             disabled={!message.trim() || !hasStaged || commit.isPending}
-            className="rounded bg-emerald-500/90 px-4 py-1.5 text-sm font-medium text-slate-900 hover:bg-emerald-400 disabled:opacity-40"
+            className="rounded bg-claude-500/90 px-4 py-1.5 text-sm font-medium text-white hover:bg-claude-400 disabled:opacity-40"
             title="staged 파일만 커밋 (Enter)"
           >
             {commit.isPending ? '커밋 중…' : '커밋'}
@@ -190,17 +190,17 @@ function FileSection({
   onAllAction?: () => void;
 }) {
   return (
-    <section className="border-b border-slate-800">
-      <div className="flex items-center justify-between px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+    <section className="border-b border-ink-850">
+      <div className="flex items-center justify-between px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink-500">
         <span>
-          {title} <span className="ml-1 text-slate-600">({files.length})</span>
+          {title} <span className="ml-1 text-ink-600">({files.length})</span>
         </span>
         {allActionLabel && onAllAction && (
           <button
             type="button"
             disabled={disabled}
             onClick={onAllAction}
-            className="rounded px-1.5 py-0.5 text-[10px] text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+            className="rounded px-1.5 py-0.5 text-[10px] text-ink-300 hover:bg-ink-850 disabled:opacity-40"
           >
             {allActionLabel}
           </button>
@@ -213,7 +213,7 @@ function FileSection({
             <li key={`${side}-${f.path}`}>
               <div
                 className={`group flex items-center gap-1 rounded px-1.5 py-1 text-xs ${
-                  active ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/60'
+                  active ? 'bg-ink-850 text-white' : 'text-ink-300 hover:bg-ink-850/60'
                 }`}
               >
                 <button
@@ -230,7 +230,7 @@ function FileSection({
                   type="button"
                   disabled={disabled}
                   onClick={() => onToggle(f)}
-                  className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-slate-300 opacity-0 hover:bg-slate-700 group-hover:opacity-100 disabled:opacity-30"
+                  className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-ink-300 opacity-0 hover:bg-ink-700 group-hover:opacity-100 disabled:opacity-30"
                   title={actionLabel}
                 >
                   {actionLabel}
@@ -240,7 +240,7 @@ function FileSection({
           );
         })}
         {files.length === 0 && (
-          <li className="px-2 py-2 text-[11px] text-slate-500">{empty}</li>
+          <li className="px-2 py-2 text-[11px] text-ink-500">{empty}</li>
         )}
       </ul>
     </section>
@@ -249,12 +249,12 @@ function FileSection({
 
 function KindBadge({ kind }: { kind: FileChange['kind'] }) {
   const map: Record<FileChange['kind'], { label: string; cls: string }> = {
-    added: { label: 'A', cls: 'bg-emerald-500/20 text-emerald-300' },
+    added: { label: 'A', cls: 'bg-claude-500/20 text-claude-300' },
     modified: { label: 'M', cls: 'bg-amber-500/20 text-amber-300' },
     deleted: { label: 'D', cls: 'bg-red-500/20 text-red-300' },
     renamed: { label: 'R', cls: 'bg-sky-500/20 text-sky-300' },
     untracked: { label: 'U', cls: 'bg-violet-500/20 text-violet-300' },
-    unknown: { label: '?', cls: 'bg-slate-700 text-slate-300' },
+    unknown: { label: '?', cls: 'bg-ink-700 text-ink-300' },
   };
   const v = map[kind];
   return (
@@ -278,7 +278,7 @@ function DiffPane({
 
   if (!target) {
     return (
-      <div className="flex h-full items-center justify-center bg-slate-950 p-6 text-sm text-slate-500">
+      <div className="flex h-full items-center justify-center bg-ink-950 p-6 text-sm text-ink-500">
         왼쪽에서 파일을 선택하면 해당 변경의 diff 가 표시됩니다.
       </div>
     );
@@ -286,25 +286,25 @@ function DiffPane({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-2 border-b border-slate-800 bg-slate-900/40 px-3 py-1.5 text-xs">
+      <div className="flex items-center gap-2 border-b border-ink-850 bg-ink-900/40 px-3 py-1.5 text-xs">
         <span
           className={`rounded px-1.5 py-0.5 ${
             target.side === 'staged'
-              ? 'bg-emerald-500/15 text-emerald-300'
+              ? 'bg-claude-500/15 text-claude-300'
               : 'bg-amber-500/15 text-amber-300'
           }`}
         >
           {target.side === 'staged' ? 'staged diff' : 'unstaged diff'}
         </span>
-        <span className="truncate font-mono text-slate-300" title={target.path}>
+        <span className="truncate font-mono text-ink-300" title={target.path}>
           {target.path}
         </span>
       </div>
-      <pre className="m-0 flex-1 overflow-auto whitespace-pre bg-slate-950 p-3 font-mono text-xs leading-relaxed text-slate-200">
+      <pre className="m-0 flex-1 overflow-auto whitespace-pre bg-ink-950 p-3 font-mono text-xs leading-relaxed text-ink-200">
         {diff.isFetching && !diff.data ? (
-          <span className="text-slate-500">로딩 중…</span>
+          <span className="text-ink-500">로딩 중…</span>
         ) : diff.data?.isBinary ? (
-          <span className="text-slate-500">바이너리 파일 — diff 표시 불가</span>
+          <span className="text-ink-500">바이너리 파일 — diff 표시 불가</span>
         ) : (
           colorizeDiff(diff.data?.diff ?? '')
         )}
@@ -314,11 +314,11 @@ function DiffPane({
 }
 
 function colorizeDiff(diff: string): JSX.Element[] {
-  if (!diff) return [<span key="empty" className="text-slate-500">— 변경 없음 —</span>];
+  if (!diff) return [<span key="empty" className="text-ink-500">— 변경 없음 —</span>];
   return diff.split('\n').map((line, i) => {
-    let cls = 'text-slate-300';
-    if (line.startsWith('+') && !line.startsWith('+++')) cls = 'text-emerald-400';
-    else if (line.startsWith('-') && !line.startsWith('---')) cls = 'text-red-400';
+    let cls = 'text-ink-300';
+    if (line.startsWith('+') && !line.startsWith('+++')) cls = 'text-claude-400';
+    else if (line.startsWith('-') && !line.startsWith('---')) cls = 'text-red-300';
     else if (line.startsWith('@@')) cls = 'text-sky-400';
     else if (line.startsWith('diff ') || line.startsWith('index ')) cls = 'text-amber-300';
     return (
