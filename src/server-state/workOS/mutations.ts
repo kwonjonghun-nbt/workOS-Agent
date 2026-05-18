@@ -7,6 +7,8 @@ import type {
   CreateWorkflowRequest,
   DecomposeTaskRequest,
   DeleteStepRequest,
+  MergeDuplicateStepsRequest,
+  MergeDuplicateStepsResponse,
   DeleteTaskItemRequest,
   DeleteTaskRequest,
   DeleteWorkflowRequest,
@@ -35,6 +37,10 @@ export const workOSMutations = {
     mutationOptions<Step, Error, UpdateStepRequest>({ mutationFn: (r) => workOSApi.updateStep(r) }),
   deleteStep: () =>
     mutationOptions<void, Error, DeleteStepRequest>({ mutationFn: (r) => workOSApi.deleteStep(r) }),
+  mergeDuplicateSteps: () =>
+    mutationOptions<MergeDuplicateStepsResponse, Error, MergeDuplicateStepsRequest>({
+      mutationFn: (r) => workOSApi.mergeDuplicateSteps(r),
+    }),
 
   createWorkflow: () =>
     mutationOptions<Workflow, Error, CreateWorkflowRequest>({

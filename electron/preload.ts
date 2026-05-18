@@ -41,6 +41,10 @@ import type {
   CreateWorkflowRequest,
   DecomposeTaskRequest,
   DeleteStepRequest,
+  FindDuplicateStepsRequest,
+  FindDuplicateStepsResponse,
+  MergeDuplicateStepsRequest,
+  MergeDuplicateStepsResponse,
   DeleteTaskItemRequest,
   DeleteTaskRequest,
   DeleteWorkflowRequest,
@@ -127,6 +131,10 @@ const workOS = {
     ipcRenderer.invoke(CHANNELS.workOS.updateStep, req),
   deleteStep: (req: DeleteStepRequest): Promise<void> =>
     ipcRenderer.invoke(CHANNELS.workOS.deleteStep, req),
+  findDuplicateSteps: (req: FindDuplicateStepsRequest): Promise<FindDuplicateStepsResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.findDuplicateSteps, req),
+  mergeDuplicateSteps: (req: MergeDuplicateStepsRequest): Promise<MergeDuplicateStepsResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.mergeDuplicateSteps, req),
 
   listWorkflows: (req: ListByWorkspaceRequest): Promise<Workflow[]> =>
     ipcRenderer.invoke(CHANNELS.workOS.listWorkflows, req),

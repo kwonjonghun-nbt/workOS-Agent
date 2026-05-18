@@ -71,6 +71,23 @@ export type UpdateStepRequest = {
 };
 export type DeleteStepRequest = { workspaceId: string; id: string };
 
+export type FindDuplicateStepsRequest = { workspaceId: string };
+export type DuplicateStepGroup = {
+  key: string;
+  survivor: Step;
+  duplicates: Step[];
+  affectedWorkflowIds: string[];
+};
+export type FindDuplicateStepsResponse = { groups: DuplicateStepGroup[] };
+export type MergeDuplicateStepsRequest = {
+  workspaceId: string;
+  groups: Array<{ survivorId: string; duplicateIds: string[] }>;
+};
+export type MergeDuplicateStepsResponse = {
+  deletedStepIds: string[];
+  updatedWorkflowIds: string[];
+};
+
 export type CreateWorkflowRequest = {
   workspaceId: string;
   name: string;

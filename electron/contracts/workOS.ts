@@ -104,6 +104,43 @@ export type UpdateStepRequest = z.infer<typeof updateStepRequestSchema>;
 export const deleteStepRequestSchema = workspaceIdReq.extend({ id: idSchema });
 export type DeleteStepRequest = z.infer<typeof deleteStepRequestSchema>;
 
+// Step 중복 정리: 같은 name + agent 를 가진 Step 들을 그룹화해 미리 보여주고,
+// 사용자가 승인한 그룹에 대해 survivor 1개만 남기고 나머지를 삭제한다.
+// 삭제 전 모든 Workflow.stepIds 에서 duplicate id 를 survivor id 로 치환.
+export const findDuplicateStepsRequestSchema = workspaceIdReq;
+export type FindDuplicateStepsRequest = z.infer<typeof findDuplicateStepsRequestSchema>;
+
+export const duplicateStepGroupSchema = z.object({
+  key: z.string(),
+  survivor: stepSchema,
+  duplicates: z.array(stepSchema),
+  affectedWorkflowIds: z.array(idSchema),
+});
+export type DuplicateStepGroup = z.infer<typeof duplicateStepGroupSchema>;
+
+export const findDuplicateStepsResponseSchema = z.object({
+  groups: z.array(duplicateStepGroupSchema),
+});
+export type FindDuplicateStepsResponse = z.infer<typeof findDuplicateStepsResponseSchema>;
+
+export const mergeDuplicateStepsRequestSchema = workspaceIdReq.extend({
+  groups: z
+    .array(
+      z.object({
+        survivorId: idSchema,
+        duplicateIds: z.array(idSchema).min(1),
+      }),
+    )
+    .min(1),
+});
+export type MergeDuplicateStepsRequest = z.infer<typeof mergeDuplicateStepsRequestSchema>;
+
+export const mergeDuplicateStepsResponseSchema = z.object({
+  deletedStepIds: z.array(idSchema),
+  updatedWorkflowIds: z.array(idSchema),
+});
+export type MergeDuplicateStepsResponse = z.infer<typeof mergeDuplicateStepsResponseSchema>;
+
 // Workflow
 export const createWorkflowRequestSchema = workspaceIdReq.extend({
   name: z.string().min(1),

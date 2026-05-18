@@ -115,6 +115,104 @@ export class WorkOSService {
     this.notify.notify(workspaceId, ['step', 'workflow']);
   }
 
+  /**
+   * 같은 (소문자/trim 한 name) + (소문자/trim 한 첫 agentName) 을 가진 Step 들을 묶는다.
+   * 그룹 내 createdAt 이 가장 빠른 항목이 survivor 후보(가장 안정적).
+   */
+  async findDuplicateSteps(workspaceId: string): Promise<{
+    groups: Array<{
+      key: string;
+      survivor: Step;
+      duplicates: Step[];
+      affectedWorkflowIds: string[];
+    }>;
+  }> {
+    const r = await this.repo(workspaceId);
+    const steps = await r.listSteps();
+    const workflows = await r.listWorkflows();
+
+    const buckets = new Map<string, Step[]>();
+    for (const s of steps) {
+      const agent = (s.agentNames[0] ?? '').trim().toLowerCase();
+      const name = s.name.trim().toLowerCase();
+      if (!name) continue;
+      const key = `${name}|${agent}`;
+      const arr = buckets.get(key);
+      if (arr) arr.push(s);
+      else buckets.set(key, [s]);
+    }
+
+    const groups: Array<{
+      key: string;
+      survivor: Step;
+      duplicates: Step[];
+      affectedWorkflowIds: string[];
+    }> = [];
+    for (const [key, items] of buckets) {
+      if (items.length < 2) continue;
+      items.sort((a, b) => a.createdAt - b.createdAt);
+      const survivor = items[0];
+      const duplicates = items.slice(1);
+      const dupSet = new Set(duplicates.map((d) => d.id));
+      const affected = workflows
+        .filter((wf) => wf.stepIds.some((id) => dupSet.has(id)))
+        .map((wf) => wf.id);
+      groups.push({ key, survivor, duplicates, affectedWorkflowIds: affected });
+    }
+    return { groups };
+  }
+
+  async mergeDuplicateSteps(
+    workspaceId: string,
+    groups: Array<{ survivorId: string; duplicateIds: string[] }>,
+  ): Promise<{ deletedStepIds: string[]; updatedWorkflowIds: string[] }> {
+    const r = await this.repo(workspaceId);
+    const steps = await r.listSteps();
+    const stepById = new Map(steps.map((s) => [s.id, s] as const));
+
+    const replaceMap = new Map<string, string>(); // duplicateId → survivorId
+    for (const g of groups) {
+      if (!stepById.has(g.survivorId)) {
+        throw new ApiError('NOT_FOUND', `survivor step not found: ${g.survivorId}`);
+      }
+      for (const did of g.duplicateIds) {
+        if (did === g.survivorId) continue;
+        if (!stepById.has(did)) {
+          throw new ApiError('NOT_FOUND', `duplicate step not found: ${did}`);
+        }
+        if (replaceMap.has(did)) {
+          throw new ApiError('VALIDATION', `step appears in multiple groups: ${did}`);
+        }
+        replaceMap.set(did, g.survivorId);
+      }
+    }
+    if (replaceMap.size === 0) return { deletedStepIds: [], updatedWorkflowIds: [] };
+
+    // workflow.stepIds 치환 — 순서 유지, 연속 중복은 dedupe.
+    const workflows = await r.listWorkflows();
+    const updatedWorkflowIds: string[] = [];
+    for (const wf of workflows) {
+      if (!wf.stepIds.some((id) => replaceMap.has(id))) continue;
+      const replaced = wf.stepIds.map((id) => replaceMap.get(id) ?? id);
+      const collapsed: string[] = [];
+      for (const id of replaced) {
+        if (collapsed[collapsed.length - 1] !== id) collapsed.push(id);
+      }
+      await r.writeWorkflow({ ...wf, stepIds: collapsed, updatedAt: Date.now() });
+      updatedWorkflowIds.push(wf.id);
+    }
+
+    // duplicate step 삭제
+    const deletedStepIds: string[] = [];
+    for (const did of replaceMap.keys()) {
+      await r.deleteStep(did);
+      deletedStepIds.push(did);
+    }
+
+    this.notify.notify(workspaceId, ['step', 'workflow']);
+    return { deletedStepIds, updatedWorkflowIds };
+  }
+
   // -------- Workflows --------
   async listWorkflows(workspaceId: string): Promise<Workflow[]> {
     return (await this.repo(workspaceId)).listWorkflows();
@@ -543,11 +641,19 @@ export class WorkOSService {
 
   async mcpSubmitWorkflowDraft(
     workspaceId: string,
-    _draftId: string,
+    draftId: string,
     name: string,
     description: string,
     steps: Array<{ name: string; description?: string; agentName: string }>,
   ): Promise<{ workflowId: string }> {
+    // 이미 같은 draftId 로 submit 되어 있으면 그대로 재사용 — 중복 생성 방지.
+    const prior = await this.readDraftSidecar(workspaceId, draftId);
+    if (prior) {
+      const r0 = await this.repo(workspaceId);
+      const existing = await r0.readWorkflow(prior);
+      if (existing) return { workflowId: existing.id };
+    }
+
     const r = await this.repo(workspaceId);
     const now = Date.now();
     const stepIds: string[] = [];
@@ -575,8 +681,44 @@ export class WorkOSService {
       updatedAt: now,
     };
     await r.writeWorkflow(wf);
+    await this.writeDraftSidecar(workspaceId, draftId, wf.id);
     this.notify.notify(workspaceId, ['step', 'workflow']);
     return { workflowId: wf.id };
+  }
+
+  /** draft → workflow 매핑 사이드카 경로. */
+  private draftSidecarPath(root: string, draftId: string): string {
+    return path.join(root, '.claude', 'workOS', 'workflow-drafts', `${draftId}.submitted.json`);
+  }
+
+  private async readDraftSidecar(
+    workspaceId: string,
+    draftId: string,
+  ): Promise<string | null> {
+    try {
+      const root = await this.cwd.resolveCwd(workspaceId);
+      const raw = await fs.readFile(this.draftSidecarPath(root, draftId), 'utf-8');
+      const parsed = JSON.parse(raw) as { workflowId?: unknown };
+      return typeof parsed.workflowId === 'string' ? parsed.workflowId : null;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      return null;
+    }
+  }
+
+  private async writeDraftSidecar(
+    workspaceId: string,
+    draftId: string,
+    workflowId: string,
+  ): Promise<void> {
+    try {
+      const root = await this.cwd.resolveCwd(workspaceId);
+      const p = this.draftSidecarPath(root, draftId);
+      await fs.mkdir(path.dirname(p), { recursive: true });
+      await fs.writeFile(p, JSON.stringify({ workflowId, at: Date.now() }, null, 2), 'utf-8');
+    } catch {
+      // best-effort — 사이드카 없으면 가져오기 버튼이 중복 생성할 수 있지만 fatal X
+    }
   }
 
   /** When every TaskItem in a Task is terminal, roll the Task up to completed. */
@@ -971,6 +1113,15 @@ export class WorkOSService {
     draftId: string,
   ): Promise<{ workflowId: string }> {
     const r = await this.repo(workspaceId);
+
+    // MCP 자동 제출이 이미 워크플로를 만들었을 수 있다 — 사이드카가 있으면 그대로 재사용.
+    const priorId = await this.readDraftSidecar(workspaceId, draftId);
+    if (priorId) {
+      const existing = await r.readWorkflow(priorId);
+      if (existing) return { workflowId: existing.id };
+      // 워크플로가 사용자에 의해 삭제됐다면 사이드카만 남아 있을 수 있음 — 아래로 떨어져 재생성.
+    }
+
     const root = await this.cwd.resolveCwd(workspaceId);
     const outPath = path.join(root, '.claude', 'workOS', 'workflow-drafts', `${draftId}.json`);
 
@@ -1035,6 +1186,7 @@ export class WorkOSService {
       updatedAt: now,
     };
     await r.writeWorkflow(wf);
+    await this.writeDraftSidecar(workspaceId, draftId, wf.id);
     this.notify.notify(workspaceId, ['step', 'workflow']);
 
     // 드래프트 파일은 archive 폴더로 옮겨 보관 (사용자가 git에 남기고 싶을 수 있음)

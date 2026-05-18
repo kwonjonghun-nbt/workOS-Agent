@@ -68,6 +68,9 @@ export function useUpdateStep() {
 export function useDeleteStep() {
   return useMutation(workOSMutations.deleteStep());
 }
+export function useMergeDuplicateSteps() {
+  return useMutation(workOSMutations.mergeDuplicateSteps());
+}
 export function useCreateWorkflow() {
   return useMutation(workOSMutations.createWorkflow());
 }

@@ -27,6 +27,10 @@ import type {
   CreateWorkflowRequest,
   DecomposeTaskRequest,
   DeleteStepRequest,
+  FindDuplicateStepsRequest,
+  FindDuplicateStepsResponse,
+  MergeDuplicateStepsRequest,
+  MergeDuplicateStepsResponse,
   DeleteTaskItemRequest,
   DeleteTaskRequest,
   DeleteWorkflowRequest,
@@ -96,6 +100,8 @@ export type WorkOSApi = {
   createStep: (req: CreateStepRequest) => Promise<Step>;
   updateStep: (req: UpdateStepRequest) => Promise<Step>;
   deleteStep: (req: DeleteStepRequest) => Promise<void>;
+  findDuplicateSteps: (req: FindDuplicateStepsRequest) => Promise<FindDuplicateStepsResponse>;
+  mergeDuplicateSteps: (req: MergeDuplicateStepsRequest) => Promise<MergeDuplicateStepsResponse>;
 
   listWorkflows: (req: ListByWorkspaceRequest) => Promise<Workflow[]>;
   createWorkflow: (req: CreateWorkflowRequest) => Promise<Workflow>;

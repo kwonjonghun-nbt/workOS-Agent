@@ -7,6 +7,8 @@ import {
   createWorkflowRequestSchema,
   decomposeTaskRequestSchema,
   deleteStepRequestSchema,
+  findDuplicateStepsRequestSchema,
+  mergeDuplicateStepsRequestSchema,
   deleteTaskItemRequestSchema,
   deleteTaskRequestSchema,
   deleteWorkflowRequestSchema,
@@ -54,6 +56,18 @@ export function registerWorkOSHandlers(service: WorkOSService): void {
     wrap(async () => {
       const { workspaceId, id } = deleteStepRequestSchema.parse(raw);
       await service.deleteStep(workspaceId, id);
+    }),
+  );
+  ipcMain.handle(CHANNELS.workOS.findDuplicateSteps, async (_e, raw) =>
+    wrap(async () => {
+      const { workspaceId } = findDuplicateStepsRequestSchema.parse(raw);
+      return service.findDuplicateSteps(workspaceId);
+    }),
+  );
+  ipcMain.handle(CHANNELS.workOS.mergeDuplicateSteps, async (_e, raw) =>
+    wrap(async () => {
+      const { workspaceId, groups } = mergeDuplicateStepsRequestSchema.parse(raw);
+      return service.mergeDuplicateSteps(workspaceId, groups);
     }),
   );
 

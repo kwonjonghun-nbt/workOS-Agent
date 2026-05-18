@@ -27,6 +27,8 @@ export const CHANNELS = {
     createStep: 'workOS:createStep',
     updateStep: 'workOS:updateStep',
     deleteStep: 'workOS:deleteStep',
+    findDuplicateSteps: 'workOS:findDuplicateSteps',
+    mergeDuplicateSteps: 'workOS:mergeDuplicateSteps',
 
     listWorkflows: 'workOS:listWorkflows',
     createWorkflow: 'workOS:createWorkflow',
