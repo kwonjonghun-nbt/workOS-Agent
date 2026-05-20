@@ -8,6 +8,7 @@ import { TerminalPanel } from '../terminal/TerminalPanel';
 import { Split } from '../../shared/Split';
 import { WorkspaceTabBar } from './WorkspaceTabBar';
 import { WorkspaceContent } from './WorkspaceContent';
+import { StatusBar } from '../../shared/StatusBar';
 
 export function WorkspaceShell() {
   const listQuery = useWorkspaceList();
@@ -65,6 +66,7 @@ export function WorkspaceShell() {
           })
         )}
       </div>
+      <StatusBar />
     </div>
   );
 }

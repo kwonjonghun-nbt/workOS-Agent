@@ -27,6 +27,7 @@ import { registerWorkspaceHandlers } from './workspace.handler';
 import { registerWorkOSHandlers } from './workOS.handler';
 import { registerMcpHandlers } from './mcp.handler';
 import { registerPreferencesHandlers } from './preferences.handler';
+import { registerUpdaterHandlers } from './updater.handler';
 
 export type Container = {
   workspaceService: WorkspaceService;
@@ -112,6 +113,7 @@ export function registerIpcHandlers(): Container {
   registerWorkOSHandlers(workOSService);
   registerMcpHandlers(mcpService);
   registerPreferencesHandlers(preferencesService);
+  registerUpdaterHandlers();
 
   void bootstrapMcp(plane, mcpService, workOSService);
 

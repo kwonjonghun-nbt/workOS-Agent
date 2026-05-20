@@ -30,6 +30,7 @@ import type {
   SetupMcpResponse,
 } from './contracts/mcp';
 import type { Preferences, SetThemeRequest } from './contracts/preferences';
+import type { UpdaterStatus, UpdaterStatusEvent } from './contracts/updater';
 import type {
   TaskItemProgressEvent,
 } from './contracts/workOS';
@@ -226,12 +227,24 @@ const preferences = {
     ipcRenderer.invoke(CHANNELS.preferences.setTheme, req),
 };
 
+const updater = {
+  getStatus: (): Promise<UpdaterStatus> => ipcRenderer.invoke(CHANNELS.updater.getStatus),
+  check: (): Promise<UpdaterStatus> => ipcRenderer.invoke(CHANNELS.updater.check),
+  quitAndInstall: (): Promise<void> => ipcRenderer.invoke(CHANNELS.updater.quitAndInstall),
+  onStatus: (listener: (event: UpdaterStatusEvent) => void): (() => void) => {
+    const wrapped = (_e: IpcRendererEvent, payload: UpdaterStatusEvent) => listener(payload);
+    ipcRenderer.on(CHANNELS.updaterEvents.status, wrapped);
+    return () => ipcRenderer.off(CHANNELS.updaterEvents.status, wrapped);
+  },
+};
+
 contextBridge.exposeInMainWorld('electronAPI', {
   terminal,
   workspace,
   workOS,
   mcp,
   preferences,
+  updater,
 });
 
 export type ElectronAPI = {
@@ -240,4 +253,5 @@ export type ElectronAPI = {
   workOS: typeof workOS;
   mcp: typeof mcp;
   preferences: typeof preferences;
+  updater: typeof updater;
 };

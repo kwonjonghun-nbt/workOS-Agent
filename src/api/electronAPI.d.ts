@@ -73,6 +73,7 @@ import type {
   SetupMcpResponse,
   TaskItemProgressEvent,
 } from './mcp/types';
+import type { UpdaterStatus, UpdaterStatusEvent } from './updater/types';
 
 export type TerminalApi = {
   create: (req: CreateTerminalRequest) => Promise<CreateTerminalResponse>;
@@ -154,6 +155,13 @@ export type PreferencesApi = {
   setTheme: (req: { theme: ThemeMode }) => Promise<void>;
 };
 
+export type UpdaterApi = {
+  getStatus: () => Promise<UpdaterStatus>;
+  check: () => Promise<UpdaterStatus>;
+  quitAndInstall: () => Promise<void>;
+  onStatus: (listener: (event: UpdaterStatusEvent) => void) => () => void;
+};
+
 declare global {
   interface Window {
     electronAPI: {
@@ -162,6 +170,7 @@ declare global {
       workOS: WorkOSApi;
       mcp: McpApi;
       preferences: PreferencesApi;
+      updater: UpdaterApi;
     };
   }
 }

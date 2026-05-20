@@ -77,4 +77,12 @@ export const CHANNELS = {
     getSync: 'preferences:getSync',
     setTheme: 'preferences:setTheme',
   },
+  updater: {
+    getStatus: 'updater:getStatus',
+    check: 'updater:check',
+    quitAndInstall: 'updater:quitAndInstall',
+  },
+  updaterEvents: {
+    status: 'updater:status',
+  },
 } as const;
