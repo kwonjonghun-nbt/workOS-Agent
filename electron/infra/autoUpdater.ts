@@ -73,6 +73,16 @@ export function initAutoUpdater() {
   autoUpdater.on('error', (err) => {
     const message = err instanceof Error ? err.message : String(err);
     log.warn('[autoUpdater] error:', message);
+    // GitHub returns 404/406 when no published release exists yet — semantically
+    // that's "no newer version available", not a check failure.
+    if (
+      /Unable to find latest version on GitHub/i.test(message) ||
+      /please ensure a production release exists/i.test(message) ||
+      /Cannot parse releases feed/i.test(message)
+    ) {
+      update({ state: 'not-available', error: undefined });
+      return;
+    }
     update({ state: 'error', error: message });
   });
 
