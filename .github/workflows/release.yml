@@ -23,6 +23,14 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Setup Python 3.11 (node-gyp needs distutils, removed in 3.12)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install setuptools (provides distutils shim)
+        run: python -m pip install --upgrade setuptools
+
       - name: Decode signing certificate (.p12)
         env:
           MAC_CERTS_BASE64: ${{ secrets.MAC_CERTS_BASE64 }}
