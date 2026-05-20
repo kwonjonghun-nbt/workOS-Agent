@@ -155,7 +155,8 @@ async function bootstrapMcp(
 
 /**
  * Install the standalone MCP server script to a stable path under userData.
- * Source candidate paths cover dev (raw `electron/mcp/`) and packaged builds.
+ * The script is pre-bundled (esbuild) into `dist-electron/mcp/workos-mcp-server.mjs`
+ * with all SDK code inlined, so we just need to copy it out — no import rewriting.
  */
 async function installMcpServerScript(): Promise<string> {
   const target = path.join(app.getPath('userData'), 'mcp', 'workos-mcp-server.mjs');
@@ -163,22 +164,18 @@ async function installMcpServerScript(): Promise<string> {
   const cwd = process.cwd();
   const candidates = Array.from(
     new Set([
-      path.join(appPath, 'electron', 'mcp', 'workos-mcp-server.mjs'),
-      path.join(appPath, 'dist-electron', 'mcp', 'workos-mcp-server.mjs'),
       path.join(moduleDir, 'mcp', 'workos-mcp-server.mjs'),
-      path.join(moduleDir, '..', 'electron', 'mcp', 'workos-mcp-server.mjs'),
-      path.join(cwd, 'electron', 'mcp', 'workos-mcp-server.mjs'),
+      path.join(appPath, 'dist-electron', 'mcp', 'workos-mcp-server.mjs'),
+      path.join(cwd, 'dist-electron', 'mcp', 'workos-mcp-server.mjs'),
     ]),
   );
   await fs.mkdir(path.dirname(target), { recursive: true });
   let src: string | null = null;
-  let resolvedRoot: string | null = null;
   const tried: string[] = [];
   for (const c of candidates) {
     tried.push(c);
     try {
       src = await fs.readFile(c, 'utf-8');
-      resolvedRoot = await findUp(path.dirname(c), 'node_modules');
       break;
     } catch {
       // try next
@@ -189,42 +186,13 @@ async function installMcpServerScript(): Promise<string> {
       'workOS-Agent: bundled MCP server script not found in any of:\n  ' + tried.join('\n  '),
     );
   }
-  if (!resolvedRoot) {
-    throw new Error(
-      'workOS-Agent: could not locate node_modules from MCP source candidate path',
-    );
-  }
-  // Rewrite SDK import paths to absolute node_modules so the script runs
-  // regardless of cwd / packaging — Claude CLI spawns `node <abs path>`.
-  const sdkBase = path.join(resolvedRoot, '@modelcontextprotocol', 'sdk', 'dist', 'esm');
-  const rewritten = src.replace(
-    /from '@modelcontextprotocol\/sdk\/([^']+)'/g,
-    (_m, sub) => `from '${path.join(sdkBase, sub).replace(/\\/g, '/')}'`,
-  );
-  await fs.writeFile(target, rewritten, 'utf-8');
+  await fs.writeFile(target, src, 'utf-8');
   try {
     await fs.chmod(target, 0o755);
   } catch {
     // ignore on platforms without chmod semantics
   }
   return target;
-}
-
-/** Walk up from `start` looking for a directory named `name`. */
-async function findUp(start: string, name: string): Promise<string | null> {
-  let dir = path.resolve(start);
-  while (true) {
-    const candidate = path.join(dir, name);
-    try {
-      const st = await fs.stat(candidate);
-      if (st.isDirectory()) return candidate;
-    } catch {
-      // continue
-    }
-    const parent = path.dirname(dir);
-    if (parent === dir) return null;
-    dir = parent;
-  }
 }
 
 function bindControlPlane(plane: McpControlPlane, svc: WorkOSService): void {
