@@ -55,7 +55,7 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx tsc -b && npx vite build && npx electron-builder --mac --publish always
+        run: node scripts/build-mcp-server.mjs && npx tsc -b && npx vite build && npx electron-builder --mac --publish always
 
       - name: Cleanup secrets
         if: always()
