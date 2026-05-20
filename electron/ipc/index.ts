@@ -261,6 +261,27 @@ function bindControlPlane(plane: McpControlPlane, svc: WorkOSService): void {
     ),
   );
   plane.on(
+    '/v1/taskitem/add',
+    wrap(
+      async (
+        ws,
+        {
+          taskItemId,
+          items,
+        }: {
+          taskItemId: string;
+          items: Array<{
+            stepId?: string;
+            name: string;
+            description?: string;
+            agentName: string;
+            prompt?: string;
+          }>;
+        },
+      ) => svc.mcpAddTaskItems(ws, taskItemId, items),
+    ),
+  );
+  plane.on(
     '/v1/taskitem/fail',
     wrap(async (ws, { taskItemId, error }: { taskItemId: string; error: string }) =>
       svc.mcpFail(ws, taskItemId, error),

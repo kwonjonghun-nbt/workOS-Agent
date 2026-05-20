@@ -70,6 +70,12 @@ export const MCP_TOOLS: McpToolDescriptor[] = [
       '같은 Task 의 pending TaskItem 중 createdAt 이 가장 빠른 항목을 새 터미널 세션에서 자동 실행한다. complete 직후 호출해 체이닝.',
   },
   {
+    name: 'workos_taskitem_add',
+    title: 'TaskItem 추가',
+    description:
+      '진행 중인 TaskItem 의 결과로 새 TaskItem 이 필요할 때 같은 Task 에 추가한다. complete 직후 run_next 가 자동 픽업.',
+  },
+  {
     name: 'workos_taskitem_fail',
     title: '실패 처리',
     description: 'TaskItem 상태를 failed 로 전환하고 에러 메시지를 저장한다.',

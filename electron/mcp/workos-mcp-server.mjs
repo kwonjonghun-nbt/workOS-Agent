@@ -147,6 +147,44 @@ const TOOLS = [
     route: '/v1/taskitem/run-next',
   },
   {
+    name: 'workos_taskitem_add',
+    description:
+      'Append new TaskItem(s) to the same Task as the running TaskItem. Use this when the execution result of the current TaskItem is "more TaskItems need to be created" (e.g. analysis discovers N sub-tasks). The new items are appended to the parent Task and will be picked up by workos_taskitem_run_next after completion. If stepId is omitted, the current TaskItem\'s stepId is reused.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskItemId: {
+          type: 'string',
+          description: 'The currently running TaskItem — used to locate the parent Task.',
+        },
+        items: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'object',
+            properties: {
+              stepId: {
+                type: 'string',
+                description:
+                  'Optional. Step id this TaskItem belongs to. Must be a step of the parent workflow. Falls back to the current TaskItem stepId when omitted.',
+              },
+              name: { type: 'string' },
+              description: { type: 'string' },
+              agentName: { type: 'string' },
+              prompt: {
+                type: 'string',
+                description: 'Prompt body that the new TaskItem will execute.',
+              },
+            },
+            required: ['name', 'agentName'],
+          },
+        },
+      },
+      required: ['taskItemId', 'items'],
+    },
+    route: '/v1/taskitem/add',
+  },
+  {
     name: 'workos_taskitem_fail',
     description: 'Mark the TaskItem as failed with an error message.',
     inputSchema: {

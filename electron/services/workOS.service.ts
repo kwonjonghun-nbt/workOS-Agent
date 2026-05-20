@@ -567,6 +567,72 @@ export class WorkOSService {
     return { nextTaskItemId: next.id, sessionId, promptFilePath };
   }
 
+  /**
+   * Append new TaskItem(s) to the same Task as `taskItemId`.
+   * 진행 중인 TaskItem 의 결과로 추가 TaskItem 이 필요할 때 호출.
+   * stepId 가 비어 있으면 현재 TaskItem 의 stepId 를 재사용한다.
+   * 생성된 항목은 task.taskItemIds 끝에 append → 다음 run_next 호출 시 자연스럽게 선택된다.
+   */
+  async mcpAddTaskItems(
+    workspaceId: string,
+    taskItemId: string,
+    items: Array<{
+      stepId?: string;
+      name: string;
+      description?: string;
+      agentName: string;
+      prompt?: string;
+    }>,
+  ): Promise<TaskItem[]> {
+    if (!Array.isArray(items) || items.length === 0) {
+      throw new ApiError('VALIDATION', 'items 배열이 비어 있습니다');
+    }
+    const r = await this.repo(workspaceId);
+    const current = await r.readTaskItem(taskItemId);
+    if (!current) throw new ApiError('NOT_FOUND', `task item not found: ${taskItemId}`);
+    const task = await r.readTask(current.taskId);
+    if (!task) throw new ApiError('NOT_FOUND', `task not found: ${current.taskId}`);
+    const wf = await r.readWorkflow(task.workflowId);
+    if (!wf) throw new ApiError('NOT_FOUND', `workflow not found: ${task.workflowId}`);
+    const validStepIds = new Set(wf.stepIds);
+
+    const created: TaskItem[] = [];
+    // createdAt 을 단조 증가시켜 run_next 의 "가장 빠른 createdAt" 정렬과 충돌 안 함.
+    let now = Date.now();
+    for (const e of items) {
+      const name = (e.name ?? '').trim();
+      const agentName = (e.agentName ?? '').trim();
+      const stepId = e.stepId && validStepIds.has(e.stepId) ? e.stepId : current.stepId;
+      if (!name || !agentName) {
+        throw new ApiError('VALIDATION', 'name 과 agentName 은 필수입니다');
+      }
+      const item: TaskItem = {
+        id: newId(),
+        taskId: task.id,
+        stepId,
+        workflowId: wf.id,
+        name,
+        description: e.description ?? '',
+        agentName,
+        prompt: e.prompt ?? '',
+        status: 'pending',
+        createdAt: now,
+        updatedAt: now,
+      };
+      await r.writeTaskItem(item);
+      created.push(item);
+      now += 1;
+    }
+    await r.writeTask({
+      ...task,
+      taskItemIds: [...task.taskItemIds, ...created.map((c) => c.id)],
+      status: task.status === 'completed' ? 'in_progress' : task.status,
+      updatedAt: Date.now(),
+    });
+    this.notify.notify(workspaceId, ['task', 'task-item']);
+    return created;
+  }
+
   async mcpTaskContext(
     workspaceId: string,
     taskItemId: string,
@@ -1465,6 +1531,8 @@ function mcpInstructions(opts: { taskItemId?: string; taskId?: string; draftId?:
       '- 정상 종료: `workos_taskitem_complete({ taskItemId, output: "결과 한 줄 요약" })`',
       '- 실패: `workos_taskitem_fail({ taskItemId, error: "에러 메시지" })`',
       '- 컨텍스트가 필요하면: `workos_task_context_get({ taskItemId })`',
+      '- 작업 결과로 후속 TaskItem 이 필요하면: `workos_taskitem_add({ taskItemId, items: [{ name, agentName, prompt, description?, stepId? }] })`',
+      '  → 같은 Task 에 항목이 추가되고, complete 후 `workos_taskitem_run_next` 가 자동으로 픽업합니다.',
     );
   }
   if (opts.taskId) {
