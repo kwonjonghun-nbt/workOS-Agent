@@ -21,6 +21,63 @@ import type {
   Workspace,
   WorkspaceChangedEvent,
 } from './contracts/workspace';
+import type {
+  McpStatusRequest,
+  McpStatusResponse,
+  McpToastEvent,
+  McpToolDescriptor,
+  SetupMcpRequest,
+  SetupMcpResponse,
+} from './contracts/mcp';
+import type { Preferences, SetThemeRequest } from './contracts/preferences';
+import type {
+  TaskItemProgressEvent,
+} from './contracts/workOS';
+import type {
+  CatalogResponse,
+  CreateStepRequest,
+  CreateTaskItemRequest,
+  CreateTaskRequest,
+  CreateWorkflowRequest,
+  DecomposeTaskRequest,
+  DeleteStepRequest,
+  FindDuplicateStepsRequest,
+  FindDuplicateStepsResponse,
+  MergeDuplicateStepsRequest,
+  MergeDuplicateStepsResponse,
+  DeleteTaskItemRequest,
+  DeleteTaskRequest,
+  DeleteWorkflowRequest,
+  ExecuteTaskItemRequest,
+  ExecuteTaskItemResponse,
+  GitCommitRequest,
+  GitCommitResponse,
+  GitDiffResponse,
+  GitFileDiffRequest,
+  GitFileDiffResponse,
+  GitStagePathsRequest,
+  GitStatusResponse,
+  GitUnstagePathsRequest,
+  ImportDecompositionRequest,
+  ImportWorkflowDraftRequest,
+  ImportWorkflowDraftResponse,
+  ListByWorkspaceRequest,
+  RequestAiDecomposeRequest,
+  RequestAiDecomposeResponse,
+  RequestAiWorkflowGenRequest,
+  RequestAiWorkflowGenResponse,
+  SeedPresetRequest,
+  SeedPresetResponse,
+  Step,
+  Task,
+  TaskItem,
+  UpdateStepRequest,
+  UpdateTaskItemRequest,
+  UpdateTaskRequest,
+  UpdateWorkflowRequest,
+  Workflow,
+  WorkOSChangedEvent,
+} from './contracts/workOS';
 
 const terminal = {
   create: (req: CreateTerminalRequest): Promise<CreateTerminalResponse> =>
@@ -65,6 +122,122 @@ const workspace = {
   },
 };
 
-contextBridge.exposeInMainWorld('electronAPI', { terminal, workspace });
+const workOS = {
+  listSteps: (req: ListByWorkspaceRequest): Promise<Step[]> =>
+    ipcRenderer.invoke(CHANNELS.workOS.listSteps, req),
+  createStep: (req: CreateStepRequest): Promise<Step> =>
+    ipcRenderer.invoke(CHANNELS.workOS.createStep, req),
+  updateStep: (req: UpdateStepRequest): Promise<Step> =>
+    ipcRenderer.invoke(CHANNELS.workOS.updateStep, req),
+  deleteStep: (req: DeleteStepRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.workOS.deleteStep, req),
+  findDuplicateSteps: (req: FindDuplicateStepsRequest): Promise<FindDuplicateStepsResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.findDuplicateSteps, req),
+  mergeDuplicateSteps: (req: MergeDuplicateStepsRequest): Promise<MergeDuplicateStepsResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.mergeDuplicateSteps, req),
 
-export type ElectronAPI = { terminal: typeof terminal; workspace: typeof workspace };
+  listWorkflows: (req: ListByWorkspaceRequest): Promise<Workflow[]> =>
+    ipcRenderer.invoke(CHANNELS.workOS.listWorkflows, req),
+  createWorkflow: (req: CreateWorkflowRequest): Promise<Workflow> =>
+    ipcRenderer.invoke(CHANNELS.workOS.createWorkflow, req),
+  updateWorkflow: (req: UpdateWorkflowRequest): Promise<Workflow> =>
+    ipcRenderer.invoke(CHANNELS.workOS.updateWorkflow, req),
+  deleteWorkflow: (req: DeleteWorkflowRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.workOS.deleteWorkflow, req),
+
+  listTasks: (req: ListByWorkspaceRequest): Promise<Task[]> =>
+    ipcRenderer.invoke(CHANNELS.workOS.listTasks, req),
+  createTask: (req: CreateTaskRequest): Promise<Task> =>
+    ipcRenderer.invoke(CHANNELS.workOS.createTask, req),
+  updateTask: (req: UpdateTaskRequest): Promise<Task> =>
+    ipcRenderer.invoke(CHANNELS.workOS.updateTask, req),
+  deleteTask: (req: DeleteTaskRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.workOS.deleteTask, req),
+  decomposeTask: (req: DecomposeTaskRequest): Promise<TaskItem[]> =>
+    ipcRenderer.invoke(CHANNELS.workOS.decomposeTask, req),
+
+  listTaskItems: (req: ListByWorkspaceRequest): Promise<TaskItem[]> =>
+    ipcRenderer.invoke(CHANNELS.workOS.listTaskItems, req),
+  createTaskItem: (req: CreateTaskItemRequest): Promise<TaskItem> =>
+    ipcRenderer.invoke(CHANNELS.workOS.createTaskItem, req),
+  updateTaskItem: (req: UpdateTaskItemRequest): Promise<TaskItem> =>
+    ipcRenderer.invoke(CHANNELS.workOS.updateTaskItem, req),
+  deleteTaskItem: (req: DeleteTaskItemRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.workOS.deleteTaskItem, req),
+  executeTaskItem: (req: ExecuteTaskItemRequest): Promise<ExecuteTaskItemResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.executeTaskItem, req),
+
+  catalog: (req: ListByWorkspaceRequest): Promise<CatalogResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.catalog, req),
+  gitDiff: (req: ListByWorkspaceRequest): Promise<GitDiffResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.gitDiff, req),
+  gitCommit: (req: GitCommitRequest): Promise<GitCommitResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.gitCommit, req),
+  gitStatus: (req: ListByWorkspaceRequest): Promise<GitStatusResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.gitStatus, req),
+  gitFileDiff: (req: GitFileDiffRequest): Promise<GitFileDiffResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.gitFileDiff, req),
+  gitStagePaths: (req: GitStagePathsRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.workOS.gitStagePaths, req),
+  gitUnstagePaths: (req: GitUnstagePathsRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.workOS.gitUnstagePaths, req),
+
+  seedPreset: (req: SeedPresetRequest): Promise<SeedPresetResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.seedPreset, req),
+  requestAiDecompose: (req: RequestAiDecomposeRequest): Promise<RequestAiDecomposeResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.requestAiDecompose, req),
+  importDecomposition: (req: ImportDecompositionRequest): Promise<TaskItem[]> =>
+    ipcRenderer.invoke(CHANNELS.workOS.importDecomposition, req),
+  requestAiWorkflowGen: (
+    req: RequestAiWorkflowGenRequest,
+  ): Promise<RequestAiWorkflowGenResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.requestAiWorkflowGen, req),
+  importWorkflowDraft: (req: ImportWorkflowDraftRequest): Promise<ImportWorkflowDraftResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.importWorkflowDraft, req),
+
+  onChanged: (listener: (event: WorkOSChangedEvent) => void): (() => void) => {
+    const wrapped = (_e: IpcRendererEvent, payload: WorkOSChangedEvent) => listener(payload);
+    ipcRenderer.on(CHANNELS.workOSEvents.changed, wrapped);
+    return () => ipcRenderer.off(CHANNELS.workOSEvents.changed, wrapped);
+  },
+};
+
+const mcp = {
+  status: (req: McpStatusRequest): Promise<McpStatusResponse> =>
+    ipcRenderer.invoke(CHANNELS.mcp.status, req),
+  setup: (req: SetupMcpRequest): Promise<SetupMcpResponse> =>
+    ipcRenderer.invoke(CHANNELS.mcp.setup, req),
+  listTools: (): Promise<McpToolDescriptor[]> => ipcRenderer.invoke(CHANNELS.mcp.listTools),
+  onProgress: (listener: (event: TaskItemProgressEvent) => void): (() => void) => {
+    const wrapped = (_e: IpcRendererEvent, payload: TaskItemProgressEvent) => listener(payload);
+    ipcRenderer.on(CHANNELS.mcpEvents.progress, wrapped);
+    return () => ipcRenderer.off(CHANNELS.mcpEvents.progress, wrapped);
+  },
+  onToast: (listener: (event: McpToastEvent) => void): (() => void) => {
+    const wrapped = (_e: IpcRendererEvent, payload: McpToastEvent) => listener(payload);
+    ipcRenderer.on(CHANNELS.mcpEvents.toast, wrapped);
+    return () => ipcRenderer.off(CHANNELS.mcpEvents.toast, wrapped);
+  },
+};
+
+const preferences = {
+  getSync: (): Preferences => ipcRenderer.sendSync(CHANNELS.preferences.getSync) as Preferences,
+  setTheme: (req: SetThemeRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.preferences.setTheme, req),
+};
+
+contextBridge.exposeInMainWorld('electronAPI', {
+  terminal,
+  workspace,
+  workOS,
+  mcp,
+  preferences,
+});
+
+export type ElectronAPI = {
+  terminal: typeof terminal;
+  workspace: typeof workspace;
+  workOS: typeof workOS;
+  mcp: typeof mcp;
+  preferences: typeof preferences;
+};

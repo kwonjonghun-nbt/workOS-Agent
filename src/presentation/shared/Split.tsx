@@ -71,8 +71,8 @@ export function Split({
   const cursorClass = dragging ? (isHorizontal ? 'cursor-col-resize' : 'cursor-row-resize') : '';
   const firstStyle = isHorizontal ? { width: `${firstSize}%` } : { height: `${firstSize}%` };
   const handleBase = isHorizontal
-    ? 'w-1 cursor-col-resize hover:bg-emerald-500/60'
-    : 'h-1 cursor-row-resize hover:bg-emerald-500/60';
+    ? 'w-1 cursor-col-resize hover:bg-claude-500/60'
+    : 'h-1 cursor-row-resize hover:bg-claude-500/60';
 
   return (
     <div
@@ -86,8 +86,8 @@ export function Split({
         role="separator"
         aria-orientation={isHorizontal ? 'vertical' : 'horizontal'}
         onPointerDown={onPointerDown}
-        className={`shrink-0 bg-slate-700 transition-colors ${handleBase} ${
-          dragging ? 'bg-emerald-500' : ''
+        className={`shrink-0 bg-ink-800 transition-colors ${handleBase} ${
+          dragging ? 'bg-claude-500' : ''
         }`}
       />
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{second}</div>

@@ -19,12 +19,12 @@ export function TerminalList({ items, activeId, onSelect, onAdd, onClose, onRena
   const [renamingId, setRenamingId] = useState<string | null>(null);
 
   return (
-    <div className="flex h-full w-full flex-col bg-slate-900">
-      <div className="border-b border-slate-700 p-2">
+    <div className="flex h-full w-full flex-col bg-ink-900">
+      <div className="border-b border-ink-800 p-2">
         <button
           type="button"
           onClick={onAdd}
-          className="flex w-full items-center justify-center gap-1 rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm font-medium text-emerald-400 hover:border-emerald-500/50 hover:bg-slate-700"
+          className="flex w-full items-center justify-center gap-1.5 rounded-full border border-ink-800 bg-ink-850/60 px-3 py-1.5 text-xs font-medium text-claude-300 transition-colors hover:border-claude-500/40 hover:bg-claude-500/10"
           aria-label="Add terminal"
         >
           <span className="text-base leading-none">+</span>
@@ -55,7 +55,7 @@ export function TerminalList({ items, activeId, onSelect, onAdd, onClose, onRena
           />
         ))}
         {items.length === 0 && (
-          <li className="px-3 py-2 text-xs text-slate-500">No terminals. Click + to add.</li>
+          <li className="px-3 py-2 text-xs text-ink-500">No terminals. Click + to add.</li>
         )}
       </ul>
     </div>
@@ -105,7 +105,7 @@ function TerminalRow({
       <div
         ref={rowRef}
         className={`group relative flex items-center justify-between px-3 py-1.5 text-sm ${
-          active ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/60'
+          active ? 'bg-ink-850 text-white' : 'text-ink-300 hover:bg-ink-850/60'
         }`}
       >
         {renaming ? (
@@ -125,7 +125,7 @@ function TerminalRow({
             <button
               type="button"
               onClick={onToggleMenu}
-              className="rounded px-1.5 text-slate-400 hover:bg-slate-700 hover:text-white"
+              className="rounded px-1.5 text-ink-400 hover:bg-ink-700 hover:text-white"
               aria-label={`More options for ${item.name}`}
             >
               ⋯
@@ -133,7 +133,7 @@ function TerminalRow({
             <button
               type="button"
               onClick={onClose}
-              className="rounded px-1.5 text-slate-400 hover:bg-slate-700 hover:text-white"
+              className="rounded px-1.5 text-ink-400 hover:bg-ink-700 hover:text-white"
               aria-label={`Close ${item.name}`}
             >
               ✕
@@ -142,11 +142,11 @@ function TerminalRow({
         )}
 
         {menuOpen && (
-          <div className="absolute right-2 top-full z-10 mt-1 w-32 rounded-md border border-slate-700 bg-slate-800 py-1 shadow-lg">
+          <div className="absolute right-2 top-full z-10 mt-1 w-32 rounded-md border border-ink-700 bg-ink-850 py-1 shadow-lg">
             <button
               type="button"
               onClick={onStartRename}
-              className="block w-full px-3 py-1.5 text-left text-sm text-slate-200 hover:bg-slate-700"
+              className="block w-full px-3 py-1.5 text-left text-sm text-ink-200 hover:bg-ink-700"
             >
               이름 변경
             </button>
@@ -184,7 +184,7 @@ function RenameInput({
         if (e.key === 'Enter') onCommit(value);
         else if (e.key === 'Escape') onCancel();
       }}
-      className="flex-1 rounded border border-slate-600 bg-slate-900 px-1.5 py-0.5 text-sm text-white outline-none focus:border-emerald-500"
+      className="flex-1 rounded border border-ink-600 bg-ink-900 px-1.5 py-0.5 text-sm text-white outline-none focus:border-claude-500"
     />
   );
 }

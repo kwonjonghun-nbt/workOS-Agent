@@ -19,6 +19,60 @@ import type {
   Workspace,
   WorkspaceChangedEvent,
 } from './workspace/types';
+import type {
+  CatalogResponse,
+  CreateStepRequest,
+  CreateTaskItemRequest,
+  CreateTaskRequest,
+  CreateWorkflowRequest,
+  DecomposeTaskRequest,
+  DeleteStepRequest,
+  FindDuplicateStepsRequest,
+  FindDuplicateStepsResponse,
+  MergeDuplicateStepsRequest,
+  MergeDuplicateStepsResponse,
+  DeleteTaskItemRequest,
+  DeleteTaskRequest,
+  DeleteWorkflowRequest,
+  ExecuteTaskItemRequest,
+  ExecuteTaskItemResponse,
+  GitCommitRequest,
+  GitCommitResponse,
+  GitDiffResponse,
+  GitFileDiffRequest,
+  GitFileDiffResponse,
+  GitStagePathsRequest,
+  GitStatusResponse,
+  GitUnstagePathsRequest,
+  ImportDecompositionRequest,
+  ImportWorkflowDraftRequest,
+  ImportWorkflowDraftResponse,
+  ListByWorkspaceRequest,
+  RequestAiDecomposeRequest,
+  RequestAiDecomposeResponse,
+  RequestAiWorkflowGenRequest,
+  RequestAiWorkflowGenResponse,
+  SeedPresetRequest,
+  SeedPresetResponse,
+  Step,
+  Task,
+  TaskItem,
+  UpdateStepRequest,
+  UpdateTaskItemRequest,
+  UpdateTaskRequest,
+  UpdateWorkflowRequest,
+  Workflow,
+  WorkOSChangedEvent,
+} from './workOS/types';
+import type {
+  McpStatusRequest,
+  McpStatusResponse,
+  McpToastEvent,
+  McpToolDescriptor,
+  SetupMcpRequest,
+  SetupMcpResponse,
+  TaskItemProgressEvent,
+} from './mcp/types';
 
 export type TerminalApi = {
   create: (req: CreateTerminalRequest) => Promise<CreateTerminalResponse>;
@@ -41,11 +95,73 @@ export type WorkspaceApi = {
   onChanged: (listener: (event: WorkspaceChangedEvent) => void) => () => void;
 };
 
+export type WorkOSApi = {
+  listSteps: (req: ListByWorkspaceRequest) => Promise<Step[]>;
+  createStep: (req: CreateStepRequest) => Promise<Step>;
+  updateStep: (req: UpdateStepRequest) => Promise<Step>;
+  deleteStep: (req: DeleteStepRequest) => Promise<void>;
+  findDuplicateSteps: (req: FindDuplicateStepsRequest) => Promise<FindDuplicateStepsResponse>;
+  mergeDuplicateSteps: (req: MergeDuplicateStepsRequest) => Promise<MergeDuplicateStepsResponse>;
+
+  listWorkflows: (req: ListByWorkspaceRequest) => Promise<Workflow[]>;
+  createWorkflow: (req: CreateWorkflowRequest) => Promise<Workflow>;
+  updateWorkflow: (req: UpdateWorkflowRequest) => Promise<Workflow>;
+  deleteWorkflow: (req: DeleteWorkflowRequest) => Promise<void>;
+
+  listTasks: (req: ListByWorkspaceRequest) => Promise<Task[]>;
+  createTask: (req: CreateTaskRequest) => Promise<Task>;
+  updateTask: (req: UpdateTaskRequest) => Promise<Task>;
+  deleteTask: (req: DeleteTaskRequest) => Promise<void>;
+  decomposeTask: (req: DecomposeTaskRequest) => Promise<TaskItem[]>;
+
+  listTaskItems: (req: ListByWorkspaceRequest) => Promise<TaskItem[]>;
+  createTaskItem: (req: CreateTaskItemRequest) => Promise<TaskItem>;
+  updateTaskItem: (req: UpdateTaskItemRequest) => Promise<TaskItem>;
+  deleteTaskItem: (req: DeleteTaskItemRequest) => Promise<void>;
+  executeTaskItem: (req: ExecuteTaskItemRequest) => Promise<ExecuteTaskItemResponse>;
+
+  catalog: (req: ListByWorkspaceRequest) => Promise<CatalogResponse>;
+  gitDiff: (req: ListByWorkspaceRequest) => Promise<GitDiffResponse>;
+  gitStatus: (req: ListByWorkspaceRequest) => Promise<GitStatusResponse>;
+  gitFileDiff: (req: GitFileDiffRequest) => Promise<GitFileDiffResponse>;
+  gitStagePaths: (req: GitStagePathsRequest) => Promise<void>;
+  gitUnstagePaths: (req: GitUnstagePathsRequest) => Promise<void>;
+  gitCommit: (req: GitCommitRequest) => Promise<GitCommitResponse>;
+
+  seedPreset: (req: SeedPresetRequest) => Promise<SeedPresetResponse>;
+  requestAiDecompose: (req: RequestAiDecomposeRequest) => Promise<RequestAiDecomposeResponse>;
+  importDecomposition: (req: ImportDecompositionRequest) => Promise<TaskItem[]>;
+  requestAiWorkflowGen: (
+    req: RequestAiWorkflowGenRequest,
+  ) => Promise<RequestAiWorkflowGenResponse>;
+  importWorkflowDraft: (req: ImportWorkflowDraftRequest) => Promise<ImportWorkflowDraftResponse>;
+
+  onChanged: (listener: (event: WorkOSChangedEvent) => void) => () => void;
+};
+
+export type McpApi = {
+  status: (req: McpStatusRequest) => Promise<McpStatusResponse>;
+  setup: (req: SetupMcpRequest) => Promise<SetupMcpResponse>;
+  listTools: () => Promise<McpToolDescriptor[]>;
+  onProgress: (listener: (event: TaskItemProgressEvent) => void) => () => void;
+  onToast: (listener: (event: McpToastEvent) => void) => () => void;
+};
+
+export type ThemeMode = 'dark' | 'light';
+export type Preferences = { theme?: ThemeMode };
+export type PreferencesApi = {
+  getSync: () => Preferences;
+  setTheme: (req: { theme: ThemeMode }) => Promise<void>;
+};
+
 declare global {
   interface Window {
     electronAPI: {
       terminal: TerminalApi;
       workspace: WorkspaceApi;
+      workOS: WorkOSApi;
+      mcp: McpApi;
+      preferences: PreferencesApi;
     };
   }
 }
