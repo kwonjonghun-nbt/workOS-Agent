@@ -1,10 +1,15 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 // 워크스페이스 메타데이터(목록, 이름, 경로)는 메인 프로세스가 SSOT 이고
 // react-query 가 그 캐시이다. 이 스토어에는 UI 관심사만 둔다:
 //  - 열어둔 탭 (서버 list 의 부분집합)
 //  - 활성 탭
 //  - 워크스페이스별 활성 터미널 (UI 만의 선택 상태)
+//
+// 열린 탭/활성 탭은 localStorage 에 persist 한다. OS 잠자기 후 렌더러가
+// 재로드돼도 사용자가 명시적으로 닫기 전까지는 선택 상태가 유지된다.
+// pruneMissing 이 메인 SSOT 와 동기화를 보장.
 
 type WorkspaceUiStore = {
   openIds: string[];
@@ -21,7 +26,9 @@ type WorkspaceUiStore = {
   pruneMissing: (existingIds: ReadonlySet<string>) => void;
 };
 
-export const useWorkspaceStore = create<WorkspaceUiStore>((set) => ({
+export const useWorkspaceStore = create<WorkspaceUiStore>()(
+  persist(
+    (set) => ({
   openIds: [],
   activeId: null,
   activeTerminalIdByWorkspace: {},
@@ -100,4 +107,17 @@ export const useWorkspaceStore = create<WorkspaceUiStore>((set) => ({
       }
       return { openIds, activeId, activeTerminalIdByWorkspace, terminalPanelOpenByWorkspace };
     }),
-}));
+    }),
+    {
+      name: 'workos-agent:workspace-ui',
+      storage: createJSONStorage(() => localStorage),
+      version: 1,
+      partialize: (state) => ({
+        openIds: state.openIds,
+        activeId: state.activeId,
+        activeTerminalIdByWorkspace: state.activeTerminalIdByWorkspace,
+        terminalPanelOpenByWorkspace: state.terminalPanelOpenByWorkspace,
+      }),
+    },
+  ),
+);

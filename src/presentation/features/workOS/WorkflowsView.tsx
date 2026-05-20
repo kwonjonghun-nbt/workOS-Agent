@@ -347,7 +347,6 @@ function StepLibrary({ workspaceId }: { workspaceId: string }) {
   const { data: steps = [] } = useSteps(workspaceId);
   const { data: catalog } = useCatalog(workspaceId);
   const create = useCreateStep();
-  const update = useUpdateStep();
   const del = useDeleteStep();
 
   const [draft, setDraft] = useState({ name: '', description: '', agent: '' });
@@ -443,7 +442,7 @@ function StepLibrary({ workspaceId }: { workspaceId: string }) {
               <div className="truncate text-sm font-medium text-white">{step.name}</div>
               <div className="mt-0.5 flex items-center gap-2 text-[11px] text-ink-500">
                 <span className="rounded bg-ink-850 px-1.5 py-0.5">
-                  {step.agentNames[0] ?? '에이전트 없음'}
+                  {step.agentNames.length > 0 ? step.agentNames.join(', ') : '에이전트 없음'}
                 </span>
                 {step.description && (
                   <span className="truncate text-ink-600">{step.description}</span>
@@ -633,7 +632,9 @@ function DedupeStepsModal({
                         </span>
                         <span className="truncate text-sm text-white">{g.survivor.name}</span>
                         <span className="rounded bg-ink-850 px-1.5 py-0.5 text-[10px] text-ink-400">
-                          {g.survivor.agentNames[0] ?? '에이전트 없음'}
+                          {g.survivor.agentNames.length > 0
+                            ? g.survivor.agentNames.join(', ')
+                            : '에이전트 없음'}
                         </span>
                       </div>
                       {g.survivor.description && (
@@ -664,7 +665,9 @@ function DedupeStepsModal({
                                   {d.name}
                                 </span>
                                 <span className="rounded bg-ink-850 px-1.5 py-0.5 text-[10px] text-ink-400">
-                                  {d.agentNames[0] ?? '에이전트 없음'}
+                                  {d.agentNames.length > 0
+                                    ? d.agentNames.join(', ')
+                                    : '에이전트 없음'}
                                 </span>
                               </div>
                               {d.description && (
@@ -784,28 +787,65 @@ function StepDetailModal({
           </div>
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-400">
-              Agent
+              Agents <span className="text-ink-500">(복수 선택 가능)</span>
             </label>
-            <select
-              value={step.agentNames[0] ?? ''}
-              onChange={(e) =>
-                void update.mutateAsync({
-                  workspaceId,
-                  id: step.id,
-                  patch: { agentNames: [e.target.value] },
-                })
-              }
-              className="w-full rounded border border-ink-700 bg-ink-950 px-3 py-2 text-sm outline-none focus:border-claude-500"
-            >
-              {agentChoices.map((a) => (
-                <option key={a.name} value={a.name}>
-                  {a.name}
-                </option>
-              ))}
-              {!agentChoices.find((a) => a.name === step.agentNames[0]) && step.agentNames[0] && (
-                <option value={step.agentNames[0]}>{step.agentNames[0]}</option>
-              )}
-            </select>
+            <div className="max-h-60 space-y-1 overflow-y-auto rounded border border-ink-700 bg-ink-950 p-2">
+              {(() => {
+                const selected = new Set(step.agentNames);
+                const catalogNames = new Set(agentChoices.map((a) => a.name));
+                const orphans = step.agentNames.filter((n) => !catalogNames.has(n));
+                const toggle = (name: string) => {
+                  const next = new Set(selected);
+                  if (next.has(name)) next.delete(name);
+                  else next.add(name);
+                  const arr = Array.from(next);
+                  if (arr.length === 0) return;
+                  void update.mutateAsync({
+                    workspaceId,
+                    id: step.id,
+                    patch: { agentNames: arr },
+                  });
+                };
+                return (
+                  <>
+                    {agentChoices.map((a) => (
+                      <label
+                        key={a.name}
+                        className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm text-ink-200 hover:bg-ink-850/60"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected.has(a.name)}
+                          onChange={() => toggle(a.name)}
+                        />
+                        <span>{a.name}</span>
+                      </label>
+                    ))}
+                    {orphans.map((name) => (
+                      <label
+                        key={name}
+                        className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm text-amber-200 hover:bg-ink-850/60"
+                        title="카탈로그에 없는 에이전트 (이전 데이터)"
+                      >
+                        <input
+                          type="checkbox"
+                          checked
+                          onChange={() => toggle(name)}
+                        />
+                        <span>{name}</span>
+                        <span className="text-[10px] text-amber-400">(카탈로그 외)</span>
+                      </label>
+                    ))}
+                    {agentChoices.length === 0 && orphans.length === 0 && (
+                      <p className="px-2 py-1 text-xs text-ink-500">에이전트 카탈로그가 비어 있습니다.</p>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+            <p className="mt-1 text-[11px] text-ink-500">
+              체크 시 즉시 저장됩니다. 최소 1개 이상 유지해야 합니다.
+            </p>
           </div>
         </div>
         <footer className="flex items-center justify-end gap-2 border-t border-ink-850 bg-ink-900/60 px-5 py-3">
