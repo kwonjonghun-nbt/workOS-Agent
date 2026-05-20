@@ -1,7 +1,7 @@
 {
   "name": "workos-agent",
   "private": true,
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Desktop agent that orchestrates workOS workflows on the local machine.",
   "author": {
     "name": "Jong-hun Kwon",
@@ -31,7 +31,8 @@
       {
         "provider": "github",
         "owner": "kwonjonghun-nbt",
-        "repo": "workOS-Agent"
+        "repo": "workOS-Agent",
+        "releaseType": "release"
       }
     ],
     "mac": {
