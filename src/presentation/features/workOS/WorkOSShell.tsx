@@ -28,7 +28,7 @@ export function WorkOSShell({ workspaceId, terminalOpen, onToggleTerminal }: Pro
 
   return (
     <div className="flex h-full w-full flex-col bg-ink-900 text-white">
-      <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-ink-800 bg-ink-900/80 px-3 backdrop-blur">
+      <header className="relative z-40 flex h-12 shrink-0 items-center justify-between gap-3 border-b border-ink-800 bg-ink-900/80 px-3 backdrop-blur">
         <nav className="flex items-center gap-0.5 rounded-full bg-ink-850/60 p-0.5">
           <ViewTab
             label="태스크"
