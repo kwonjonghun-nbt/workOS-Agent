@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { registerIpcHandlers } from './ipc';
+import { initAutoUpdater } from './infra/autoUpdater';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -39,6 +40,7 @@ app.whenReady().then(() => {
     container.mcpControlPlane.stop().catch(() => {});
   });
   createWindow();
+  initAutoUpdater();
 });
 
 app.on('window-all-closed', () => {
