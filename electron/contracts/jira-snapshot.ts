@@ -22,6 +22,7 @@ export const normalizedIssueSchema = z.object({
   updated: z.string(),
   url: z.string(),
   labels: z.array(z.string()),
+  components: z.array(z.string()).default([]),
   dueDate: z.string().nullable(),
   startDate: z.string().nullable(),
   storyPoints: z.number().nullable(),

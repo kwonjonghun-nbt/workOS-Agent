@@ -115,6 +115,12 @@ export const CHANNELS = {
     updateIssueLabels: 'jiraLabels:updateIssueLabels',
     suggest: 'jiraLabels:suggest',
   },
+  jiraSlack: {
+    testConnection: 'jiraSlack:testConnection',
+    findThreadMessage: 'jiraSlack:findThreadMessage',
+    sendDailyReport: 'jiraSlack:sendDailyReport',
+    previewDailyReport: 'jiraSlack:previewDailyReport',
+  },
   jiraReports: {
     list: 'jiraReports:list',
     get: 'jiraReports:get',

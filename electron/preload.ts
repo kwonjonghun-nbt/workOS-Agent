@@ -72,6 +72,14 @@ import type {
   SaveReportRequest,
 } from './contracts/jira-reports';
 import type {
+  FindThreadMessageRequest,
+  FindThreadMessageResponse,
+  PreviewDailyReportResponse,
+  SendDailyReportResponse,
+  TestSlackConnectionRequest,
+  TestSlackConnectionResponse,
+} from './contracts/jira-slack';
+import type {
   TaskItemProgressEvent,
 } from './contracts/workOS';
 import type {
@@ -336,6 +344,21 @@ const jiraLabels = {
     ipcRenderer.invoke(CHANNELS.jiraLabels.suggest, req),
 };
 
+const jiraSlack = {
+  testConnection: (
+    req: TestSlackConnectionRequest = {},
+  ): Promise<TestSlackConnectionResponse> =>
+    ipcRenderer.invoke(CHANNELS.jiraSlack.testConnection, req),
+  findThreadMessage: (
+    req: FindThreadMessageRequest = {},
+  ): Promise<FindThreadMessageResponse> =>
+    ipcRenderer.invoke(CHANNELS.jiraSlack.findThreadMessage, req),
+  sendDailyReport: (): Promise<SendDailyReportResponse> =>
+    ipcRenderer.invoke(CHANNELS.jiraSlack.sendDailyReport),
+  previewDailyReport: (): Promise<PreviewDailyReportResponse> =>
+    ipcRenderer.invoke(CHANNELS.jiraSlack.previewDailyReport),
+};
+
 const jiraReports = {
   list: (): Promise<{ files: ReportMeta[] }> =>
     ipcRenderer.invoke(CHANNELS.jiraReports.list),
@@ -361,6 +384,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   jiraSnapshot,
   jiraLabels,
   jiraReports,
+  jiraSlack,
 });
 
 export type ElectronAPI = {
@@ -375,4 +399,5 @@ export type ElectronAPI = {
   jiraSnapshot: typeof jiraSnapshot;
   jiraLabels: typeof jiraLabels;
   jiraReports: typeof jiraReports;
+  jiraSlack: typeof jiraSlack;
 };

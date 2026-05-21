@@ -46,6 +46,10 @@ import { registerJiraHandlers } from './jira.handler';
 import { registerJiraSnapshotHandlers } from './jira-snapshot.handler';
 import { registerJiraLabelHandlers } from './jira-label.handler';
 import { registerJiraReportHandlers } from './jira-report.handler';
+import { registerJiraSlackHandlers } from './jira-slack.handler';
+import { HttpSlackRepository } from '../repositories/slack.repo';
+import { JiraSlackService } from '../services/jira-slack.service';
+import { JiraSlackSchedulerService } from '../services/jira-slack-scheduler.service';
 import { JsonLabelNotesRepository } from '../repositories/jira-label-notes.repo';
 import { TerminalLlmRepository } from '../repositories/terminal-llm.repo';
 import { FsReportsRepository } from '../repositories/jira-reports.repo';
@@ -209,6 +213,16 @@ export function registerIpcHandlers(): Container {
   registerJiraSnapshotHandlers(jiraSnapshotService);
   const jiraScheduler = new JiraSchedulerService(jiraSnapshotService);
   jiraScheduler.start();
+
+  const slackRepo = new HttpSlackRepository();
+  const jiraSlackService = new JiraSlackService(
+    jiraSnapshotRepo,
+    slackRepo,
+    extensionService,
+  );
+  registerJiraSlackHandlers(jiraSlackService);
+  const jiraSlackScheduler = new JiraSlackSchedulerService(jiraSlackService);
+  jiraSlackScheduler.start();
 
   const labelNotesRepo = new JsonLabelNotesRepository(app.getPath('userData'));
   // Jira 의 AI 호출(라벨 추천, 리포트 생성)은 모두 Jira 확장의 가시 터미널

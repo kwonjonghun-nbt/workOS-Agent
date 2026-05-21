@@ -114,6 +114,14 @@ import type {
   ReportMeta as JiraReportMeta,
   SaveReportRequest as JiraSaveReportRequest,
 } from './jira/report-types';
+import type {
+  FindThreadMessageRequest as JiraSlackFindThreadMessageRequest,
+  FindThreadMessageResponse as JiraSlackFindThreadMessageResponse,
+  PreviewDailyReportResponse as JiraSlackPreviewDailyReportResponse,
+  SendDailyReportResponse as JiraSlackSendDailyReportResponse,
+  TestSlackConnectionRequest as JiraSlackTestConnectionRequest,
+  TestSlackConnectionResponse as JiraSlackTestConnectionResponse,
+} from './jira/slack-types';
 
 export type TerminalApi = {
   create: (req: CreateTerminalRequest) => Promise<CreateTerminalResponse>;
@@ -234,6 +242,17 @@ export type JiraLabelsApi = {
   suggest: (req: JiraSuggestLabelRequest) => Promise<JiraSuggestLabelResponse>;
 };
 
+export type JiraSlackApi = {
+  testConnection: (
+    req?: JiraSlackTestConnectionRequest,
+  ) => Promise<JiraSlackTestConnectionResponse>;
+  findThreadMessage: (
+    req?: JiraSlackFindThreadMessageRequest,
+  ) => Promise<JiraSlackFindThreadMessageResponse>;
+  sendDailyReport: () => Promise<JiraSlackSendDailyReportResponse>;
+  previewDailyReport: () => Promise<JiraSlackPreviewDailyReportResponse>;
+};
+
 export type JiraReportsApi = {
   list: () => Promise<{ files: JiraReportMeta[] }>;
   get: (req: JiraGetReportRequest) => Promise<JiraGetReportResponse>;
@@ -256,6 +275,7 @@ declare global {
       jiraSnapshot: JiraSnapshotApi;
       jiraLabels: JiraLabelsApi;
       jiraReports: JiraReportsApi;
+      jiraSlack: JiraSlackApi;
     };
   }
 }

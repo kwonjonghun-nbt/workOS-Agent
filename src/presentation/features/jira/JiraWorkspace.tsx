@@ -4,6 +4,7 @@ import { JiraDashboard } from './JiraDashboard';
 import { JiraLabels } from './JiraLabels';
 import { JiraReports } from './JiraReports';
 import { JiraTestConnection } from './JiraTestConnection';
+import { JiraSlackSettings } from './JiraSlackSettings';
 import { ExtensionSettingsForm } from '../extensions/ExtensionSettingsForm';
 
 type Section =
@@ -11,6 +12,7 @@ type Section =
   | 'dashboard'
   | 'labels'
   | 'reports'
+  | 'slack'
   | 'settings';
 
 const NAV: { key: Section; label: string; icon: string; hint: string }[] = [
@@ -18,6 +20,7 @@ const NAV: { key: Section; label: string; icon: string; hint: string }[] = [
   { key: 'dashboard', label: '대시보드', icon: '📊', hint: '개요 · 타임라인 · 통계' },
   { key: 'labels', label: '라벨', icon: '🏷', hint: '관리 · 변경 · 추천' },
   { key: 'reports', label: '리포트', icon: '📝', hint: '기간별 마크다운 리포트' },
+  { key: 'slack', label: '데일리 공유', icon: '💬', hint: 'Slack 스레드 데일리 리포트' },
   { key: 'settings', label: '설정', icon: '⚙', hint: '연결 정보 · 테스트' },
 ];
 
@@ -54,6 +57,11 @@ export function JiraWorkspace() {
         {section === 'dashboard' && <JiraDashboard />}
         {section === 'labels' && <JiraLabels />}
         {section === 'reports' && <JiraReports />}
+        {section === 'slack' && (
+          <div className="mx-auto flex max-w-2xl flex-col gap-4">
+            <JiraSlackSettings />
+          </div>
+        )}
         {section === 'settings' && <SettingsSection />}
       </section>
     </div>

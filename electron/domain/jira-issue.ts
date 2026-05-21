@@ -24,6 +24,7 @@ export type NormalizedIssue = {
   updated: string;
   url: string;
   labels: string[];
+  components: string[];
   dueDate: string | null;
   startDate: string | null;
   storyPoints: number | null;
@@ -44,6 +45,7 @@ export type AtlassianIssueRaw = {
     created?: string;
     updated?: string;
     labels?: string[];
+    components?: Array<{ name?: string } | null> | null;
     duedate?: string | null;
     parent?: { key?: string } | null;
     // Jira customfields for story points / start date vary per tenant. We probe
@@ -78,6 +80,11 @@ export function normalizeAtlassianIssue(
     updated: String(fields.updated ?? ''),
     url: `${baseUrl}/browse/${raw.key}`,
     labels: Array.isArray(fields.labels) ? fields.labels.map(String) : [],
+    components: Array.isArray(fields.components)
+      ? fields.components
+          .map((c) => (c && typeof c.name === 'string' ? c.name : ''))
+          .filter((n) => n.length > 0)
+      : [],
     dueDate: fields.duedate ?? null,
     startDate: pickFirstString(fields, START_DATE_KEYS),
     storyPoints: pickFirstNumber(fields, STORY_POINT_KEYS),
@@ -118,6 +125,7 @@ export const SNAPSHOT_FIELDS: string[] = [
   'created',
   'updated',
   'labels',
+  'components',
   'duedate',
   'parent',
   ...STORY_POINT_KEYS,
