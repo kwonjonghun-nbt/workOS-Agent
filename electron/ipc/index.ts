@@ -47,6 +47,9 @@ import { registerJiraSnapshotHandlers } from './jira-snapshot.handler';
 import { registerJiraLabelHandlers } from './jira-label.handler';
 import { registerJiraReportHandlers } from './jira-report.handler';
 import { registerJiraSlackHandlers } from './jira-slack.handler';
+import { HttpGitHubPrRepository } from '../repositories/github-pr.repo';
+import { GitHubPrService } from '../services/github-pr.service';
+import { registerGitHubPrHandlers } from './github-pr.handler';
 import { HttpSlackRepository } from '../repositories/slack.repo';
 import { JiraSlackService } from '../services/jira-slack.service';
 import { JiraSlackSchedulerService } from '../services/jira-slack-scheduler.service';
@@ -198,6 +201,10 @@ export function registerIpcHandlers(): Container {
   const jiraRepo = new HttpJiraRepository();
   const jiraService = new JiraService(jiraRepo, extensionService);
   registerJiraHandlers(jiraService);
+
+  const githubPrRepo = new HttpGitHubPrRepository();
+  const githubPrService = new GitHubPrService(githubPrRepo, extensionService);
+  registerGitHubPrHandlers(githubPrService);
 
   const jiraSnapshotRepo = new JsonJiraSnapshotRepository(app.getPath('userData'));
   const jiraSnapshotService = new JiraSnapshotService(

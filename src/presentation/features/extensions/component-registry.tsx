@@ -1,4 +1,5 @@
 import { JiraWorkspace } from '../jira/JiraWorkspace';
+import { GitHubPrWorkspace } from '../github-pr/GitHubPrWorkspace';
 
 /**
  * Maps a `custom` view block's `component` id to a host-rendered React
@@ -10,6 +11,7 @@ import { JiraWorkspace } from '../jira/JiraWorkspace';
  */
 export const EXTENSION_COMPONENTS: Record<string, () => JSX.Element> = {
   'jira-workspace': JiraWorkspace,
+  'github-pr-workspace': GitHubPrWorkspace,
 };
 
 export function resolveExtensionComponent(name: string): (() => JSX.Element) | null {

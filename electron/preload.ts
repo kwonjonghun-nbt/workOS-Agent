@@ -80,6 +80,11 @@ import type {
   TestSlackConnectionResponse,
 } from './contracts/jira-slack';
 import type {
+  GithubPrTestConnectionResponse,
+  ListPullRequestsRequest,
+  ListPullRequestsResponse,
+} from './contracts/github-pr';
+import type {
   TaskItemProgressEvent,
 } from './contracts/workOS';
 import type {
@@ -372,6 +377,13 @@ const jiraReports = {
     ipcRenderer.invoke(CHANNELS.jiraReports.generate, req),
 };
 
+const githubPr = {
+  listPullRequests: (req: ListPullRequestsRequest): Promise<ListPullRequestsResponse> =>
+    ipcRenderer.invoke(CHANNELS.githubPr.listPullRequests, req),
+  testConnection: (): Promise<GithubPrTestConnectionResponse> =>
+    ipcRenderer.invoke(CHANNELS.githubPr.testConnection),
+};
+
 contextBridge.exposeInMainWorld('electronAPI', {
   terminal,
   workspace,
@@ -385,6 +397,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   jiraLabels,
   jiraReports,
   jiraSlack,
+  githubPr,
 });
 
 export type ElectronAPI = {
@@ -400,4 +413,5 @@ export type ElectronAPI = {
   jiraLabels: typeof jiraLabels;
   jiraReports: typeof jiraReports;
   jiraSlack: typeof jiraSlack;
+  githubPr: typeof githubPr;
 };

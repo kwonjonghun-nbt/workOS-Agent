@@ -128,4 +128,8 @@ export const CHANNELS = {
     delete: 'jiraReports:delete',
     generate: 'jiraReports:generate',
   },
+  githubPr: {
+    listPullRequests: 'githubPr:listPullRequests',
+    testConnection: 'githubPr:testConnection',
+  },
 } as const;

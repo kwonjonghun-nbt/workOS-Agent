@@ -253,6 +253,36 @@ export type JiraSlackApi = {
   previewDailyReport: () => Promise<JiraSlackPreviewDailyReportResponse>;
 };
 
+export type GithubPrApi = {
+  listPullRequests: (req: {
+    state: 'open' | 'closed' | 'all';
+  }) => Promise<{
+    prs: Array<{
+      number: number;
+      title: string;
+      state: 'open' | 'closed';
+      draft: boolean;
+      merged: boolean;
+      user: { login: string; avatarUrl: string };
+      repo: string;
+      headRef: string;
+      htmlUrl: string;
+      createdAt: string;
+      updatedAt: string;
+      labels: Array<{ name: string; color: string }>;
+      requestedReviewers: Array<{ login: string }>;
+    }>;
+    errors: Array<{ repo: string; error: string }>;
+    hasMore: boolean;
+  }>;
+  testConnection: () => Promise<{
+    ok: true;
+    login: string;
+    apiUrl: string;
+    repos: string[];
+  }>;
+};
+
 export type JiraReportsApi = {
   list: () => Promise<{ files: JiraReportMeta[] }>;
   get: (req: JiraGetReportRequest) => Promise<JiraGetReportResponse>;
@@ -276,6 +306,7 @@ declare global {
       jiraLabels: JiraLabelsApi;
       jiraReports: JiraReportsApi;
       jiraSlack: JiraSlackApi;
+      githubPr: GithubPrApi;
     };
   }
 }
