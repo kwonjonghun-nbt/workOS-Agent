@@ -1,4 +1,5 @@
 import type { GitHubPullRequest } from '../../../server-state/github-pr';
+import { repoChipStyle } from './repo-color';
 
 function getStatusBadge(pr: GitHubPullRequest) {
   if (pr.draft) return { label: 'Draft', tone: 'bg-ink-700 text-ink-200' };
@@ -7,16 +8,24 @@ function getStatusBadge(pr: GitHubPullRequest) {
   return { label: 'Closed', tone: 'bg-rose-600/80 text-white' };
 }
 
-export function PRCard({ pr }: { pr: GitHubPullRequest }) {
+export function PRCard({
+  pr,
+  showRepo = true,
+}: {
+  pr: GitHubPullRequest;
+  showRepo?: boolean;
+}) {
   const badge = getStatusBadge(pr);
   const relative = formatRelative(pr.createdAt);
+  const repoStyle = repoChipStyle(pr.repo);
 
   return (
     <a
       href={pr.htmlUrl}
       target="_blank"
       rel="noreferrer"
-      className="block rounded-lg border border-ink-800 bg-ink-900/60 p-3 transition hover:border-ink-700 hover:bg-ink-850"
+      className="relative block rounded-lg border border-ink-800 bg-ink-900/60 p-3 pl-4 transition hover:border-ink-700 hover:bg-ink-850"
+      style={{ borderLeft: `3px solid ${repoStyle.accent}` }}
     >
       <div className="flex items-start gap-3">
         <img
@@ -25,11 +34,28 @@ export function PRCard({ pr }: { pr: GitHubPullRequest }) {
           className="mt-0.5 h-8 w-8 shrink-0 rounded-full"
         />
         <div className="min-w-0 flex-1">
-          <div className="mb-1 flex items-center gap-2">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
             <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${badge.tone}`}>
               {badge.label}
             </span>
-            <span className="truncate text-[11px] text-ink-500">{pr.repo}</span>
+            {showRepo && (
+              <span
+                className="inline-flex items-center gap-1 truncate rounded-full border px-1.5 py-0.5 text-[10px] font-medium"
+                style={{
+                  color: repoStyle.fg,
+                  backgroundColor: repoStyle.bg,
+                  borderColor: repoStyle.border,
+                }}
+                title={pr.repo}
+              >
+                <span
+                  aria-hidden
+                  className="inline-block h-1.5 w-1.5 rounded-full"
+                  style={{ backgroundColor: repoStyle.accent }}
+                />
+                {pr.repo}
+              </span>
+            )}
           </div>
 
           <h3 className="mb-1.5 text-sm leading-snug text-ink-100">
