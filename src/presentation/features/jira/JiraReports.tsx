@@ -5,6 +5,7 @@ import {
   jiraReportMutations,
   jiraReportQueries,
 } from '../../../server-state/jira';
+import { ReportVisualView } from './ReportVisualView';
 
 export function JiraReports() {
   const queryClient = useQueryClient();
@@ -218,10 +219,35 @@ function ReportDetailView({
   onDelete: () => void;
   deleting: boolean;
 }) {
+  const [mode, setMode] = useState<'visual' | 'raw'>('visual');
   return (
     <div className="flex flex-col gap-2">
       <header className="flex items-center gap-2">
         <h2 className="flex-1 truncate font-mono text-sm text-ink-100">{filename}</h2>
+        <div className="flex overflow-hidden rounded border border-ink-700 text-[11px]">
+          <button
+            type="button"
+            onClick={() => setMode('visual')}
+            className={`px-2 py-1 ${
+              mode === 'visual'
+                ? 'bg-claude-500/20 text-claude-100'
+                : 'text-ink-300 hover:bg-ink-850'
+            }`}
+          >
+            비주얼
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('raw')}
+            className={`px-2 py-1 ${
+              mode === 'raw'
+                ? 'bg-claude-500/20 text-claude-100'
+                : 'text-ink-300 hover:bg-ink-850'
+            }`}
+          >
+            원문
+          </button>
+        </div>
         <button
           type="button"
           onClick={onDelete}
@@ -233,6 +259,8 @@ function ReportDetailView({
       </header>
       {loading ? (
         <div className="py-12 text-center text-xs text-ink-500">불러오는 중…</div>
+      ) : mode === 'visual' ? (
+        <ReportVisualView content={content} />
       ) : (
         <pre className="whitespace-pre-wrap rounded border border-ink-800 bg-ink-900/60 p-4 text-xs leading-relaxed text-ink-100">
           {content}
