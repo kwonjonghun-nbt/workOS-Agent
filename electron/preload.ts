@@ -32,6 +32,17 @@ import type {
 import type { Preferences, SetThemeRequest } from './contracts/preferences';
 import type { UpdaterStatus, UpdaterStatusEvent } from './contracts/updater';
 import type {
+  ExtensionListItem,
+  ExtensionsChangedEvent,
+  SetEnabledRequest,
+  UpdateSettingsRequest,
+} from './contracts/extension';
+import type {
+  ListMyIssuesRequest,
+  ListMyIssuesResponse,
+  TestConnectionResponse,
+} from './contracts/jira';
+import type {
   TaskItemProgressEvent,
 } from './contracts/workOS';
 import type {
@@ -238,6 +249,26 @@ const updater = {
   },
 };
 
+const extension = {
+  list: (): Promise<ExtensionListItem[]> => ipcRenderer.invoke(CHANNELS.extension.list),
+  setEnabled: (req: SetEnabledRequest): Promise<ExtensionListItem> =>
+    ipcRenderer.invoke(CHANNELS.extension.setEnabled, req),
+  updateSettings: (req: UpdateSettingsRequest): Promise<ExtensionListItem> =>
+    ipcRenderer.invoke(CHANNELS.extension.updateSettings, req),
+  onChanged: (listener: (event: ExtensionsChangedEvent) => void): (() => void) => {
+    const wrapped = (_e: IpcRendererEvent, payload: ExtensionsChangedEvent) => listener(payload);
+    ipcRenderer.on(CHANNELS.extensionEvents.changed, wrapped);
+    return () => ipcRenderer.off(CHANNELS.extensionEvents.changed, wrapped);
+  },
+};
+
+const jira = {
+  listMyIssues: (req: ListMyIssuesRequest): Promise<ListMyIssuesResponse> =>
+    ipcRenderer.invoke(CHANNELS.jira.listMyIssues, req),
+  testConnection: (): Promise<TestConnectionResponse> =>
+    ipcRenderer.invoke(CHANNELS.jira.testConnection),
+};
+
 contextBridge.exposeInMainWorld('electronAPI', {
   terminal,
   workspace,
@@ -245,6 +276,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   mcp,
   preferences,
   updater,
+  extension,
+  jira,
 });
 
 export type ElectronAPI = {
@@ -254,4 +287,6 @@ export type ElectronAPI = {
   mcp: typeof mcp;
   preferences: typeof preferences;
   updater: typeof updater;
+  extension: typeof extension;
+  jira: typeof jira;
 };

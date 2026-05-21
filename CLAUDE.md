@@ -116,4 +116,8 @@ Electron(메인 프로세스) 측:
 - `/ipc-domain` — `electron/domain/**` (순수 도메인 모델·규칙)
 - `/ipc-contract` — `electron/contracts/**` + preload/BrowserWindow 보안
 
+크로스컷팅 피처:
+
+- `/extensions` — 확장 프로그램 시스템 (`electron/builtin-extensions/**`, `electron/{contracts,domain,services,repositories,ipc}/extension*.ts`, `src/{api,server-state,business,presentation/features}/extension*/**`). 새 확장 추가, manifest 스펙 확장, hook event/action/settings 필드 추가 시 사용.
+
 레이어 파일을 편집하거나 리뷰할 때 자동으로 매칭되도록 description 트리거를 설정해두었다.

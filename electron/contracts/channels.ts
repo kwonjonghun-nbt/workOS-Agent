@@ -85,4 +85,16 @@ export const CHANNELS = {
   updaterEvents: {
     status: 'updater:status',
   },
+  extension: {
+    list: 'extension:list',
+    setEnabled: 'extension:setEnabled',
+    updateSettings: 'extension:updateSettings',
+  },
+  extensionEvents: {
+    changed: 'extension:changed',
+  },
+  jira: {
+    listMyIssues: 'jira:listMyIssues',
+    testConnection: 'jira:testConnection',
+  },
 } as const;

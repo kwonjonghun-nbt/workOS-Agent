@@ -9,6 +9,9 @@ import { Split } from '../../shared/Split';
 import { WorkspaceTabBar } from './WorkspaceTabBar';
 import { WorkspaceContent } from './WorkspaceContent';
 import { StatusBar } from '../../shared/StatusBar';
+import { ActivityBar } from '../extensions/ActivityBar';
+import { ExtensionsSidebar } from '../extensions/ExtensionsSidebar';
+import { useExtensionStore } from '../../../business/extension/extension-store';
 
 export function WorkspaceShell() {
   const listQuery = useWorkspaceList();
@@ -47,24 +50,27 @@ export function WorkspaceShell() {
         onCloseTab={handleCloseTab}
         onAdd={handleAdd}
       />
-      <div className="relative min-h-0 flex-1">
-        {openIds.length === 0 ? (
-          <EmptyState onOpen={handleAdd} />
-        ) : (
-          openIds.map((id) => {
-            const ws = workspaces.find((w) => w.id === id);
-            if (!ws) return null;
-            return (
-              <div
-                key={id}
-                className="absolute inset-0"
-                style={{ display: id === activeId ? 'block' : 'none' }}
-              >
-                <WorkspacePane workspaceId={id} />
-              </div>
-            );
-          })
-        )}
+      <div className="flex min-h-0 flex-1">
+        <ActivityBar />
+        <div className="relative min-h-0 flex-1">
+          {openIds.length === 0 ? (
+            <NoWorkspaceArea onOpen={handleAdd} />
+          ) : (
+            openIds.map((id) => {
+              const ws = workspaces.find((w) => w.id === id);
+              if (!ws) return null;
+              return (
+                <div
+                  key={id}
+                  className="absolute inset-0"
+                  style={{ display: id === activeId ? 'block' : 'none' }}
+                >
+                  <WorkspacePane workspaceId={id} />
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
       <StatusBar />
     </div>
@@ -78,21 +84,32 @@ function WorkspacePane({ workspaceId }: { workspaceId: string }) {
   const toggleTerminalPanel = useWorkspaceStore((s) => s.toggleTerminalPanel);
   const onToggle = () => toggleTerminalPanel(workspaceId);
 
-  if (!terminalOpen) {
-    return (
-      <WorkspaceContent
-        workspaceId={workspaceId}
-        terminalOpen={false}
-        onToggleTerminal={onToggle}
-      />
-    );
-  }
+  const activeExtensionView = useExtensionStore((s) => s.activeViewKey);
+  // Extension panel takes over the workflow/main content slot, leaving the
+  // terminal split intact below.
+  const main = activeExtensionView ? (
+    <ExtensionsSidebar />
+  ) : (
+    <WorkspaceContent
+      workspaceId={workspaceId}
+      terminalOpen={terminalOpen}
+      onToggleTerminal={onToggle}
+    />
+  );
+
+  if (!terminalOpen) return main;
   return (
     <Split direction="horizontal" initialFirstSize={60} minFirstSize={20} maxFirstSize={85}>
-      <WorkspaceContent workspaceId={workspaceId} terminalOpen onToggleTerminal={onToggle} />
+      {main}
       <TerminalPanel workspaceId={workspaceId} onClose={onToggle} />
     </Split>
   );
+}
+
+function NoWorkspaceArea({ onOpen }: { onOpen: () => void }) {
+  const activeExtensionView = useExtensionStore((s) => s.activeViewKey);
+  if (activeExtensionView) return <ExtensionsSidebar />;
+  return <EmptyState onOpen={onOpen} />;
 }
 
 function EmptyState({ onOpen }: { onOpen: () => void }) {

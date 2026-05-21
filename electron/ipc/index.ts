@@ -11,15 +11,22 @@ import type {
   WorkOSChangedEvent,
 } from '../contracts/workOS';
 import type { McpToastEvent } from '../contracts/mcp';
+import type {
+  ExtensionListItem,
+  ExtensionsChangedEvent,
+} from '../contracts/extension';
 import type { Workspace } from '../domain/workspace';
 import { NodePtyRepository } from '../repositories/pty.repo';
 import { JsonWorkspaceRepository } from '../repositories/workspace.repo';
 import { JsonPreferencesRepository } from '../repositories/preferences.repo';
+import { JsonExtensionStateRepository } from '../repositories/extension.repo';
+import { BUILTIN_EXTENSIONS } from '../builtin-extensions';
 import { TerminalService } from '../services/terminal.service';
 import { WorkspaceService } from '../services/workspace.service';
 import { WorkOSService } from '../services/workOS.service';
 import { McpService } from '../services/mcp.service';
 import { PreferencesService } from '../services/preferences.service';
+import { ExtensionService } from '../services/extension.service';
 import { eventBus } from '../infra/event-bus';
 import { McpControlPlane } from '../infra/mcp-control-plane';
 import { registerTerminalHandlers } from './terminal.handler';
@@ -28,6 +35,10 @@ import { registerWorkOSHandlers } from './workOS.handler';
 import { registerMcpHandlers } from './mcp.handler';
 import { registerPreferencesHandlers } from './preferences.handler';
 import { registerUpdaterHandlers } from './updater.handler';
+import { registerExtensionHandlers } from './extension.handler';
+import { HttpJiraRepository } from '../repositories/jira.repo';
+import { JiraService } from '../services/jira.service';
+import { registerJiraHandlers } from './jira.handler';
 
 export type Container = {
   workspaceService: WorkspaceService;
@@ -36,6 +47,7 @@ export type Container = {
   mcpService: McpService;
   mcpControlPlane: McpControlPlane;
   preferencesService: PreferencesService;
+  extensionService: ExtensionService;
 };
 
 export function registerIpcHandlers(): Container {
@@ -43,6 +55,27 @@ export function registerIpcHandlers(): Container {
   const workspaceRepo = new JsonWorkspaceRepository(app.getPath('userData'));
   const preferencesRepo = new JsonPreferencesRepository(app.getPath('userData'));
   const preferencesService = new PreferencesService(preferencesRepo);
+  const extensionStateRepo = new JsonExtensionStateRepository(app.getPath('userData'));
+  const extensionService = new ExtensionService(
+    BUILTIN_EXTENSIONS,
+    extensionStateRepo,
+    {
+      notify(notice) {
+        // Surface extension notifications as toasts via the existing MCP toast
+        // channel — the renderer already wires this into the toast store.
+        const payload: McpToastEvent = {
+          workspaceId: '',
+          level: notice.level,
+          message: `[${notice.extensionName}] ${notice.message}`,
+        };
+        eventBus.broadcast(CHANNELS.mcpEvents.toast, payload);
+      },
+    },
+    (list: ExtensionListItem[]) => {
+      const payload: ExtensionsChangedEvent = { extensions: list };
+      eventBus.broadcast(CHANNELS.extensionEvents.changed, payload);
+    },
+  );
 
   let terminalServiceHolder: TerminalService | null = null;
 
@@ -68,6 +101,11 @@ export function registerIpcHandlers(): Container {
       onExit(sessionId, workspaceId, exitCode, signal) {
         const payload: TerminalExitEvent = { sessionId, workspaceId, exitCode, signal };
         eventBus.broadcast(CHANNELS.terminalEvents.exit, payload);
+        void extensionService
+          .dispatchEvent('terminal:exit', { sessionId, workspaceId, exitCode, signal })
+          .catch((err) => {
+            console.error('[workos-agent] extension dispatch failed:', err);
+          });
       },
     },
     { resolveCwd: (id) => workspaceService.resolveCwd(id) },
@@ -114,6 +152,10 @@ export function registerIpcHandlers(): Container {
   registerMcpHandlers(mcpService);
   registerPreferencesHandlers(preferencesService);
   registerUpdaterHandlers();
+  registerExtensionHandlers(extensionService);
+
+  const jiraService = new JiraService(new HttpJiraRepository(), extensionService);
+  registerJiraHandlers(jiraService);
 
   void bootstrapMcp(plane, mcpService, workOSService);
 
@@ -124,6 +166,7 @@ export function registerIpcHandlers(): Container {
     mcpService,
     mcpControlPlane: plane,
     preferencesService,
+    extensionService,
   };
 }
 

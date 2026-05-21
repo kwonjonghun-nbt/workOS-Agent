@@ -74,6 +74,17 @@ import type {
   TaskItemProgressEvent,
 } from './mcp/types';
 import type { UpdaterStatus, UpdaterStatusEvent } from './updater/types';
+import type {
+  ExtensionListItem,
+  ExtensionsChangedEvent,
+  SetEnabledRequest,
+  UpdateSettingsRequest,
+} from './extension/types';
+import type {
+  ListMyIssuesRequest,
+  ListMyIssuesResponse,
+  TestConnectionResponse,
+} from './jira/types';
 
 export type TerminalApi = {
   create: (req: CreateTerminalRequest) => Promise<CreateTerminalResponse>;
@@ -162,6 +173,18 @@ export type UpdaterApi = {
   onStatus: (listener: (event: UpdaterStatusEvent) => void) => () => void;
 };
 
+export type ExtensionApi = {
+  list: () => Promise<ExtensionListItem[]>;
+  setEnabled: (req: SetEnabledRequest) => Promise<ExtensionListItem>;
+  updateSettings: (req: UpdateSettingsRequest) => Promise<ExtensionListItem>;
+  onChanged: (listener: (event: ExtensionsChangedEvent) => void) => () => void;
+};
+
+export type JiraApi = {
+  listMyIssues: (req: ListMyIssuesRequest) => Promise<ListMyIssuesResponse>;
+  testConnection: () => Promise<TestConnectionResponse>;
+};
+
 declare global {
   interface Window {
     electronAPI: {
@@ -171,6 +194,8 @@ declare global {
       mcp: McpApi;
       preferences: PreferencesApi;
       updater: UpdaterApi;
+      extension: ExtensionApi;
+      jira: JiraApi;
     };
   }
 }
