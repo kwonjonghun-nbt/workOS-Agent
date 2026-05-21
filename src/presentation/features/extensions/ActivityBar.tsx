@@ -3,6 +3,9 @@ import { useExtensionStore, viewKey } from '../../../business/extension/extensio
 
 // Always-present built-in entry that opens the extension manager.
 const BUILTIN_KEY = 'workos-agent.extensions:manage';
+// Sentinel for the Home button — closes any active extension view and
+// returns the main slot to the workspace workflow.
+const HOME_KEY = '__home__';
 
 type ActivityItem = {
   key: string;
@@ -18,6 +21,11 @@ export function ActivityBar() {
   const setActiveView = useExtensionStore((s) => s.setActiveView);
 
   const items: ActivityItem[] = [
+    {
+      key: HOME_KEY,
+      icon: '⌂',
+      title: '홈 — 워크플로우 보기',
+    },
     {
       key: BUILTIN_KEY,
       icon: '⌬',
@@ -36,13 +44,17 @@ export function ActivityBar() {
   ];
 
   const onClick = (key: string) => {
+    if (key === HOME_KEY) {
+      setActiveView(null);
+      return;
+    }
     setActiveView(activeKey === key ? null : key);
   };
 
   return (
     <div className="flex h-full w-12 shrink-0 flex-col items-center gap-1 border-r border-ink-800 bg-ink-950/70 py-2">
       {items.map((it) => {
-        const active = it.key === activeKey;
+        const active = it.key === HOME_KEY ? activeKey === null : it.key === activeKey;
         return (
           <button
             key={it.key}
