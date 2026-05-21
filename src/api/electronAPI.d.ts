@@ -85,6 +85,33 @@ import type {
   ListMyIssuesResponse,
   TestConnectionResponse,
 } from './jira/types';
+import type {
+  MetaData as JiraSnapshotMeta,
+  StoredData as JiraSnapshotStored,
+  SyncProgressEvent as JiraSyncProgressEvent,
+  TriggerSyncRequest as JiraSnapshotTriggerRequest,
+  TriggerSyncResponse as JiraSnapshotTriggerResponse,
+} from './jira/snapshot-types';
+import type {
+  BulkReplaceRequest as JiraBulkReplaceRequest,
+  BulkReplaceResponse as JiraBulkReplaceResponse,
+  LabelNote as JiraLabelNote,
+  SaveLabelNotesRequest as JiraSaveLabelNotesRequest,
+  SearchByLabelRequest as JiraSearchByLabelRequest,
+  SearchByLabelResponse as JiraSearchByLabelResponse,
+  SuggestLabelRequest as JiraSuggestLabelRequest,
+  SuggestLabelResponse as JiraSuggestLabelResponse,
+  UpdateIssueLabelsRequest as JiraUpdateIssueLabelsRequest,
+} from './jira/label-types';
+import type {
+  DeleteReportRequest as JiraDeleteReportRequest,
+  GenerateReportRequest as JiraGenerateReportRequest,
+  GenerateReportResponse as JiraGenerateReportResponse,
+  GetReportRequest as JiraGetReportRequest,
+  GetReportResponse as JiraGetReportResponse,
+  ReportMeta as JiraReportMeta,
+  SaveReportRequest as JiraSaveReportRequest,
+} from './jira/report-types';
 
 export type TerminalApi = {
   create: (req: CreateTerminalRequest) => Promise<CreateTerminalResponse>;
@@ -185,6 +212,30 @@ export type JiraApi = {
   testConnection: () => Promise<TestConnectionResponse>;
 };
 
+export type JiraSnapshotApi = {
+  trigger: (req: JiraSnapshotTriggerRequest) => Promise<JiraSnapshotTriggerResponse>;
+  getLatest: () => Promise<JiraSnapshotStored | null>;
+  getMeta: () => Promise<JiraSnapshotMeta>;
+  onProgress: (listener: (event: JiraSyncProgressEvent) => void) => () => void;
+};
+
+export type JiraLabelsApi = {
+  getNotes: () => Promise<JiraLabelNote[]>;
+  saveNotes: (req: JiraSaveLabelNotesRequest) => Promise<JiraLabelNote[]>;
+  searchByLabel: (req: JiraSearchByLabelRequest) => Promise<JiraSearchByLabelResponse>;
+  bulkReplace: (req: JiraBulkReplaceRequest) => Promise<JiraBulkReplaceResponse>;
+  updateIssueLabels: (req: JiraUpdateIssueLabelsRequest) => Promise<void>;
+  suggest: (req: JiraSuggestLabelRequest) => Promise<JiraSuggestLabelResponse>;
+};
+
+export type JiraReportsApi = {
+  list: () => Promise<{ files: JiraReportMeta[] }>;
+  get: (req: JiraGetReportRequest) => Promise<JiraGetReportResponse>;
+  save: (req: JiraSaveReportRequest) => Promise<void>;
+  delete: (req: JiraDeleteReportRequest) => Promise<void>;
+  generate: (req: JiraGenerateReportRequest) => Promise<JiraGenerateReportResponse>;
+};
+
 declare global {
   interface Window {
     electronAPI: {
@@ -196,6 +247,9 @@ declare global {
       updater: UpdaterApi;
       extension: ExtensionApi;
       jira: JiraApi;
+      jiraSnapshot: JiraSnapshotApi;
+      jiraLabels: JiraLabelsApi;
+      jiraReports: JiraReportsApi;
     };
   }
 }

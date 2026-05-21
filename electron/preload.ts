@@ -43,6 +43,33 @@ import type {
   TestConnectionResponse,
 } from './contracts/jira';
 import type {
+  GetLatestResponse,
+  GetMetaResponse,
+  SyncProgressEvent,
+  TriggerSyncRequest,
+  TriggerSyncResponse,
+} from './contracts/jira-snapshot';
+import type {
+  BulkReplaceRequest,
+  BulkReplaceResponse,
+  LabelNote,
+  SaveLabelNotesRequest,
+  SearchByLabelRequest,
+  SearchByLabelResponse,
+  SuggestLabelRequest,
+  SuggestLabelResponse,
+  UpdateIssueLabelsRequest,
+} from './contracts/jira-labels';
+import type {
+  DeleteReportRequest,
+  GenerateReportRequest,
+  GenerateReportResponse,
+  GetReportRequest,
+  GetReportResponse,
+  ReportMeta,
+  SaveReportRequest,
+} from './contracts/jira-reports';
+import type {
   TaskItemProgressEvent,
 } from './contracts/workOS';
 import type {
@@ -269,6 +296,48 @@ const jira = {
     ipcRenderer.invoke(CHANNELS.jira.testConnection),
 };
 
+const jiraSnapshot = {
+  trigger: (req: TriggerSyncRequest): Promise<TriggerSyncResponse> =>
+    ipcRenderer.invoke(CHANNELS.jiraSnapshot.trigger, req),
+  getLatest: (): Promise<GetLatestResponse> =>
+    ipcRenderer.invoke(CHANNELS.jiraSnapshot.getLatest),
+  getMeta: (): Promise<GetMetaResponse> =>
+    ipcRenderer.invoke(CHANNELS.jiraSnapshot.getMeta),
+  onProgress: (listener: (event: SyncProgressEvent) => void): (() => void) => {
+    const wrapped = (_e: IpcRendererEvent, payload: SyncProgressEvent) => listener(payload);
+    ipcRenderer.on(CHANNELS.jiraSnapshotEvents.progress, wrapped);
+    return () => ipcRenderer.off(CHANNELS.jiraSnapshotEvents.progress, wrapped);
+  },
+};
+
+const jiraLabels = {
+  getNotes: (): Promise<LabelNote[]> =>
+    ipcRenderer.invoke(CHANNELS.jiraLabels.getNotes),
+  saveNotes: (req: SaveLabelNotesRequest): Promise<LabelNote[]> =>
+    ipcRenderer.invoke(CHANNELS.jiraLabels.saveNotes, req),
+  searchByLabel: (req: SearchByLabelRequest): Promise<SearchByLabelResponse> =>
+    ipcRenderer.invoke(CHANNELS.jiraLabels.searchByLabel, req),
+  bulkReplace: (req: BulkReplaceRequest): Promise<BulkReplaceResponse> =>
+    ipcRenderer.invoke(CHANNELS.jiraLabels.bulkReplace, req),
+  updateIssueLabels: (req: UpdateIssueLabelsRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.jiraLabels.updateIssueLabels, req),
+  suggest: (req: SuggestLabelRequest): Promise<SuggestLabelResponse> =>
+    ipcRenderer.invoke(CHANNELS.jiraLabels.suggest, req),
+};
+
+const jiraReports = {
+  list: (): Promise<{ files: ReportMeta[] }> =>
+    ipcRenderer.invoke(CHANNELS.jiraReports.list),
+  get: (req: GetReportRequest): Promise<GetReportResponse> =>
+    ipcRenderer.invoke(CHANNELS.jiraReports.get, req),
+  save: (req: SaveReportRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.jiraReports.save, req),
+  delete: (req: DeleteReportRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.jiraReports.delete, req),
+  generate: (req: GenerateReportRequest): Promise<GenerateReportResponse> =>
+    ipcRenderer.invoke(CHANNELS.jiraReports.generate, req),
+};
+
 contextBridge.exposeInMainWorld('electronAPI', {
   terminal,
   workspace,
@@ -278,6 +347,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updater,
   extension,
   jira,
+  jiraSnapshot,
+  jiraLabels,
+  jiraReports,
 });
 
 export type ElectronAPI = {
@@ -289,4 +361,7 @@ export type ElectronAPI = {
   updater: typeof updater;
   extension: typeof extension;
   jira: typeof jira;
+  jiraSnapshot: typeof jiraSnapshot;
+  jiraLabels: typeof jiraLabels;
+  jiraReports: typeof jiraReports;
 };

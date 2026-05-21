@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { jiraKeys, jiraQueries } from '../../../server-state/jira';
 import type { JiraIssue } from '../../../server-state/jira';
+import { useIssueModalStore } from '../../../business/jira/issue-modal-store';
 
 /**
  * Renders the Jira issues currently assigned to the configured account,
@@ -130,13 +131,18 @@ function Stat({ label, value }: { label: string; value: number }) {
 
 function IssueRow({ issue }: { issue: JiraIssue }) {
   const statusTone = statusToneFor(issue.statusCategory);
+  const openIssue = useIssueModalStore((s) => s.open);
   return (
-    <li className="rounded border border-ink-800 bg-ink-900/60 px-2 py-1.5 text-xs">
+    <li
+      className="cursor-pointer rounded border border-ink-800 bg-ink-900/60 px-2 py-1.5 text-xs hover:border-ink-700 hover:bg-ink-850/60"
+      onClick={() => openIssue(issue.key)}
+    >
       <div className="flex items-center gap-2">
         <a
           href={issue.url}
           target="_blank"
           rel="noreferrer"
+          onClick={(e) => e.stopPropagation()}
           className="font-mono text-[11px] text-claude-300 hover:underline"
         >
           {issue.key}

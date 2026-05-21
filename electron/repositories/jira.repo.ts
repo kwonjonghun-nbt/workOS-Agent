@@ -1,5 +1,7 @@
 import type { AtlassianIssue, JiraConfig } from '../domain/jira';
 import { buildSearchJql } from '../domain/jira';
+import type { AtlassianIssueRaw } from '../domain/jira-issue';
+import { SNAPSHOT_FIELDS } from '../domain/jira-issue';
 import { ApiError } from '../infra/error';
 
 /**
@@ -21,6 +23,32 @@ export interface JiraRepository {
     config: JiraConfig,
     maxResults: number,
   ): Promise<{ raw: AtlassianIssue[]; total: number }>;
+  /**
+   * Paginated full-snapshot search. Returns the union of all issues matching
+   * the snapshot JQL with the rich field set (labels, due date, story points,
+   * etc). Used by the snapshot pipeline only — the lightweight list view
+   * keeps using {@link searchAssignedIssues}.
+   */
+  searchAssignedIssuesFull(
+    config: JiraConfig,
+    maxPages?: number,
+  ): Promise<{ raw: AtlassianIssueRaw[] }>;
+  searchByLabel(
+    config: JiraConfig,
+    projectKey: string,
+    label: string,
+  ): Promise<{ issues: Array<{ key: string; summary: string; labels: string[]; status: string }> }>;
+  replaceLabelOnIssue(
+    config: JiraConfig,
+    issueKey: string,
+    oldLabel: string,
+    newLabel: string,
+  ): Promise<void>;
+  setIssueLabels(
+    config: JiraConfig,
+    issueKey: string,
+    labels: string[],
+  ): Promise<void>;
   getMyself(config: JiraConfig): Promise<JiraMyself>;
 }
 
@@ -65,6 +93,110 @@ export class HttpJiraRepository implements JiraRepository {
       raw: issues,
       total: typeof json.total === 'number' ? json.total : issues.length,
     };
+  }
+
+  async searchAssignedIssuesFull(
+    config: JiraConfig,
+    maxPages = 20,
+  ): Promise<{ raw: AtlassianIssueRaw[] }> {
+    const url = `${config.baseUrl}/rest/api/3/search/jql`;
+    const jql = buildSearchJql(config.projectKeys);
+    const all: AtlassianIssueRaw[] = [];
+    let nextPageToken: string | undefined;
+    for (let page = 0; page < maxPages; page += 1) {
+      const body: Record<string, unknown> = {
+        jql,
+        maxResults: 100,
+        fields: SNAPSHOT_FIELDS,
+      };
+      if (nextPageToken) body.nextPageToken = nextPageToken;
+      LOG('POST', url, 'snapshot page=', page, 'token=', nextPageToken ?? '(initial)');
+      const res = await this.request(config, url, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+      const json = (await res.json()) as {
+        issues?: AtlassianIssueRaw[];
+        nextPageToken?: string;
+        isLast?: boolean;
+      };
+      const issues = Array.isArray(json.issues) ? json.issues : [];
+      all.push(...issues);
+      LOG('snapshot page ok:', issues.length, 'total so far=', all.length);
+      if (json.isLast || !json.nextPageToken) break;
+      nextPageToken = json.nextPageToken;
+    }
+    return { raw: all };
+  }
+
+  async searchByLabel(
+    config: JiraConfig,
+    projectKey: string,
+    label: string,
+  ): Promise<{ issues: Array<{ key: string; summary: string; labels: string[]; status: string }> }> {
+    const url = `${config.baseUrl}/rest/api/3/search/jql`;
+    const escapedLabel = label.replace(/"/g, '');
+    const jql = `project = "${projectKey.replace(/"/g, '')}" AND labels = "${escapedLabel}"`;
+    const body = {
+      jql,
+      maxResults: 100,
+      fields: ['summary', 'labels', 'status'],
+    };
+    LOG('searchByLabel jql=', jql);
+    const res = await this.request(config, url, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    const json = (await res.json()) as {
+      issues?: Array<{
+        key?: string;
+        fields?: {
+          summary?: string;
+          labels?: string[];
+          status?: { name?: string };
+        };
+      }>;
+    };
+    const issues = (json.issues ?? []).map((i) => ({
+      key: String(i.key ?? ''),
+      summary: String(i.fields?.summary ?? ''),
+      labels: Array.isArray(i.fields?.labels) ? i.fields!.labels!.map(String) : [],
+      status: String(i.fields?.status?.name ?? ''),
+    }));
+    return { issues };
+  }
+
+  async replaceLabelOnIssue(
+    config: JiraConfig,
+    issueKey: string,
+    oldLabel: string,
+    newLabel: string,
+  ): Promise<void> {
+    const url = `${config.baseUrl}/rest/api/3/issue/${encodeURIComponent(issueKey)}`;
+    const body = {
+      update: {
+        labels: [{ remove: oldLabel }, { add: newLabel }],
+      },
+    };
+    LOG('PUT (replace label)', issueKey, oldLabel, '→', newLabel);
+    await this.request(config, url, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async setIssueLabels(
+    config: JiraConfig,
+    issueKey: string,
+    labels: string[],
+  ): Promise<void> {
+    const url = `${config.baseUrl}/rest/api/3/issue/${encodeURIComponent(issueKey)}`;
+    const body = { fields: { labels } };
+    LOG('PUT (set labels)', issueKey, labels);
+    await this.request(config, url, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
   }
 
   async getMyself(config: JiraConfig): Promise<JiraMyself> {

@@ -37,8 +37,20 @@ import { registerPreferencesHandlers } from './preferences.handler';
 import { registerUpdaterHandlers } from './updater.handler';
 import { registerExtensionHandlers } from './extension.handler';
 import { HttpJiraRepository } from '../repositories/jira.repo';
+import { JsonJiraSnapshotRepository } from '../repositories/jira-snapshot.repo';
 import { JiraService } from '../services/jira.service';
+import { JiraSnapshotService } from '../services/jira-snapshot.service';
+import { JiraSchedulerService } from '../services/jira-scheduler.service';
 import { registerJiraHandlers } from './jira.handler';
+import { registerJiraSnapshotHandlers } from './jira-snapshot.handler';
+import { registerJiraLabelHandlers } from './jira-label.handler';
+import { registerJiraReportHandlers } from './jira-report.handler';
+import { JsonLabelNotesRepository } from '../repositories/jira-label-notes.repo';
+import { ClaudeCliRepository } from '../repositories/llm-cli.repo';
+import { FsReportsRepository } from '../repositories/jira-reports.repo';
+import { JiraLabelService } from '../services/jira-label.service';
+import { JiraReportService } from '../services/jira-report.service';
+import type { SyncProgressEvent } from '../contracts/jira-snapshot';
 
 export type Container = {
   workspaceService: WorkspaceService;
@@ -154,8 +166,43 @@ export function registerIpcHandlers(): Container {
   registerUpdaterHandlers();
   registerExtensionHandlers(extensionService);
 
-  const jiraService = new JiraService(new HttpJiraRepository(), extensionService);
+  const jiraRepo = new HttpJiraRepository();
+  const jiraService = new JiraService(jiraRepo, extensionService);
   registerJiraHandlers(jiraService);
+
+  const jiraSnapshotRepo = new JsonJiraSnapshotRepository(app.getPath('userData'));
+  const jiraSnapshotService = new JiraSnapshotService(
+    jiraSnapshotRepo,
+    jiraRepo,
+    extensionService,
+    {
+      emit(event: SyncProgressEvent) {
+        eventBus.broadcast(CHANNELS.jiraSnapshotEvents.progress, event);
+      },
+    },
+  );
+  registerJiraSnapshotHandlers(jiraSnapshotService);
+  const jiraScheduler = new JiraSchedulerService(jiraSnapshotService);
+  jiraScheduler.start();
+
+  const labelNotesRepo = new JsonLabelNotesRepository(app.getPath('userData'));
+  const claudeRepo = new ClaudeCliRepository();
+  const jiraLabelService = new JiraLabelService(
+    labelNotesRepo,
+    jiraRepo,
+    claudeRepo,
+    extensionService,
+  );
+  registerJiraLabelHandlers(jiraLabelService);
+
+  const reportsRepo = new FsReportsRepository(app.getPath('userData'));
+  const jiraReportService = new JiraReportService(
+    reportsRepo,
+    jiraSnapshotRepo,
+    labelNotesRepo,
+    claudeRepo,
+  );
+  registerJiraReportHandlers(jiraReportService);
 
   void bootstrapMcp(plane, mcpService, workOSService);
 

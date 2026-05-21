@@ -50,24 +50,38 @@ export function ExtensionsSidebar() {
     );
   }
 
+  // 단일 'custom' 블록만 가진 view 는 panel 내부를 가득 채우도록 한다.
+  // (예: Jira 확장의 'workspace' view — 자체 좌측 네비/스크롤을 가짐)
+  const isFullBleedCustom =
+    view.body.length === 1 && view.body[0].type === 'custom';
+
   return (
     <PanelFrame
       title={`${view.title} · ${ext.manifest.name}`}
       onClose={() => setActiveView(null)}
     >
-      <div className="mx-auto flex max-w-3xl flex-col gap-4 p-6">
-        {view.body.length === 0 ? (
-          <div className="text-xs text-ink-500">이 뷰는 본문을 선언하지 않았습니다.</div>
-        ) : (
-          view.body.map((block, idx) => (
+      {view.body.length === 0 ? (
+        <div className="p-6 text-xs text-ink-500">
+          이 뷰는 본문을 선언하지 않았습니다.
+        </div>
+      ) : isFullBleedCustom ? (
+        <div className="h-full min-h-0">
+          <ViewBodyBlock
+            block={view.body[0]}
+            extensionId={ext.manifest.id}
+          />
+        </div>
+      ) : (
+        <div className="mx-auto flex max-w-3xl flex-col gap-4 p-6">
+          {view.body.map((block, idx) => (
             <ViewBodyBlock
               key={idx}
               block={block}
               extensionId={ext.manifest.id}
             />
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </PanelFrame>
   );
 }

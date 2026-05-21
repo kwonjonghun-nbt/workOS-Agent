@@ -7,33 +7,18 @@ export const workosJiraManifest = {
   manifestVersion: 1,
   id: 'workos.jira',
   name: 'Jira',
-  version: '0.1.0',
+  version: '0.2.0',
   description:
-    'Atlassian Jira 와 연동해 내 담당 이슈 리스트와 간단한 지표를 사이드 패널에서 확인합니다.',
+    'Atlassian Jira 와 연동해 내 담당 이슈 리스트·대시보드·라벨·리포트를 한 화면에서 관리합니다.',
   author: 'workOS-Agent',
   contributes: {
+    // 단일 진입점만 액티비티 바에 노출하고, 내부 좌측 네비로 섹션을 전환한다.
     views: [
       {
-        id: 'tasks',
-        title: 'Jira Tasks',
+        id: 'workspace',
+        title: 'Jira',
         icon: 'J',
-        body: [
-          { type: 'custom', component: 'jira-task-list' },
-        ],
-      },
-      {
-        id: 'settings',
-        title: 'Jira 설정',
-        icon: '⚙',
-        body: [
-          {
-            type: 'markdown',
-            value:
-              'Atlassian 에서 발급한 API 토큰과 도메인, 프로젝트 키를 입력하세요. 토큰은 OS 보안 저장소(safeStorage)로 암호화돼 디스크에 저장됩니다.',
-          },
-          { type: 'settings' },
-          { type: 'custom', component: 'jira-test-connection' },
-        ],
+        body: [{ type: 'custom', component: 'jira-workspace' }],
       },
     ],
     settings: {

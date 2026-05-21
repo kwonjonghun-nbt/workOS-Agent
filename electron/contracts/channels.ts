@@ -97,4 +97,27 @@ export const CHANNELS = {
     listMyIssues: 'jira:listMyIssues',
     testConnection: 'jira:testConnection',
   },
+  jiraSnapshot: {
+    trigger: 'jiraSnapshot:trigger',
+    getLatest: 'jiraSnapshot:getLatest',
+    getMeta: 'jiraSnapshot:getMeta',
+  },
+  jiraSnapshotEvents: {
+    progress: 'jiraSnapshot:progress',
+  },
+  jiraLabels: {
+    getNotes: 'jiraLabels:getNotes',
+    saveNotes: 'jiraLabels:saveNotes',
+    searchByLabel: 'jiraLabels:searchByLabel',
+    bulkReplace: 'jiraLabels:bulkReplace',
+    updateIssueLabels: 'jiraLabels:updateIssueLabels',
+    suggest: 'jiraLabels:suggest',
+  },
+  jiraReports: {
+    list: 'jiraReports:list',
+    get: 'jiraReports:get',
+    save: 'jiraReports:save',
+    delete: 'jiraReports:delete',
+    generate: 'jiraReports:generate',
+  },
 } as const;
