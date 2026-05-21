@@ -3,7 +3,7 @@ import type { IPty } from 'node-pty';
 import { TerminalSession, type TerminalSize } from '../domain/terminal-session';
 
 export interface PtyRepository {
-  spawn(session: TerminalSession): void;
+  spawn(session: TerminalSession, env?: Record<string, string>): void;
   write(sessionId: string, data: string): void;
   resize(sessionId: string, size: TerminalSize): void;
   dispose(sessionId: string): void;
@@ -20,13 +20,16 @@ type Handle = {
 export class NodePtyRepository implements PtyRepository {
   private readonly handles = new Map<string, Handle>();
 
-  spawn(session: TerminalSession): void {
+  spawn(session: TerminalSession, envOverride?: Record<string, string>): void {
+    const env = envOverride
+      ? { ...(process.env as Record<string, string>), ...envOverride }
+      : (process.env as Record<string, string>);
     const proc = pty.spawn(session.shell, [], {
       name: 'xterm-color',
       cols: session.size.cols,
       rows: session.size.rows,
       cwd: session.cwd,
-      env: process.env as Record<string, string>,
+      env,
     });
 
     const handle: Handle = { proc, dataListeners: [], exitListeners: [] };

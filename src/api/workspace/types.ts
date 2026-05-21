@@ -1,9 +1,12 @@
+export type WorkspaceKind = 'user' | 'system';
+
 export type Workspace = {
   id: string;
   name: string;
   rootPath: string;
   createdAt: number;
   lastOpenedAt: number;
+  kind: WorkspaceKind;
 };
 
 export type AddWorkspaceRequest = {

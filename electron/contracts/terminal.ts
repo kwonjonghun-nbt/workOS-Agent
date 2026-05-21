@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+export const terminalPurposeSchema = z.enum(['user', 'extension']);
+export type TerminalPurpose = z.infer<typeof terminalPurposeSchema>;
+
 export const terminalSummarySchema = z.object({
   sessionId: z.string(),
   workspaceId: z.string(),
@@ -7,6 +10,8 @@ export const terminalSummarySchema = z.object({
   shell: z.string(),
   createdAt: z.number().int(),
   name: z.string(),
+  purpose: terminalPurposeSchema.default('user'),
+  ownerExtensionId: z.string().optional(),
 });
 export type TerminalSummary = z.infer<typeof terminalSummarySchema>;
 
@@ -20,6 +25,8 @@ export const createTerminalRequestSchema = z.object({
   workspaceId: z.string().min(1),
   cols: z.number().int().positive(),
   rows: z.number().int().positive(),
+  purpose: terminalPurposeSchema.default('user'),
+  ownerExtensionId: z.string().min(1).optional(),
 });
 export type CreateTerminalRequest = z.infer<typeof createTerminalRequestSchema>;
 
@@ -48,6 +55,11 @@ export type DisposeTerminalRequest = z.infer<typeof disposeTerminalRequestSchema
 
 export const listTerminalsRequestSchema = z.object({
   workspaceId: z.string().min(1),
+  // List defaults to user purpose so existing UI does not surface extension
+  // terminals. Pass 'extension' (+ ownerExtensionId) to scope to a single
+  // extension's terminals.
+  purpose: terminalPurposeSchema.optional(),
+  ownerExtensionId: z.string().min(1).optional(),
 });
 export type ListTerminalsRequest = z.infer<typeof listTerminalsRequestSchema>;
 
@@ -61,4 +73,19 @@ export type TerminalExitEvent = {
   workspaceId: string;
   exitCode: number;
   signal: number | null;
+  ownerExtensionId?: string;
 };
+
+/**
+ * Extension-owned terminal create — main process builds cwd from the system
+ * default workspace's per-extension subdir and injects secrets as env vars.
+ * Renderer never passes a workspaceId for this path.
+ */
+export const createExtensionTerminalRequestSchema = z.object({
+  extensionId: z.string().min(1),
+  cols: z.number().int().positive(),
+  rows: z.number().int().positive(),
+});
+export type CreateExtensionTerminalRequest = z.infer<
+  typeof createExtensionTerminalRequestSchema
+>;

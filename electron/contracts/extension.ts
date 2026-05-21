@@ -19,6 +19,13 @@ export const extensionViewBodyBlockSchema = z.discriminatedUnion('type', [
     type: z.literal('custom'),
     component: z.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9._-]*$/),
   }),
+  // Renders an embedded xterm bound to an extension-owned PTY rooted at the
+  // system default workspace's per-extension cwd. The host spawns/dispose
+  // the session; the extension only declares it.
+  z.object({
+    type: z.literal('terminal'),
+    title: z.string().min(1).max(64).optional(),
+  }),
 ]);
 export type ExtensionViewBodyBlock = z.infer<typeof extensionViewBodyBlockSchema>;
 
@@ -140,4 +147,14 @@ export type UpdateSettingsRequest = z.infer<typeof updateSettingsRequestSchema>;
 
 export type ExtensionsChangedEvent = {
   extensions: ExtensionListItem[];
+};
+
+/**
+ * Pushed by the host when an extension-owned process (e.g. terminal AI run)
+ * starts and needs UI attention. The renderer opens the extension's first view
+ * + auto-opens the AI Terminal panel and focuses the matching session.
+ */
+export type ExtensionOpenPanelEvent = {
+  extensionId: string;
+  sessionId: string;
 };

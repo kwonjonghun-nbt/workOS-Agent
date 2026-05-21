@@ -1,4 +1,5 @@
 import type {
+  CreateExtensionTerminalRequest,
   CreateTerminalRequest,
   CreateTerminalResponse,
   DisposeTerminalRequest,
@@ -76,6 +77,7 @@ import type {
 import type { UpdaterStatus, UpdaterStatusEvent } from './updater/types';
 import type {
   ExtensionListItem,
+  ExtensionOpenPanelEvent,
   ExtensionsChangedEvent,
   SetEnabledRequest,
   UpdateSettingsRequest,
@@ -115,6 +117,9 @@ import type {
 
 export type TerminalApi = {
   create: (req: CreateTerminalRequest) => Promise<CreateTerminalResponse>;
+  createForExtension: (
+    req: CreateExtensionTerminalRequest,
+  ) => Promise<CreateTerminalResponse>;
   write: (req: WriteTerminalRequest) => Promise<void>;
   resize: (req: ResizeTerminalRequest) => Promise<void>;
   dispose: (req: DisposeTerminalRequest) => Promise<void>;
@@ -205,6 +210,7 @@ export type ExtensionApi = {
   setEnabled: (req: SetEnabledRequest) => Promise<ExtensionListItem>;
   updateSettings: (req: UpdateSettingsRequest) => Promise<ExtensionListItem>;
   onChanged: (listener: (event: ExtensionsChangedEvent) => void) => () => void;
+  onOpenPanel: (listener: (event: ExtensionOpenPanelEvent) => void) => () => void;
 };
 
 export type JiraApi = {

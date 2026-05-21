@@ -27,6 +27,7 @@ import { WorkOSService } from '../services/workOS.service';
 import { McpService } from '../services/mcp.service';
 import { PreferencesService } from '../services/preferences.service';
 import { ExtensionService } from '../services/extension.service';
+import { ExtensionLlmRuntime } from '../services/extension-llm-runtime';
 import { eventBus } from '../infra/event-bus';
 import { McpControlPlane } from '../infra/mcp-control-plane';
 import { registerTerminalHandlers } from './terminal.handler';
@@ -46,7 +47,7 @@ import { registerJiraSnapshotHandlers } from './jira-snapshot.handler';
 import { registerJiraLabelHandlers } from './jira-label.handler';
 import { registerJiraReportHandlers } from './jira-report.handler';
 import { JsonLabelNotesRepository } from '../repositories/jira-label-notes.repo';
-import { ClaudeCliRepository } from '../repositories/llm-cli.repo';
+import { TerminalLlmRepository } from '../repositories/terminal-llm.repo';
 import { FsReportsRepository } from '../repositories/jira-reports.repo';
 import { JiraLabelService } from '../services/jira-label.service';
 import { JiraReportService } from '../services/jira-report.service';
@@ -60,6 +61,7 @@ export type Container = {
   mcpControlPlane: McpControlPlane;
   preferencesService: PreferencesService;
   extensionService: ExtensionService;
+  extensionLlmRuntime: ExtensionLlmRuntime;
 };
 
 export function registerIpcHandlers(): Container {
@@ -110,11 +112,23 @@ export function registerIpcHandlers(): Container {
         const payload: TerminalDataEvent = { sessionId, data };
         eventBus.broadcast(CHANNELS.terminalEvents.data, payload);
       },
-      onExit(sessionId, workspaceId, exitCode, signal) {
-        const payload: TerminalExitEvent = { sessionId, workspaceId, exitCode, signal };
+      onExit(sessionId, workspaceId, exitCode, signal, ownerExtensionId) {
+        const payload: TerminalExitEvent = {
+          sessionId,
+          workspaceId,
+          exitCode,
+          signal,
+          ownerExtensionId,
+        };
         eventBus.broadcast(CHANNELS.terminalEvents.exit, payload);
         void extensionService
-          .dispatchEvent('terminal:exit', { sessionId, workspaceId, exitCode, signal })
+          .dispatchEvent('terminal:exit', {
+            sessionId,
+            workspaceId,
+            exitCode,
+            signal,
+            ownerExtensionId,
+          })
           .catch((err) => {
             console.error('[workos-agent] extension dispatch failed:', err);
           });
@@ -123,6 +137,14 @@ export function registerIpcHandlers(): Container {
     { resolveCwd: (id) => workspaceService.resolveCwd(id) },
   );
   terminalServiceHolder = terminalService;
+
+  // Bootstrap the singleton system-default workspace. Hidden from list() but
+  // serves as the cwd anchor for extension-owned CLI terminals.
+  void workspaceService
+    .ensureSystemDefault(path.join(app.getPath('userData'), 'default-workspace'))
+    .catch((err) => {
+      console.error('[workos-agent] ensureSystemDefault failed:', err);
+    });
 
   const workOSService = new WorkOSService(
     { resolveCwd: (id) => workspaceService.resolveCwd(id) },
@@ -159,7 +181,10 @@ export function registerIpcHandlers(): Container {
   // Register every handler synchronously so the renderer can hit them as soon
   // as the BrowserWindow loads. The MCP plane bootstrap runs in the background.
   registerWorkspaceHandlers(workspaceService);
-  registerTerminalHandlers(terminalService);
+  registerTerminalHandlers(terminalService, {
+    workspace: workspaceService,
+    extension: extensionService,
+  });
   registerWorkOSHandlers(workOSService);
   registerMcpHandlers(mcpService);
   registerPreferencesHandlers(preferencesService);
@@ -186,11 +211,22 @@ export function registerIpcHandlers(): Container {
   jiraScheduler.start();
 
   const labelNotesRepo = new JsonLabelNotesRepository(app.getPath('userData'));
-  const claudeRepo = new ClaudeCliRepository();
+  // Jira 의 AI 호출(라벨 추천, 리포트 생성)은 모두 Jira 확장의 가시 터미널
+  // 패널에서 claude --dangerously-skip-permissions 으로 실행되고, 결과는
+  // 확장이 workos_extension_llm_result MCP 도구로 콜백한다.
+  const extensionLlmRuntime = new ExtensionLlmRuntime();
+  const jiraLlmRepo = new TerminalLlmRepository(
+    'workos.jira',
+    terminalService,
+    workspaceService,
+    extensionService,
+    mcpService,
+    extensionLlmRuntime,
+  );
   const jiraLabelService = new JiraLabelService(
     labelNotesRepo,
     jiraRepo,
-    claudeRepo,
+    jiraLlmRepo,
     extensionService,
   );
   registerJiraLabelHandlers(jiraLabelService);
@@ -200,11 +236,24 @@ export function registerIpcHandlers(): Container {
     reportsRepo,
     jiraSnapshotRepo,
     labelNotesRepo,
-    claudeRepo,
+    jiraLlmRepo,
   );
   registerJiraReportHandlers(jiraReportService);
 
   void bootstrapMcp(plane, mcpService, workOSService);
+
+  // Route for the new MCP tool `workos_extension_llm_result`.
+  plane.on('/v1/extension/llm-result', async (body) => {
+    const payload = body as { requestId?: unknown; content?: unknown; error?: unknown };
+    const requestId = typeof payload.requestId === 'string' ? payload.requestId : '';
+    if (!requestId) {
+      throw new Error('requestId is required');
+    }
+    return extensionLlmRuntime.submit(requestId, {
+      content: typeof payload.content === 'string' ? payload.content : undefined,
+      error: typeof payload.error === 'string' ? payload.error : undefined,
+    });
+  });
 
   return {
     workspaceService,
@@ -214,6 +263,7 @@ export function registerIpcHandlers(): Container {
     mcpControlPlane: plane,
     preferencesService,
     extensionService,
+    extensionLlmRuntime,
   };
 }
 

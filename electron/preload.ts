@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import { CHANNELS } from './contracts/channels';
 import type {
+  CreateExtensionTerminalRequest,
   CreateTerminalRequest,
   CreateTerminalResponse,
   DisposeTerminalRequest,
@@ -33,6 +34,7 @@ import type { Preferences, SetThemeRequest } from './contracts/preferences';
 import type { UpdaterStatus, UpdaterStatusEvent } from './contracts/updater';
 import type {
   ExtensionListItem,
+  ExtensionOpenPanelEvent,
   ExtensionsChangedEvent,
   SetEnabledRequest,
   UpdateSettingsRequest,
@@ -121,6 +123,10 @@ import type {
 const terminal = {
   create: (req: CreateTerminalRequest): Promise<CreateTerminalResponse> =>
     ipcRenderer.invoke(CHANNELS.terminal.create, req),
+  createForExtension: (
+    req: CreateExtensionTerminalRequest,
+  ): Promise<CreateTerminalResponse> =>
+    ipcRenderer.invoke(CHANNELS.terminal.createForExtension, req),
   write: (req: WriteTerminalRequest): Promise<void> =>
     ipcRenderer.invoke(CHANNELS.terminal.write, req),
   resize: (req: ResizeTerminalRequest): Promise<void> =>
@@ -286,6 +292,11 @@ const extension = {
     const wrapped = (_e: IpcRendererEvent, payload: ExtensionsChangedEvent) => listener(payload);
     ipcRenderer.on(CHANNELS.extensionEvents.changed, wrapped);
     return () => ipcRenderer.off(CHANNELS.extensionEvents.changed, wrapped);
+  },
+  onOpenPanel: (listener: (event: ExtensionOpenPanelEvent) => void): (() => void) => {
+    const wrapped = (_e: IpcRendererEvent, payload: ExtensionOpenPanelEvent) => listener(payload);
+    ipcRenderer.on(CHANNELS.extensionEvents.openPanel, wrapped);
+    return () => ipcRenderer.off(CHANNELS.extensionEvents.openPanel, wrapped);
   },
 };
 

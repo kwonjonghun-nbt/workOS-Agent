@@ -1,3 +1,5 @@
+import type { TerminalPurpose } from '../contracts/terminal';
+
 export type TerminalSize = {
   cols: number;
   rows: number;
@@ -12,6 +14,8 @@ export class TerminalSession {
     public size: TerminalSize,
     public readonly createdAt: number,
     public name: string,
+    public readonly purpose: TerminalPurpose = 'user',
+    public readonly ownerExtensionId?: string,
   ) {}
 
   resize(size: TerminalSize): void {

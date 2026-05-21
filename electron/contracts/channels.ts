@@ -12,6 +12,7 @@ export const CHANNELS = {
   },
   terminal: {
     create: 'terminal:create',
+    createForExtension: 'terminal:createForExtension',
     write: 'terminal:write',
     resize: 'terminal:resize',
     dispose: 'terminal:dispose',
@@ -92,6 +93,7 @@ export const CHANNELS = {
   },
   extensionEvents: {
     changed: 'extension:changed',
+    openPanel: 'extension:openPanel',
   },
   jira: {
     listMyIssues: 'jira:listMyIssues',

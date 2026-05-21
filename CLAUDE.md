@@ -119,5 +119,6 @@ Electron(메인 프로세스) 측:
 크로스컷팅 피처:
 
 - `/extensions` — 확장 프로그램 시스템 (`electron/builtin-extensions/**`, `electron/{contracts,domain,services,repositories,ipc}/extension*.ts`, `src/{api,server-state,business,presentation/features}/extension*/**`). 새 확장 추가, manifest 스펙 확장, hook event/action/settings 필드 추가 시 사용.
+- `/extension-ai` — 확장이 claude CLI 로 AI 작업(라벨 추천·리포트 생성 등)을 호출해 결과를 받아오는 표준 패턴 (`electron/repositories/terminal-llm.repo.ts`, `electron/services/extension-llm-runtime.ts`, `workos_extension_llm_result` MCP 도구, `extension:openPanel` 이벤트). 확장에 새 AI 기능을 붙일 때 사용.
 
 레이어 파일을 편집하거나 리뷰할 때 자동으로 매칭되도록 description 트리거를 설정해두었다.

@@ -88,8 +88,22 @@ export class McpService {
    */
   async setup(workspaceId: string, force: boolean): Promise<SetupMcpResponse> {
     const root = await this.cwd.resolveCwd(workspaceId);
-    const configPath = path.join(root, MCP_CONFIG_REL);
-    const sessionPath = path.join(root, SESSION_REL);
+    const actions = await this.setupAt(root, workspaceId, force);
+    return { status: await this.workspaceStatus(workspaceId), actions };
+  }
+
+  /**
+   * Write `.mcp.json` + session sidecar at an arbitrary cwd. Used by both the
+   * user-facing workspace setup (above) and the extension terminal runner, so
+   * extension-owned claude sessions also see workOS MCP tools.
+   *
+   * The `workspaceId` embedded in the session file is what the control plane
+   * receives as `x-workos-workspace` on each tool call. For extension cwds
+   * this should be the system-default workspace id.
+   */
+  async setupAt(cwd: string, workspaceId: string, force: boolean): Promise<string[]> {
+    const configPath = path.join(cwd, MCP_CONFIG_REL);
+    const sessionPath = path.join(cwd, SESSION_REL);
     const actions: string[] = [];
 
     await this.waitReady(3000);
@@ -138,7 +152,7 @@ export class McpService {
     actions.push('refreshed .mcp-session.json');
 
     // 3) .gitignore for sidecar (do not commit token)
-    const giPath = path.join(root, GITIGNORE_REL);
+    const giPath = path.join(cwd, GITIGNORE_REL);
     try {
       let cur = '';
       try {
@@ -156,7 +170,11 @@ export class McpService {
       // best-effort
     }
 
-    return { status: await this.workspaceStatus(workspaceId), actions };
+    return actions;
+  }
+
+  isReady(): boolean {
+    return this.plane.isRunning() && Boolean(this.scriptPath);
   }
 
   private async isConfigured(configPath: string): Promise<boolean> {

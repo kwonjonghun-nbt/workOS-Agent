@@ -280,6 +280,32 @@ const TOOLS = [
     },
     route: '/v1/notify',
   },
+  {
+    name: 'workos_extension_llm_result',
+    description:
+      'Submit the final result (or error) of an extension-issued AI task back to workOS-Agent. The prompt file the user told you to read contains a "requestId" — pass it exactly. On success, pass the full output in `content`. On failure, pass a human-readable reason in `error`. Call this exactly ONCE per requestId, after you have produced the complete result.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        requestId: {
+          type: 'string',
+          description: 'The requestId given to you inside the prompt file. Required.',
+        },
+        content: {
+          type: 'string',
+          description:
+            'The full result as a single string. For markdown reports, the entire markdown body. For JSON outputs, the JSON encoded as a string. Required when not erroring.',
+        },
+        error: {
+          type: 'string',
+          description:
+            'Human-readable failure reason. Provide when the task cannot be completed; omit `content` in that case.',
+        },
+      },
+      required: ['requestId'],
+    },
+    route: '/v1/extension/llm-result',
+  },
 ];
 
 // ---------- server -----------------------------------------------------------

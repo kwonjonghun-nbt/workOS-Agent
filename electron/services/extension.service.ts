@@ -147,7 +147,14 @@ export class ExtensionService {
    */
   async dispatchEvent(event: EventHookEvent, payload: Record<string, unknown>): Promise<void> {
     const states = this.states ?? (await this.ensureLoaded());
+    // If the payload carries an `ownerExtensionId`, the event originates from a
+    // single extension's resources (e.g. its own terminal). In that case only
+    // that extension's hooks may match — sibling extensions must not see each
+    // other's terminal exit events.
+    const owner =
+      typeof payload.ownerExtensionId === 'string' ? payload.ownerExtensionId : null;
     for (const manifest of this.catalog) {
+      if (owner && manifest.id !== owner) continue;
       const state = states[manifest.id];
       if (!state?.enabled) continue;
       for (const hook of manifest.contributes.eventHooks) {

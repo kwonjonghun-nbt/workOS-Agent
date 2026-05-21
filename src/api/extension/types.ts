@@ -3,7 +3,8 @@
 export type ExtensionViewBodyBlock =
   | { type: 'markdown'; value: string }
   | { type: 'settings' }
-  | { type: 'custom'; component: string };
+  | { type: 'custom'; component: string }
+  | { type: 'terminal'; title?: string };
 
 export type ExtensionView = {
   id: string;
@@ -67,3 +68,8 @@ export type UpdateSettingsRequest = {
 };
 
 export type ExtensionsChangedEvent = { extensions: ExtensionListItem[] };
+
+export type ExtensionOpenPanelEvent = {
+  extensionId: string;
+  sessionId: string;
+};

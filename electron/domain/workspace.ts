@@ -1,6 +1,8 @@
+import type { WorkspaceKind } from '../contracts/workspace';
+
 export class WorkspaceDomainError extends Error {
   constructor(
-    public readonly code: 'INVALID_NAME' | 'INVALID_PATH',
+    public readonly code: 'INVALID_NAME' | 'INVALID_PATH' | 'INVALID_OPERATION',
     message: string,
   ) {
     super(message);
@@ -15,6 +17,7 @@ export class Workspace {
     public readonly rootPath: string,
     public readonly createdAt: number,
     public lastOpenedAt: number,
+    public readonly kind: WorkspaceKind = 'user',
   ) {
     if (!name.trim()) {
       throw new WorkspaceDomainError('INVALID_NAME', 'workspace name must be non-empty');
@@ -25,6 +28,12 @@ export class Workspace {
   }
 
   rename(name: string): void {
+    if (this.kind === 'system') {
+      throw new WorkspaceDomainError(
+        'INVALID_OPERATION',
+        'system workspace cannot be renamed',
+      );
+    }
     const trimmed = name.trim();
     if (!trimmed) {
       throw new WorkspaceDomainError('INVALID_NAME', 'workspace name must be non-empty');
@@ -43,6 +52,7 @@ export class Workspace {
       rootPath: this.rootPath,
       createdAt: this.createdAt,
       lastOpenedAt: this.lastOpenedAt,
+      kind: this.kind,
     };
   }
 }

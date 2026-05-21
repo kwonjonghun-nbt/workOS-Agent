@@ -1,3 +1,9 @@
+export type TerminalPurpose = 'user' | 'extension';
+
+// Mirror of electron/contracts/workspace.ts: fixed id for the singleton system
+// default workspace that hosts extension-owned terminals.
+export const SYSTEM_DEFAULT_WORKSPACE_ID = '__system_default__';
+
 export type TerminalSummary = {
   sessionId: string;
   workspaceId: string;
@@ -5,6 +11,14 @@ export type TerminalSummary = {
   shell: string;
   createdAt: number;
   name: string;
+  purpose: TerminalPurpose;
+  ownerExtensionId?: string;
+};
+
+export type CreateExtensionTerminalRequest = {
+  extensionId: string;
+  cols: number;
+  rows: number;
 };
 
 export type RenameTerminalRequest = {
@@ -16,6 +30,8 @@ export type CreateTerminalRequest = {
   workspaceId: string;
   cols: number;
   rows: number;
+  purpose?: TerminalPurpose;
+  ownerExtensionId?: string;
 };
 
 export type CreateTerminalResponse = {
@@ -39,6 +55,8 @@ export type DisposeTerminalRequest = {
 
 export type ListTerminalsRequest = {
   workspaceId: string;
+  purpose?: TerminalPurpose;
+  ownerExtensionId?: string;
 };
 
 export type TerminalDataEvent = {
@@ -51,4 +69,5 @@ export type TerminalExitEvent = {
   workspaceId: string;
   exitCode: number;
   signal: number | null;
+  ownerExtensionId?: string;
 };

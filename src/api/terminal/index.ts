@@ -1,4 +1,5 @@
 import type {
+  CreateExtensionTerminalRequest,
   CreateTerminalRequest,
   CreateTerminalResponse,
   DisposeTerminalRequest,
@@ -10,6 +11,7 @@ import type {
   TerminalSummary,
   WriteTerminalRequest,
 } from './types';
+export { SYSTEM_DEFAULT_WORKSPACE_ID } from './types';
 import type { TerminalApi } from '../electronAPI';
 
 function api(): TerminalApi {
@@ -18,6 +20,8 @@ function api(): TerminalApi {
 
 export const terminalApi = {
   create: (req: CreateTerminalRequest) => api().create(req),
+  createForExtension: (req: CreateExtensionTerminalRequest) =>
+    api().createForExtension(req),
   write: (req: WriteTerminalRequest) => api().write(req),
   resize: (req: ResizeTerminalRequest) => api().resize(req),
   dispose: (req: DisposeTerminalRequest) => api().dispose(req),
@@ -28,6 +32,7 @@ export const terminalApi = {
 };
 
 export type {
+  CreateExtensionTerminalRequest,
   CreateTerminalRequest,
   CreateTerminalResponse,
   WriteTerminalRequest,

@@ -105,6 +105,13 @@ export const MCP_TOOLS: McpToolDescriptor[] = [
     title: 'UI 토스트',
     description: '워크OS UI 에 토스트 메시지를 띄운다 (info/warn/error).',
   },
+  {
+    name: 'workos_extension_llm_result',
+    title: '확장 LLM 결과 제출',
+    description:
+      '확장 프로그램이 워크OS-Agent 에게 의뢰한 AI 작업의 최종 결과(또는 에러)를 제출한다. ' +
+      'requestId 는 프롬프트 파일에 명시된 식별자. content 가 있으면 성공, error 가 있으면 실패.',
+  },
 ];
 
 // --------- Push events ---------------------------------------------------

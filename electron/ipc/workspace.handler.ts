@@ -7,6 +7,7 @@ import {
   setActiveWorkspaceRequestSchema,
   type OpenDialogResponse,
   type Workspace as WorkspaceDto,
+  type WorkspaceKind,
 } from '../contracts/workspace';
 import type { WorkspaceService } from '../services/workspace.service';
 import { toApiError } from '../infra/error';
@@ -17,12 +18,14 @@ const toDto = (w: {
   rootPath: string;
   createdAt: number;
   lastOpenedAt: number;
+  kind: WorkspaceKind;
 }): WorkspaceDto => ({
   id: w.id,
   name: w.name,
   rootPath: w.rootPath,
   createdAt: w.createdAt,
   lastOpenedAt: w.lastOpenedAt,
+  kind: w.kind,
 });
 
 export function registerWorkspaceHandlers(service: WorkspaceService): void {

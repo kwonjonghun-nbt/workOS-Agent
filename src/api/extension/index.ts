@@ -1,4 +1,5 @@
 import type {
+  ExtensionOpenPanelEvent,
   ExtensionsChangedEvent,
   SetEnabledRequest,
   UpdateSettingsRequest,
@@ -13,11 +14,14 @@ export const extensionApi = {
   setEnabled: (req: SetEnabledRequest) => api().setEnabled(req),
   updateSettings: (req: UpdateSettingsRequest) => api().updateSettings(req),
   onChanged: (listener: (event: ExtensionsChangedEvent) => void) => api().onChanged(listener),
+  onOpenPanel: (listener: (event: ExtensionOpenPanelEvent) => void) =>
+    api().onOpenPanel(listener),
 };
 
 export type {
   ExtensionListItem,
   ExtensionManifest,
+  ExtensionOpenPanelEvent,
   ExtensionView,
   ExtensionViewBodyBlock,
   ExtensionsChangedEvent,

@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { Workspace } from '../domain/workspace';
+import type { WorkspaceKind } from '../contracts/workspace';
 
 export interface WorkspaceRepository {
   load(): Promise<Workspace[]>;
@@ -13,6 +14,7 @@ type WorkspaceJson = {
   rootPath: string;
   createdAt: number;
   lastOpenedAt: number;
+  kind?: WorkspaceKind;
 };
 
 type FileShape = {
@@ -32,7 +34,15 @@ export class JsonWorkspaceRepository implements WorkspaceRepository {
       const parsed = JSON.parse(buf) as FileShape;
       if (!parsed || !Array.isArray(parsed.workspaces)) return [];
       return parsed.workspaces.map(
-        (w) => new Workspace(w.id, w.name, w.rootPath, w.createdAt, w.lastOpenedAt),
+        (w) =>
+          new Workspace(
+            w.id,
+            w.name,
+            w.rootPath,
+            w.createdAt,
+            w.lastOpenedAt,
+            w.kind ?? 'user',
+          ),
       );
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
