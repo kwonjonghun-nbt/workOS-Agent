@@ -115,6 +115,17 @@ import type {
   SaveReportRequest as JiraSaveReportRequest,
 } from './jira/report-types';
 import type {
+  DeleteTileRequest as MacroDeleteTileRequest,
+  MacroState,
+  PickPathRequest as MacroPickPathRequest,
+  PickPathResponse as MacroPickPathResponse,
+  RunTileRequest as MacroRunTileRequest,
+  RunTileResponse as MacroRunTileResponse,
+  SaveBoardRequest as MacroSaveBoardRequest,
+  SuggestTileRequest as MacroSuggestTileRequest,
+  SuggestTileResponse as MacroSuggestTileResponse,
+} from './macro/types';
+import type {
   FindThreadMessageRequest as JiraSlackFindThreadMessageRequest,
   FindThreadMessageResponse as JiraSlackFindThreadMessageResponse,
   PreviewDailyReportResponse as JiraSlackPreviewDailyReportResponse,
@@ -304,6 +315,15 @@ export type GithubPrApi = {
   }>;
 };
 
+export type MacroApi = {
+  getState: () => Promise<MacroState>;
+  saveBoard: (req: MacroSaveBoardRequest) => Promise<MacroState>;
+  deleteTile: (req: MacroDeleteTileRequest) => Promise<MacroState>;
+  runTile: (req: MacroRunTileRequest) => Promise<MacroRunTileResponse>;
+  suggestTile: (req: MacroSuggestTileRequest) => Promise<MacroSuggestTileResponse>;
+  pickPath: (req: MacroPickPathRequest) => Promise<MacroPickPathResponse>;
+};
+
 export type JiraReportsApi = {
   list: () => Promise<{ files: JiraReportMeta[] }>;
   get: (req: JiraGetReportRequest) => Promise<JiraGetReportResponse>;
@@ -328,6 +348,7 @@ declare global {
       jiraReports: JiraReportsApi;
       jiraSlack: JiraSlackApi;
       githubPr: GithubPrApi;
+      macro: MacroApi;
     };
   }
 }

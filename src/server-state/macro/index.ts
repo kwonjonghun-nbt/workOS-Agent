@@ -3,6 +3,7 @@ export { macroMutations, macroQueries } from './queries';
 export type {
   ActionTile,
   GroupTile,
+  HttpMethod,
   MacroAction,
   MacroActionKind,
   MacroBoard,

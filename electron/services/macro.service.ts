@@ -25,7 +25,6 @@ import {
   isActionTile,
   isGroupTile,
   type MacroAction,
-  type MacroBoard,
   type MacroState,
 } from '../domain/macro';
 import type { LlmCliRepository } from '../repositories/llm-cli.repo';

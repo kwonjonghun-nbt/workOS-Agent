@@ -113,7 +113,6 @@ export function MacroButtonsWorkspace() {
     if (!result) return;
 
     const isSub = navStack.length > 0;
-    const slotsPerPage = targetBoard.columns * targetBoard.rows;
     const totalPages = Math.max(1, targetBoard.pageCount);
     const currentPage = Math.min(
       pageByBoard[targetBoard.id] ?? 0,
@@ -194,17 +193,6 @@ export function MacroButtonsWorkspace() {
 
   const isReservedLocalSlot = (localSlot: number) =>
     isSubBoard && localSlot === 0;
-
-  const findFirstEmptyGlobalSlotInPage = (): number => {
-    for (let local = 0; local < slotsPerPage; local++) {
-      if (isReservedLocalSlot(local)) continue;
-      const g = pageStart + local;
-      if (!board.tiles.some((t) => t.slot === g)) return g;
-    }
-    // Page is full; fall back to the first non-reserved local slot — the
-    // caller will overwrite or the user will see the same target.
-    return pageStart + (isSubBoard ? 1 : 0);
-  };
 
   // -------- handlers --------
 
