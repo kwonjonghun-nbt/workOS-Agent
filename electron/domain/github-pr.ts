@@ -12,7 +12,7 @@ export type GitHubPrConfig = {
  * upstream so the user knows whether parsing dropped anything).
  */
 export function parseRepos(raw: string): Array<{ owner: string; repo: string; full: string }> {
-  return raw
+  const parsed = raw
     .split(/[,\s]+/)
     .map((s) => s.trim())
     .filter(Boolean)
@@ -22,6 +22,18 @@ export function parseRepos(raw: string): Array<{ owner: string; repo: string; fu
       return { owner: m[1], repo: m[2], full: `${m[1]}/${m[2]}` };
     })
     .filter((v): v is { owner: string; repo: string; full: string } => v !== null);
+  // GitHub repo names are case-insensitive, so fold duplicates that only
+  // differ in casing (e.g. "Vercel/Next.js" vs "vercel/next.js") and exact
+  // repeats from the user pasting the same entry twice.
+  const seen = new Set<string>();
+  const out: Array<{ owner: string; repo: string; full: string }> = [];
+  for (const entry of parsed) {
+    const key = entry.full.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(entry);
+  }
+  return out;
 }
 
 export function normalizeApiUrl(raw: string): string {

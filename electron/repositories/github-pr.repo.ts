@@ -55,11 +55,23 @@ export class HttpGitHubPrRepository implements GitHubPrRepository {
       }
     });
 
-    allPRs.sort(
+    // Defensive dedup keyed by `${repo}#${number}` in case the upstream config
+    // somehow listed the same repo twice past parseRepos, or GitHub returned
+    // the same PR on adjacent pages during a refresh race.
+    const seen = new Set<string>();
+    const deduped: GitHubPullRequest[] = [];
+    for (const pr of allPRs) {
+      const key = `${pr.repo.toLowerCase()}#${pr.number}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(pr);
+    }
+
+    deduped.sort(
       (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
 
-    return { prs: allPRs, errors, hasMore };
+    return { prs: deduped, errors, hasMore };
   }
 
   async testConnection(config: GitHubPrConfig): Promise<{ login: string }> {
