@@ -71,7 +71,7 @@ export function ActivityBar() {
             {active && (
               <span className="absolute left-[-6px] top-1.5 h-6 w-[2px] rounded-full bg-claude-400" />
             )}
-            <span className="leading-none">{it.icon}</span>
+            <ActivityIcon icon={it.icon} active={active} />
             {it.badge !== undefined && it.badge > 0 && (
               <span className="absolute -bottom-0.5 -right-0.5 min-w-[14px] rounded-full bg-claude-500 px-1 text-[9px] font-semibold leading-[14px] text-white">
                 {it.badge}
@@ -81,6 +81,35 @@ export function ActivityBar() {
         );
       })}
     </div>
+  );
+}
+
+function ActivityIcon({ icon, active }: { icon: string; active: boolean }) {
+  if (icon === 'mark:github') return <GitHubMark active={active} />;
+  if (icon === 'mark:jira') return <JiraMark active={active} />;
+  return <span className="leading-none">{icon}</span>;
+}
+
+function GitHubMark({ active }: { active: boolean }) {
+  // GitHub's "Octocat" logo (simple-icons / GitHub brand mark).
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      className={`h-5 w-5 ${active ? 'fill-claude-300' : 'fill-current'}`}
+    >
+      <path d="M12 .5C5.65.5.5 5.65.5 12.02c0 5.08 3.29 9.39 7.86 10.92.57.11.78-.25.78-.55 0-.27-.01-1-.02-1.96-3.2.7-3.87-1.54-3.87-1.54-.52-1.34-1.28-1.7-1.28-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.47.11-3.07 0 0 .97-.31 3.18 1.18a11 11 0 0 1 2.9-.39c.98 0 1.96.13 2.9.39 2.21-1.49 3.18-1.18 3.18-1.18.63 1.6.23 2.78.11 3.07.74.81 1.19 1.84 1.19 3.1 0 4.43-2.7 5.41-5.26 5.69.41.36.78 1.06.78 2.13 0 1.54-.01 2.78-.01 3.16 0 .31.21.67.79.55C20.21 21.4 23.5 17.1 23.5 12.02 23.5 5.65 18.35.5 12 .5Z" />
+    </svg>
+  );
+}
+
+function JiraMark({ active }: { active: boolean }) {
+  // Atlassian Jira Software mark (three nested chevrons), simple-icons path.
+  const fill = active ? '#7CC4FF' : '#2684FF';
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden className="h-5 w-5" fill={fill}>
+      <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.762a1.005 1.005 0 0 0-1.001-1.005zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.005 1.005 0 0 0 23.013 0z" />
+    </svg>
   );
 }
 

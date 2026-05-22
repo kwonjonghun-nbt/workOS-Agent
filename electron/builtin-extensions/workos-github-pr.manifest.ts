@@ -16,7 +16,7 @@ export const workosGithubPrManifest = {
       {
         id: 'workspace',
         title: 'GitHub PR',
-        icon: 'G',
+        icon: 'mark:github',
         body: [{ type: 'custom', component: 'github-pr-workspace' }],
       },
     ],
@@ -41,6 +41,13 @@ export const workosGithubPrManifest = {
           title: 'GitHub API URL',
           description: 'GitHub Enterprise는 https://github.your-domain.com/api/v3 형태로 입력.',
           default: 'https://api.github.com',
+        },
+        releaseReviewers: {
+          type: 'string',
+          title: '릴리즈 PR 기본 리뷰어',
+          description:
+            '릴리즈 브랜치 PR 생성 시 자동 지정할 리뷰어 GitHub 로그인. 콤마(,) 또는 공백으로 구분. 비워두면 지정하지 않음.',
+          default: 'yeomseoyeon, leejungmin-nbt, parksanghyeok-nbt',
         },
       },
     },

@@ -131,5 +131,8 @@ export const CHANNELS = {
   githubPr: {
     listPullRequests: 'githubPr:listPullRequests',
     testConnection: 'githubPr:testConnection',
+    listRepos: 'githubPr:listRepos',
+    createReleaseBranch: 'githubPr:createReleaseBranch',
+    createReleaseTag: 'githubPr:createReleaseTag',
   },
 } as const;

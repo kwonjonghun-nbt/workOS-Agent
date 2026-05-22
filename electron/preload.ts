@@ -80,6 +80,11 @@ import type {
   TestSlackConnectionResponse,
 } from './contracts/jira-slack';
 import type {
+  CreateReleaseBranchRequest,
+  CreateReleaseBranchResponse,
+  CreateReleaseTagRequest,
+  CreateReleaseTagResponse,
+  GithubPrListReposResponse,
   GithubPrTestConnectionResponse,
   ListPullRequestsRequest,
   ListPullRequestsResponse,
@@ -382,6 +387,12 @@ const githubPr = {
     ipcRenderer.invoke(CHANNELS.githubPr.listPullRequests, req),
   testConnection: (): Promise<GithubPrTestConnectionResponse> =>
     ipcRenderer.invoke(CHANNELS.githubPr.testConnection),
+  listRepos: (): Promise<GithubPrListReposResponse> =>
+    ipcRenderer.invoke(CHANNELS.githubPr.listRepos),
+  createReleaseBranch: (req: CreateReleaseBranchRequest): Promise<CreateReleaseBranchResponse> =>
+    ipcRenderer.invoke(CHANNELS.githubPr.createReleaseBranch, req),
+  createReleaseTag: (req: CreateReleaseTagRequest): Promise<CreateReleaseTagResponse> =>
+    ipcRenderer.invoke(CHANNELS.githubPr.createReleaseTag, req),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', {

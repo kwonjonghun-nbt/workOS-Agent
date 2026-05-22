@@ -34,3 +34,35 @@ export type GithubPrTestConnectionResponse = {
   apiUrl: string;
   repos: string[];
 };
+
+export type GithubPrListReposResponse = {
+  repos: string[];
+};
+
+export const createReleaseBranchRequestSchema = z.object({
+  repo: z.string().min(1),
+  baseBranch: z.string().min(1).default('develop'),
+  targetBranch: z.string().min(1).default('main'),
+});
+export type CreateReleaseBranchRequest = z.infer<typeof createReleaseBranchRequestSchema>;
+
+export type CreateReleaseBranchResponse = {
+  branch: string;
+  prNumber: number;
+  prUrl: string;
+  commitCount: number;
+  requestedReviewers: string[];
+  reviewerWarning: string | null;
+};
+
+export const createReleaseTagRequestSchema = z.object({
+  repo: z.string().min(1),
+  branch: z.string().min(1).default('main'),
+});
+export type CreateReleaseTagRequest = z.infer<typeof createReleaseTagRequestSchema>;
+
+export type CreateReleaseTagResponse = {
+  tag: string;
+  sha: string;
+  releaseUrl: string;
+};

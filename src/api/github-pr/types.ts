@@ -32,3 +32,31 @@ export type GithubPrTestConnectionResponse = {
   apiUrl: string;
   repos: string[];
 };
+
+export type GithubPrListReposResponse = { repos: string[] };
+
+export type CreateReleaseBranchRequest = {
+  repo: string;
+  baseBranch?: string;
+  targetBranch?: string;
+};
+
+export type CreateReleaseBranchResponse = {
+  branch: string;
+  prNumber: number;
+  prUrl: string;
+  commitCount: number;
+  requestedReviewers: string[];
+  reviewerWarning: string | null;
+};
+
+export type CreateReleaseTagRequest = {
+  repo: string;
+  branch?: string;
+};
+
+export type CreateReleaseTagResponse = {
+  tag: string;
+  sha: string;
+  releaseUrl: string;
+};

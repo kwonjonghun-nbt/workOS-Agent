@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { ExtensionSettingsForm } from '../extensions/ExtensionSettingsForm';
 import { GitHubPrList } from './GitHubPrList';
 import { GitHubPrTestConnection } from './GitHubPrTestConnection';
+import { ReleaseGenerator } from './ReleaseGenerator';
 
-type Section = 'pulls' | 'settings';
+type Section = 'pulls' | 'release' | 'settings';
 
 const NAV: { key: Section; label: string; icon: string; hint: string }[] = [
   { key: 'pulls', label: 'Pull Requests', icon: '🔀', hint: '레포별 PR 목록' },
+  { key: 'release', label: '릴리즈', icon: '🚀', hint: '릴리즈 브랜치/태그 생성' },
   { key: 'settings', label: '설정', icon: '⚙', hint: '토큰 · 레포 · 연결 테스트' },
 ];
 
@@ -41,6 +43,7 @@ export function GitHubPrWorkspace() {
 
       <section className="min-w-0 overflow-hidden">
         {section === 'pulls' && <GitHubPrList />}
+        {section === 'release' && <ReleaseGenerator />}
         {section === 'settings' && <SettingsSection />}
       </section>
     </div>

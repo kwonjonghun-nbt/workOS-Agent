@@ -281,6 +281,27 @@ export type GithubPrApi = {
     apiUrl: string;
     repos: string[];
   }>;
+  listRepos: () => Promise<{ repos: string[] }>;
+  createReleaseBranch: (req: {
+    repo: string;
+    baseBranch?: string;
+    targetBranch?: string;
+  }) => Promise<{
+    branch: string;
+    prNumber: number;
+    prUrl: string;
+    commitCount: number;
+    requestedReviewers: string[];
+    reviewerWarning: string | null;
+  }>;
+  createReleaseTag: (req: {
+    repo: string;
+    branch?: string;
+  }) => Promise<{
+    tag: string;
+    sha: string;
+    releaseUrl: string;
+  }>;
 };
 
 export type JiraReportsApi = {

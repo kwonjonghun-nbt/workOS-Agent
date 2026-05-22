@@ -17,7 +17,7 @@ export const workosJiraManifest = {
       {
         id: 'workspace',
         title: 'Jira',
-        icon: 'J',
+        icon: 'mark:jira',
         body: [{ type: 'custom', component: 'jira-workspace' }],
       },
     ],

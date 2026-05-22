@@ -19,6 +19,57 @@ export interface GitHubPrRepository {
     hasMore: boolean;
   }>;
   testConnection(config: GitHubPrConfig): Promise<{ login: string }>;
+  getBranchSha(config: GitHubPrConfig, owner: string, repo: string, branch: string): Promise<string>;
+  createBranch(
+    config: GitHubPrConfig,
+    owner: string,
+    repo: string,
+    branchName: string,
+    sha: string,
+  ): Promise<void>;
+  compareCommits(
+    config: GitHubPrConfig,
+    owner: string,
+    repo: string,
+    base: string,
+    head: string,
+  ): Promise<{
+    aheadBy: number;
+    commits: Array<{ sha: string; message: string; author: string }>;
+    files: Array<{ filename: string; additions: number; deletions: number }>;
+  }>;
+  createPullRequest(
+    config: GitHubPrConfig,
+    owner: string,
+    repo: string,
+    args: { title: string; head: string; base: string; body: string },
+  ): Promise<{ number: number; htmlUrl: string }>;
+  createAnnotatedTag(
+    config: GitHubPrConfig,
+    owner: string,
+    repo: string,
+    args: { tag: string; sha: string; message: string },
+  ): Promise<{ sha: string }>;
+  createTagRef(
+    config: GitHubPrConfig,
+    owner: string,
+    repo: string,
+    tag: string,
+    sha: string,
+  ): Promise<void>;
+  createRelease(
+    config: GitHubPrConfig,
+    owner: string,
+    repo: string,
+    args: { tag: string; targetSha: string; name: string },
+  ): Promise<{ htmlUrl: string }>;
+  requestReviewers(
+    config: GitHubPrConfig,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    reviewers: string[],
+  ): Promise<{ requested: string[] }>;
 }
 
 export class HttpGitHubPrRepository implements GitHubPrRepository {
@@ -111,6 +162,202 @@ export class HttpGitHubPrRepository implements GitHubPrRepository {
     const hasMore = linkHeader.includes('rel="next"');
     const data = (await res.json()) as GithubListPullsItem[];
     return { prs: data.map((item) => mapPullRequest(item, full)), hasMore };
+  }
+
+  async getBranchSha(
+    config: GitHubPrConfig,
+    owner: string,
+    repo: string,
+    branch: string,
+  ): Promise<string> {
+    const url = `${config.apiUrl}/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`;
+    const res = await net.fetch(url, { headers: this.buildHeaders(config.token) });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      if (res.status === 404) {
+        throw new ApiError('VALIDATION', `'${branch}' 브랜치를 찾을 수 없습니다 (${owner}/${repo}).`);
+      }
+      throw new ApiError('INTERNAL', `브랜치 조회 실패 ${res.status}: ${text.slice(0, 200)}`);
+    }
+    const data = (await res.json()) as { object?: { sha?: string } };
+    const sha = data.object?.sha;
+    if (!sha) throw new ApiError('INTERNAL', '브랜치 SHA 응답이 비어 있습니다.');
+    return sha;
+  }
+
+  async createBranch(
+    config: GitHubPrConfig,
+    owner: string,
+    repo: string,
+    branchName: string,
+    sha: string,
+  ): Promise<void> {
+    const url = `${config.apiUrl}/repos/${owner}/${repo}/git/refs`;
+    const res = await net.fetch(url, {
+      method: 'POST',
+      headers: { ...this.buildHeaders(config.token), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ref: `refs/heads/${branchName}`, sha }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      if (res.status === 422) {
+        throw new ApiError('VALIDATION', `브랜치 '${branchName}' 가 이미 존재하거나 SHA가 유효하지 않습니다.`);
+      }
+      throw new ApiError('INTERNAL', `브랜치 생성 실패 ${res.status}: ${text.slice(0, 200)}`);
+    }
+  }
+
+  async compareCommits(
+    config: GitHubPrConfig,
+    owner: string,
+    repo: string,
+    base: string,
+    head: string,
+  ): Promise<{
+    aheadBy: number;
+    commits: Array<{ sha: string; message: string; author: string }>;
+    files: Array<{ filename: string; additions: number; deletions: number }>;
+  }> {
+    const url = `${config.apiUrl}/repos/${owner}/${repo}/compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}?per_page=250`;
+    const res = await net.fetch(url, { headers: this.buildHeaders(config.token) });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new ApiError('INTERNAL', `브랜치 비교 실패 ${res.status}: ${text.slice(0, 200)}`);
+    }
+    const data = (await res.json()) as {
+      ahead_by?: number;
+      commits?: Array<{
+        sha: string;
+        commit: { message: string; author: { name?: string } };
+      }>;
+      files?: Array<{ filename: string; additions: number; deletions: number }>;
+    };
+    return {
+      aheadBy: data.ahead_by ?? 0,
+      commits: (data.commits ?? []).map((c) => ({
+        sha: c.sha.slice(0, 7),
+        message: (c.commit?.message ?? '').split('\n')[0],
+        author: c.commit?.author?.name ?? '',
+      })),
+      files: (data.files ?? []).map((f) => ({
+        filename: f.filename,
+        additions: f.additions,
+        deletions: f.deletions,
+      })),
+    };
+  }
+
+  async createPullRequest(
+    config: GitHubPrConfig,
+    owner: string,
+    repo: string,
+    args: { title: string; head: string; base: string; body: string },
+  ): Promise<{ number: number; htmlUrl: string }> {
+    const url = `${config.apiUrl}/repos/${owner}/${repo}/pulls`;
+    const res = await net.fetch(url, {
+      method: 'POST',
+      headers: { ...this.buildHeaders(config.token), 'Content-Type': 'application/json' },
+      body: JSON.stringify(args),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new ApiError('INTERNAL', `PR 생성 실패 ${res.status}: ${text.slice(0, 300)}`);
+    }
+    const data = (await res.json()) as { number: number; html_url: string };
+    return { number: data.number, htmlUrl: data.html_url };
+  }
+
+  async createAnnotatedTag(
+    config: GitHubPrConfig,
+    owner: string,
+    repo: string,
+    args: { tag: string; sha: string; message: string },
+  ): Promise<{ sha: string }> {
+    const url = `${config.apiUrl}/repos/${owner}/${repo}/git/tags`;
+    const res = await net.fetch(url, {
+      method: 'POST',
+      headers: { ...this.buildHeaders(config.token), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tag: args.tag,
+        message: args.message,
+        object: args.sha,
+        type: 'commit',
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new ApiError('INTERNAL', `태그 객체 생성 실패 ${res.status}: ${text.slice(0, 200)}`);
+    }
+    const data = (await res.json()) as { sha: string };
+    return { sha: data.sha };
+  }
+
+  async createTagRef(
+    config: GitHubPrConfig,
+    owner: string,
+    repo: string,
+    tag: string,
+    sha: string,
+  ): Promise<void> {
+    const url = `${config.apiUrl}/repos/${owner}/${repo}/git/refs`;
+    const res = await net.fetch(url, {
+      method: 'POST',
+      headers: { ...this.buildHeaders(config.token), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ref: `refs/tags/${tag}`, sha }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      if (res.status === 422) {
+        throw new ApiError('VALIDATION', `태그 '${tag}' 가 이미 존재합니다.`);
+      }
+      throw new ApiError('INTERNAL', `태그 ref 생성 실패 ${res.status}: ${text.slice(0, 200)}`);
+    }
+  }
+
+  async createRelease(
+    config: GitHubPrConfig,
+    owner: string,
+    repo: string,
+    args: { tag: string; targetSha: string; name: string },
+  ): Promise<{ htmlUrl: string }> {
+    const url = `${config.apiUrl}/repos/${owner}/${repo}/releases`;
+    const res = await net.fetch(url, {
+      method: 'POST',
+      headers: { ...this.buildHeaders(config.token), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tag_name: args.tag,
+        target_commitish: args.targetSha,
+        name: args.name,
+        generate_release_notes: true,
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new ApiError('INTERNAL', `릴리즈 생성 실패 ${res.status}: ${text.slice(0, 300)}`);
+    }
+    const data = (await res.json()) as { html_url: string };
+    return { htmlUrl: data.html_url };
+  }
+
+  async requestReviewers(
+    config: GitHubPrConfig,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    reviewers: string[],
+  ): Promise<{ requested: string[] }> {
+    const url = `${config.apiUrl}/repos/${owner}/${repo}/pulls/${pullNumber}/requested_reviewers`;
+    const res = await net.fetch(url, {
+      method: 'POST',
+      headers: { ...this.buildHeaders(config.token), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reviewers }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new ApiError('INTERNAL', `리뷰어 지정 실패 ${res.status}: ${text.slice(0, 200)}`);
+    }
+    const data = (await res.json()) as { requested_reviewers?: Array<{ login: string }> };
+    return { requested: (data.requested_reviewers ?? []).map((r) => r.login) };
   }
 
   private buildHeaders(token: string): Record<string, string> {

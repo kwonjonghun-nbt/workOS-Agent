@@ -32,7 +32,7 @@ export type ExtensionViewBodyBlock = z.infer<typeof extensionViewBodyBlockSchema
 export const extensionViewSchema = z.object({
   id: z.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9._-]*$/),
   title: z.string().min(1).max(64),
-  icon: z.string().min(1).max(4),
+  icon: z.string().min(1).max(32),
   body: z.array(extensionViewBodyBlockSchema).default([]),
 });
 export type ExtensionView = z.infer<typeof extensionViewSchema>;

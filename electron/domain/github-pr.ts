@@ -4,7 +4,22 @@ export type GitHubPrConfig = {
   token: string;
   apiUrl: string;
   repos: Array<{ owner: string; repo: string; full: string }>;
+  releaseReviewers: string[];
 };
+
+export function parseReviewers(raw: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const entry of raw.split(/[,\s]+/)) {
+    const trimmed = entry.trim().replace(/^@/, '');
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(trimmed);
+  }
+  return out;
+}
 
 /**
  * Parse "owner/repo, owner2/repo2" into structured entries. Ignores blanks and
