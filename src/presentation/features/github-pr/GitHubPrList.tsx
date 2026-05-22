@@ -5,8 +5,7 @@ import {
   githubPrQueries,
   type PrStateFilter,
 } from '../../../server-state/github-pr';
-import { PRCard } from './PRCard';
-import { repoChipStyle } from './repo-color';
+import { PRListTimeline } from './PRListVariants';
 
 const STATE_TABS: { value: PrStateFilter; label: string }[] = [
   { value: 'open', label: 'Open' },
@@ -30,20 +29,6 @@ export function GitHubPrList() {
     if (!repoFilter) return prs;
     return prs.filter((pr) => pr.repo === repoFilter);
   }, [query.data?.prs, repoFilter]);
-
-  // When no repo filter is active, group PRs by repo so the user can scan
-  // them by source at a glance. With a filter, the section header would be
-  // redundant — keep the list flat.
-  const groups = useMemo(() => {
-    if (repoFilter) return null;
-    const map = new Map<string, typeof filteredPRs>();
-    for (const pr of filteredPRs) {
-      const list = map.get(pr.repo) ?? [];
-      list.push(pr);
-      map.set(pr.repo, list);
-    }
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [filteredPRs, repoFilter]);
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: githubPrKeys.all });
@@ -147,48 +132,8 @@ export function GitHubPrList() {
           </div>
         )}
 
-        {!query.isLoading && filteredPRs.length > 0 && groups && (
-          <div className="flex flex-col gap-5">
-            {groups.map(([repo, prs]) => {
-              const style = repoChipStyle(repo);
-              return (
-                <section key={repo} className="flex flex-col gap-2">
-                  <header className="flex items-center gap-2 px-0.5">
-                    <span
-                      aria-hidden
-                      className="inline-block h-2 w-2 rounded-full"
-                      style={{ backgroundColor: style.accent }}
-                    />
-                    <span
-                      className="text-[11px] font-semibold tracking-wide"
-                      style={{ color: style.fg }}
-                    >
-                      {repo}
-                    </span>
-                    <span className="text-[10px] text-ink-500">{prs.length}</span>
-                    <div className="ml-2 h-px flex-1 bg-ink-800" />
-                  </header>
-                  <ul className="flex flex-col gap-2">
-                    {prs.map((pr) => (
-                      <li key={`${pr.repo}-${pr.number}`}>
-                        <PRCard pr={pr} showRepo={false} />
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              );
-            })}
-          </div>
-        )}
-
-        {!query.isLoading && filteredPRs.length > 0 && !groups && (
-          <ul className="flex flex-col gap-2">
-            {filteredPRs.map((pr) => (
-              <li key={`${pr.repo}-${pr.number}`}>
-                <PRCard pr={pr} />
-              </li>
-            ))}
-          </ul>
+        {!query.isLoading && filteredPRs.length > 0 && (
+          <PRListTimeline prs={filteredPRs} />
         )}
       </div>
     </div>
