@@ -112,11 +112,14 @@
 
 /* ── Light-mode overrides for hardcoded dark-mode-only colors ──
    Markup was originally written for dark mode; in light mode, swap
-   the few colors that were too pale to read on an ivory background. */
+   the few colors that were too pale to read on an ivory background.
+   Covers both pale text (-100/-200/-300/-400) and translucent tint
+   backgrounds (/5, /10, /15, /20, /30) used for callouts/badges. */
 @layer utilities {
   html[data-theme='light'] .text-white {
     color: rgb(40 37 31);
   }
+  html[data-theme='light'] .text-claude-100,
   html[data-theme='light'] .text-claude-200,
   html[data-theme='light'] .text-claude-300 {
     color: #8e4329;
@@ -126,23 +129,151 @@
   html[data-theme='light'] .text-sky-400 {
     color: rgb(3 105 161);
   }
+  html[data-theme='light'] .text-amber-200,
   html[data-theme='light'] .text-amber-300,
   html[data-theme='light'] .text-amber-400 {
-    color: rgb(180 83 9);
+    color: rgb(146 64 14);
   }
+  html[data-theme='light'] .text-red-200,
   html[data-theme='light'] .text-red-300,
   html[data-theme='light'] .text-red-400 {
     color: rgb(185 28 28);
   }
+  html[data-theme='light'] .text-rose-200,
+  html[data-theme='light'] .text-rose-300,
+  html[data-theme='light'] .text-rose-400 {
+    color: rgb(190 18 60);
+  }
+  html[data-theme='light'] .text-blue-200,
   html[data-theme='light'] .text-blue-300,
   html[data-theme='light'] .text-blue-400 {
     color: rgb(29 78 216);
   }
+  html[data-theme='light'] .text-violet-200,
   html[data-theme='light'] .text-violet-300 {
     color: rgb(109 40 217);
   }
+  html[data-theme='light'] .text-emerald-100,
+  html[data-theme='light'] .text-emerald-200,
   html[data-theme='light'] .text-emerald-300,
   html[data-theme='light'] .text-emerald-400 {
     color: rgb(4 120 87);
+  }
+  html[data-theme='light'] .text-green-200,
+  html[data-theme='light'] .text-green-300,
+  html[data-theme='light'] .text-green-400 {
+    color: rgb(21 128 61);
+  }
+
+  /* Boost translucent callout/badge backgrounds — the dark-mode
+     opacities (5–20%) of saturated colors disappear on ivory. */
+  html[data-theme='light'] .bg-amber-500\/5 {
+    background-color: rgb(245 158 11 / 0.18);
+  }
+  html[data-theme='light'] .bg-amber-500\/10 {
+    background-color: rgb(245 158 11 / 0.22);
+  }
+  html[data-theme='light'] .bg-amber-500\/15 {
+    background-color: rgb(245 158 11 / 0.3);
+  }
+  html[data-theme='light'] .bg-amber-500\/20 {
+    background-color: rgb(245 158 11 / 0.36);
+  }
+  html[data-theme='light'] .bg-amber-500\/25,
+  html[data-theme='light'] .bg-amber-500\/30 {
+    background-color: rgb(245 158 11 / 0.42);
+  }
+
+  html[data-theme='light'] .bg-emerald-500\/5 {
+    background-color: rgb(16 185 129 / 0.18);
+  }
+  html[data-theme='light'] .bg-emerald-500\/10 {
+    background-color: rgb(16 185 129 / 0.22);
+  }
+  html[data-theme='light'] .bg-emerald-500\/15 {
+    background-color: rgb(16 185 129 / 0.28);
+  }
+  html[data-theme='light'] .bg-emerald-500\/20 {
+    background-color: rgb(16 185 129 / 0.34);
+  }
+  html[data-theme='light'] .bg-emerald-500\/30 {
+    background-color: rgb(16 185 129 / 0.42);
+  }
+  html[data-theme='light'] .bg-emerald-700\/20 {
+    background-color: rgb(4 120 87 / 0.22);
+  }
+  html[data-theme='light'] .bg-emerald-700\/30 {
+    background-color: rgb(4 120 87 / 0.3);
+  }
+
+  html[data-theme='light'] .bg-rose-500\/5 {
+    background-color: rgb(244 63 94 / 0.16);
+  }
+  html[data-theme='light'] .bg-rose-500\/10 {
+    background-color: rgb(244 63 94 / 0.2);
+  }
+  html[data-theme='light'] .bg-rose-500\/15 {
+    background-color: rgb(244 63 94 / 0.26);
+  }
+  html[data-theme='light'] .bg-rose-500\/20 {
+    background-color: rgb(244 63 94 / 0.32);
+  }
+  html[data-theme='light'] .bg-rose-900\/30,
+  html[data-theme='light'] .bg-rose-900\/50 {
+    background-color: rgb(159 18 57 / 0.18);
+  }
+
+  html[data-theme='light'] .bg-red-500\/5 {
+    background-color: rgb(239 68 68 / 0.16);
+  }
+  html[data-theme='light'] .bg-red-500\/10 {
+    background-color: rgb(239 68 68 / 0.2);
+  }
+  html[data-theme='light'] .bg-red-500\/20 {
+    background-color: rgb(239 68 68 / 0.3);
+  }
+
+  html[data-theme='light'] .bg-sky-500\/5 {
+    background-color: rgb(14 165 233 / 0.16);
+  }
+  html[data-theme='light'] .bg-sky-500\/10 {
+    background-color: rgb(14 165 233 / 0.22);
+  }
+  html[data-theme='light'] .bg-sky-500\/15 {
+    background-color: rgb(14 165 233 / 0.28);
+  }
+  html[data-theme='light'] .bg-sky-500\/20 {
+    background-color: rgb(14 165 233 / 0.34);
+  }
+
+  html[data-theme='light'] .bg-blue-500\/5 {
+    background-color: rgb(59 130 246 / 0.16);
+  }
+  html[data-theme='light'] .bg-blue-500\/10 {
+    background-color: rgb(59 130 246 / 0.22);
+  }
+  html[data-theme='light'] .bg-blue-500\/20 {
+    background-color: rgb(59 130 246 / 0.3);
+  }
+
+  html[data-theme='light'] .bg-violet-500\/15,
+  html[data-theme='light'] .bg-violet-500\/20 {
+    background-color: rgb(139 92 246 / 0.28);
+  }
+
+  html[data-theme='light'] .bg-claude-500\/10 {
+    background-color: rgb(201 100 66 / 0.16);
+  }
+  html[data-theme='light'] .bg-claude-500\/15 {
+    background-color: rgb(201 100 66 / 0.22);
+  }
+  html[data-theme='light'] .bg-claude-500\/20 {
+    background-color: rgb(201 100 66 / 0.28);
+  }
+  html[data-theme='light'] .bg-claude-500\/25 {
+    background-color: rgb(201 100 66 / 0.34);
+  }
+  html[data-theme='light'] .bg-claude-500\/30 {
+    background-color: rgb(201 100 66 / 0.4);
   }
 }
