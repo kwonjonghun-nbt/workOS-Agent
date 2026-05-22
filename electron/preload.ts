@@ -90,6 +90,17 @@ import type {
   ListPullRequestsResponse,
 } from './contracts/github-pr';
 import type {
+  DeleteTileRequest,
+  MacroStateDto,
+  PickPathRequest,
+  PickPathResponse,
+  RunTileRequest,
+  RunTileResponse,
+  SaveBoardRequest,
+  SuggestTileRequest,
+  SuggestTileResponse,
+} from './contracts/macro';
+import type {
   TaskItemProgressEvent,
 } from './contracts/workOS';
 import type {
@@ -382,6 +393,20 @@ const jiraReports = {
     ipcRenderer.invoke(CHANNELS.jiraReports.generate, req),
 };
 
+const macro = {
+  getState: (): Promise<MacroStateDto> => ipcRenderer.invoke(CHANNELS.macro.getState),
+  saveBoard: (req: SaveBoardRequest): Promise<MacroStateDto> =>
+    ipcRenderer.invoke(CHANNELS.macro.saveBoard, req),
+  deleteTile: (req: DeleteTileRequest): Promise<MacroStateDto> =>
+    ipcRenderer.invoke(CHANNELS.macro.deleteTile, req),
+  runTile: (req: RunTileRequest): Promise<RunTileResponse> =>
+    ipcRenderer.invoke(CHANNELS.macro.runTile, req),
+  suggestTile: (req: SuggestTileRequest): Promise<SuggestTileResponse> =>
+    ipcRenderer.invoke(CHANNELS.macro.suggestTile, req),
+  pickPath: (req: PickPathRequest): Promise<PickPathResponse> =>
+    ipcRenderer.invoke(CHANNELS.macro.pickPath, req),
+};
+
 const githubPr = {
   listPullRequests: (req: ListPullRequestsRequest): Promise<ListPullRequestsResponse> =>
     ipcRenderer.invoke(CHANNELS.githubPr.listPullRequests, req),
@@ -409,6 +434,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   jiraReports,
   jiraSlack,
   githubPr,
+  macro,
 });
 
 export type ElectronAPI = {
@@ -425,4 +451,5 @@ export type ElectronAPI = {
   jiraReports: typeof jiraReports;
   jiraSlack: typeof jiraSlack;
   githubPr: typeof githubPr;
+  macro: typeof macro;
 };

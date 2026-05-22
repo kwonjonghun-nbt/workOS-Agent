@@ -3,6 +3,7 @@ import type { ExtensionManifest } from '../contracts/extension';
 import { sampleHelloManifest } from './sample-hello.manifest';
 import { workosJiraManifest } from './workos-jira.manifest';
 import { workosGithubPrManifest } from './workos-github-pr.manifest';
+import { workosMacroButtonsManifest } from './workos-macro-buttons.manifest';
 
 /**
  * Catalog of first-party extensions shipped with the app.
@@ -13,7 +14,12 @@ import { workosGithubPrManifest } from './workos-github-pr.manifest';
  *   3. Restart the dev server. The manifest is validated at boot via
  *      parseManifest — invalid catalog entries crash early.
  */
-const RAW_MANIFESTS: unknown[] = [sampleHelloManifest, workosJiraManifest, workosGithubPrManifest];
+const RAW_MANIFESTS: unknown[] = [
+  sampleHelloManifest,
+  workosJiraManifest,
+  workosGithubPrManifest,
+  workosMacroButtonsManifest,
+];
 
 export const BUILTIN_EXTENSIONS: ExtensionManifest[] = RAW_MANIFESTS.map((raw, idx) => {
   try {

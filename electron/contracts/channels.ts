@@ -128,6 +128,14 @@ export const CHANNELS = {
     delete: 'jiraReports:delete',
     generate: 'jiraReports:generate',
   },
+  macro: {
+    getState: 'macro:getState',
+    saveBoard: 'macro:saveBoard',
+    deleteTile: 'macro:deleteTile',
+    runTile: 'macro:runTile',
+    suggestTile: 'macro:suggestTile',
+    pickPath: 'macro:pickPath',
+  },
   githubPr: {
     listPullRequests: 'githubPr:listPullRequests',
     testConnection: 'githubPr:testConnection',

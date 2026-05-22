@@ -1,5 +1,6 @@
 import { JiraWorkspace } from '../jira/JiraWorkspace';
 import { GitHubPrWorkspace } from '../github-pr/GitHubPrWorkspace';
+import { MacroButtonsWorkspace } from '../macro-buttons/MacroButtonsWorkspace';
 
 /**
  * Maps a `custom` view block's `component` id to a host-rendered React
@@ -12,6 +13,7 @@ import { GitHubPrWorkspace } from '../github-pr/GitHubPrWorkspace';
 export const EXTENSION_COMPONENTS: Record<string, () => JSX.Element> = {
   'jira-workspace': JiraWorkspace,
   'github-pr-workspace': GitHubPrWorkspace,
+  'macro-buttons-workspace': MacroButtonsWorkspace,
 };
 
 export function resolveExtensionComponent(name: string): (() => JSX.Element) | null {

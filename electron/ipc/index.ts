@@ -50,6 +50,9 @@ import { registerJiraSlackHandlers } from './jira-slack.handler';
 import { HttpGitHubPrRepository } from '../repositories/github-pr.repo';
 import { GitHubPrService } from '../services/github-pr.service';
 import { registerGitHubPrHandlers } from './github-pr.handler';
+import { JsonMacroRepository } from '../repositories/macro.repo';
+import { MacroService } from '../services/macro.service';
+import { registerMacroHandlers } from './macro.handler';
 import { HttpSlackRepository } from '../repositories/slack.repo';
 import { JiraSlackService } from '../services/jira-slack.service';
 import { JiraSlackSchedulerService } from '../services/jira-slack-scheduler.service';
@@ -206,6 +209,32 @@ export function registerIpcHandlers(): Container {
   const githubPrService = new GitHubPrService(githubPrRepo, extensionService);
   registerGitHubPrHandlers(githubPrService);
 
+  // Shared extension AI runtime — used by both Jira and Macro Buttons. Holds
+  // pending requestId → Promise so claude's `workos_extension_llm_result`
+  // MCP callback can resolve the awaiting call.
+  const extensionLlmRuntime = new ExtensionLlmRuntime();
+
+  // The macro extension shares the same terminal-AI plumbing as the Jira
+  // extension — claude --dangerously-skip-permissions in the extension's
+  // visible PTY, result via `workos_extension_llm_result` MCP callback.
+  const macroLlmRepo = new TerminalLlmRepository(
+    'workos.macro-buttons',
+    terminalService,
+    workspaceService,
+    extensionService,
+    mcpService,
+    extensionLlmRuntime,
+  );
+  const macroRepo = new JsonMacroRepository(app.getPath('userData'));
+  const macroService = new MacroService(
+    macroRepo,
+    extensionService,
+    terminalService,
+    workspaceService,
+    macroLlmRepo,
+  );
+  registerMacroHandlers(macroService);
+
   const jiraSnapshotRepo = new JsonJiraSnapshotRepository(app.getPath('userData'));
   const jiraSnapshotService = new JiraSnapshotService(
     jiraSnapshotRepo,
@@ -235,7 +264,6 @@ export function registerIpcHandlers(): Container {
   // Jira 의 AI 호출(라벨 추천, 리포트 생성)은 모두 Jira 확장의 가시 터미널
   // 패널에서 claude --dangerously-skip-permissions 으로 실행되고, 결과는
   // 확장이 workos_extension_llm_result MCP 도구로 콜백한다.
-  const extensionLlmRuntime = new ExtensionLlmRuntime();
   const jiraLlmRepo = new TerminalLlmRepository(
     'workos.jira',
     terminalService,
