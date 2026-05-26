@@ -55,8 +55,11 @@ import { MacroService } from '../services/macro.service';
 import { registerMacroHandlers } from './macro.handler';
 import { SlackService } from '../services/slack.service';
 import { SlackSummarizeService } from '../services/slack-summarize.service';
+import { SlackThreadsService } from '../services/slack-threads.service';
 import { registerSlackHandlers } from './slack.handler';
+import { registerSlackThreadHandlers } from './slack-threads.handler';
 import { HttpSlackRepository } from '../repositories/slack.repo';
+import { FsSlackThreadsRepository } from '../repositories/slack-threads.repo';
 import { JiraSlackService } from '../services/jira-slack.service';
 import { JiraSlackSchedulerService } from '../services/jira-slack-scheduler.service';
 import { JsonLabelNotesRepository } from '../repositories/jira-label-notes.repo';
@@ -306,6 +309,14 @@ export function registerIpcHandlers(): Container {
   );
   const slackSummarize = new SlackSummarizeService(slackService, slackLlmRepo);
   registerSlackHandlers(slackService, slackSummarize);
+
+  const slackThreadsRepo = new FsSlackThreadsRepository(app.getPath('userData'));
+  const slackThreadsService = new SlackThreadsService(
+    slackService,
+    slackRepo,
+    slackThreadsRepo,
+  );
+  registerSlackThreadHandlers(slackThreadsService);
 
   void bootstrapMcp(plane, mcpService, workOSService);
 

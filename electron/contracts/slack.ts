@@ -99,6 +99,21 @@ export type FetchMyReactionsResponse =
   | { ok: true; hits: SlackReactionHit[]; truncated: boolean }
   | { ok: false; error: string };
 
+/**
+ * Output-shape preset for summary requests. The service maps each value to a
+ * different "요약 형식" block in the prompt while keeping the message log and
+ * grounding rules shared.
+ */
+export const SLACK_SUMMARY_TEMPLATES = [
+  'decision',
+  'timeline',
+  'tldr',
+  'issue',
+  'qa',
+  'perspectives',
+] as const;
+export type SlackSummaryTemplate = (typeof SLACK_SUMMARY_TEMPLATES)[number];
+
 export const summarizeRequestSchema = z.object({
   channelId: z.string().min(1),
   threadTs: z.string().min(1).optional(),
@@ -108,6 +123,8 @@ export const summarizeRequestSchema = z.object({
   model: z.string().max(80).optional(),
   /** Free-form extra instruction injected into the prompt. */
   focus: z.string().max(500).optional(),
+  /** Preset that determines the summary output shape. Defaults to "decision". */
+  template: z.enum(SLACK_SUMMARY_TEMPLATES).optional(),
 });
 export type SummarizeRequest = z.infer<typeof summarizeRequestSchema>;
 
@@ -122,4 +139,116 @@ export type SummarizeResponse =
 
 export type SlackTestConnectionResponse =
   | { ok: true; userId: string; userName: string; tokenMode: 'user' | 'bot'; teamId: string | null }
+  | { ok: false; error: string };
+
+/**
+ * Topic-thread cache surface.
+ *
+ * Convention: 회사 슬랙은 "[주제]" 형태의 부모 메시지에 스레드로 논의를 잇는
+ * 문화를 쓰므로, 채널 단위로 스레드를 가진 부모 메시지를 수집해 영속화한다.
+ * 한 번 등록·갱신한 채널은 사용자가 직접 갱신/삭제를 누르기 전까지 추가
+ * 네트워크 호출 없이 화면에 보여줄 수 있도록, 부모 메시지뿐 아니라 각 부모의
+ * 전체 스레드 답글도 같은 스냅샷에 함께 저장한다.
+ */
+
+export type SlackThreadReply = {
+  ts: string;
+  userId: string;
+  userName: string;
+  text: string;
+  at: string;
+};
+
+export type SlackThreadParent = {
+  ts: string;
+  userId: string;
+  userName: string;
+  text: string;
+  /** Number of replies reported by Slack — populated from message metadata, accurate even before replies are loaded. */
+  replyCount: number;
+  /** True if the parent text starts with a bracketed topic marker like "[..." or "【...". */
+  isTopic: boolean;
+  at: string;
+  /** Resolved lazily together with replies — null until the user expands the thread. */
+  permalink: string | null;
+  /** Empty until first expand. After lazy load, contains the full reply list as captured at `repliesLoadedAt`. */
+  replies: SlackThreadReply[];
+  /** ISO timestamp of the most recent reply fetch for this thread. null = never loaded. */
+  repliesLoadedAt: string | null;
+};
+
+export type SlackThreadChannelCache = {
+  channelId: string;
+  channelName: string;
+  /** Window size (days) used when this snapshot was captured. */
+  days: number;
+  /** ISO 8601 — first added to the cache. */
+  addedAt: string;
+  /** ISO 8601 — last successful refresh. */
+  refreshedAt: string;
+  threads: SlackThreadParent[];
+};
+
+export type SlackThreadChannelMeta = {
+  channelId: string;
+  channelName: string;
+  days: number;
+  addedAt: string;
+  refreshedAt: string;
+  threadCount: number;
+};
+
+export const listThreadChannelsResponseTag = 'slack:listThreadChannels';
+export type ListThreadChannelsResponse =
+  | { ok: true; channels: SlackThreadChannelMeta[] }
+  | { ok: false; error: string };
+
+export const loadThreadChannelRequestSchema = z.object({
+  channelId: z.string().min(1).max(64),
+});
+export type LoadThreadChannelRequest = z.infer<
+  typeof loadThreadChannelRequestSchema
+>;
+
+export type LoadThreadChannelResponse =
+  | { ok: true; cache: SlackThreadChannelCache }
+  | { ok: false; error: string };
+
+export const addThreadChannelRequestSchema = z.object({
+  channelId: z.string().min(1).max(64),
+  /** Optional override; service falls back to a sensible default (90). */
+  days: z.number().int().min(1).max(365).optional(),
+});
+export type AddThreadChannelRequest = z.infer<
+  typeof addThreadChannelRequestSchema
+>;
+
+export const refreshThreadChannelRequestSchema = addThreadChannelRequestSchema;
+export type RefreshThreadChannelRequest = AddThreadChannelRequest;
+
+export type AddOrRefreshThreadChannelResponse =
+  | { ok: true; cache: SlackThreadChannelCache }
+  | { ok: false; error: string };
+
+export const removeThreadChannelRequestSchema = z.object({
+  channelId: z.string().min(1).max(64),
+});
+export type RemoveThreadChannelRequest = z.infer<
+  typeof removeThreadChannelRequestSchema
+>;
+
+export type RemoveThreadChannelResponse =
+  | { ok: true }
+  | { ok: false; error: string };
+
+export const loadThreadRepliesRequestSchema = z.object({
+  channelId: z.string().min(1).max(64),
+  threadTs: z.string().min(1).max(64),
+});
+export type LoadThreadRepliesRequest = z.infer<
+  typeof loadThreadRepliesRequestSchema
+>;
+
+export type LoadThreadRepliesResponse =
+  | { ok: true; thread: SlackThreadParent }
   | { ok: false; error: string };

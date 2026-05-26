@@ -69,6 +69,16 @@ export type FetchMyReactionsResponse =
   | { ok: true; hits: SlackReactionHit[]; truncated: boolean }
   | { ok: false; error: string };
 
+export const SLACK_SUMMARY_TEMPLATES = [
+  'decision',
+  'timeline',
+  'tldr',
+  'issue',
+  'qa',
+  'perspectives',
+] as const;
+export type SlackSummaryTemplate = (typeof SLACK_SUMMARY_TEMPLATES)[number];
+
 export type SummarizeRequest = {
   channelId: string;
   threadTs?: string;
@@ -76,6 +86,7 @@ export type SummarizeRequest = {
   toUnix: number;
   model?: string;
   focus?: string;
+  template?: SlackSummaryTemplate;
 };
 
 export type SummarizeResponse =
@@ -89,4 +100,68 @@ export type SummarizeResponse =
 
 export type SlackTestConnectionResponse =
   | { ok: true; userId: string; userName: string; tokenMode: 'user' | 'bot'; teamId: string | null }
+  | { ok: false; error: string };
+
+export type SlackThreadReply = {
+  ts: string;
+  userId: string;
+  userName: string;
+  text: string;
+  at: string;
+};
+
+export type SlackThreadParent = {
+  ts: string;
+  userId: string;
+  userName: string;
+  text: string;
+  replyCount: number;
+  isTopic: boolean;
+  at: string;
+  permalink: string | null;
+  replies: SlackThreadReply[];
+  repliesLoadedAt: string | null;
+};
+
+export type SlackThreadChannelCache = {
+  channelId: string;
+  channelName: string;
+  days: number;
+  addedAt: string;
+  refreshedAt: string;
+  threads: SlackThreadParent[];
+};
+
+export type SlackThreadChannelMeta = {
+  channelId: string;
+  channelName: string;
+  days: number;
+  addedAt: string;
+  refreshedAt: string;
+  threadCount: number;
+};
+
+export type ListThreadChannelsResponse =
+  | { ok: true; channels: SlackThreadChannelMeta[] }
+  | { ok: false; error: string };
+
+export type LoadThreadChannelRequest = { channelId: string };
+export type LoadThreadChannelResponse =
+  | { ok: true; cache: SlackThreadChannelCache }
+  | { ok: false; error: string };
+
+export type AddThreadChannelRequest = { channelId: string; days?: number };
+export type RefreshThreadChannelRequest = AddThreadChannelRequest;
+export type AddOrRefreshThreadChannelResponse =
+  | { ok: true; cache: SlackThreadChannelCache }
+  | { ok: false; error: string };
+
+export type RemoveThreadChannelRequest = { channelId: string };
+export type RemoveThreadChannelResponse =
+  | { ok: true }
+  | { ok: false; error: string };
+
+export type LoadThreadRepliesRequest = { channelId: string; threadTs: string };
+export type LoadThreadRepliesResponse =
+  | { ok: true; thread: SlackThreadParent }
   | { ok: false; error: string };

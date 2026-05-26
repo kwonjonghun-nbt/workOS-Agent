@@ -126,12 +126,22 @@ import type {
   SuggestTileResponse as MacroSuggestTileResponse,
 } from './macro/types';
 import type {
+  AddOrRefreshThreadChannelResponse as SlackAddOrRefreshThreadChannelResponse,
+  AddThreadChannelRequest as SlackAddThreadChannelRequest,
   FetchMessagesRequest as SlackFetchMessagesRequest,
   FetchMessagesResponse as SlackFetchMessagesResponse,
   FetchMyReactionsRequest as SlackFetchMyReactionsRequest,
   FetchMyReactionsResponse as SlackFetchMyReactionsResponse,
   ListChannelsRequest as SlackListChannelsRequest,
   ListChannelsResponse as SlackListChannelsResponse,
+  ListThreadChannelsResponse as SlackListThreadChannelsResponse,
+  LoadThreadChannelRequest as SlackLoadThreadChannelRequest,
+  LoadThreadChannelResponse as SlackLoadThreadChannelResponse,
+  LoadThreadRepliesRequest as SlackLoadThreadRepliesRequest,
+  LoadThreadRepliesResponse as SlackLoadThreadRepliesResponse,
+  RefreshThreadChannelRequest as SlackRefreshThreadChannelRequest,
+  RemoveThreadChannelRequest as SlackRemoveThreadChannelRequest,
+  RemoveThreadChannelResponse as SlackRemoveThreadChannelResponse,
   SlackTestConnectionResponse,
   SummarizeRequest as SlackSummarizeRequest,
   SummarizeResponse as SlackSummarizeResponse,
@@ -334,6 +344,22 @@ export type SlackApi = {
   ) => Promise<SlackFetchMyReactionsResponse>;
   summarize: (req: SlackSummarizeRequest) => Promise<SlackSummarizeResponse>;
   testConnection: () => Promise<SlackTestConnectionResponse>;
+  listThreadChannels: () => Promise<SlackListThreadChannelsResponse>;
+  loadThreadChannel: (
+    req: SlackLoadThreadChannelRequest,
+  ) => Promise<SlackLoadThreadChannelResponse>;
+  addThreadChannel: (
+    req: SlackAddThreadChannelRequest,
+  ) => Promise<SlackAddOrRefreshThreadChannelResponse>;
+  refreshThreadChannel: (
+    req: SlackRefreshThreadChannelRequest,
+  ) => Promise<SlackAddOrRefreshThreadChannelResponse>;
+  removeThreadChannel: (
+    req: SlackRemoveThreadChannelRequest,
+  ) => Promise<SlackRemoveThreadChannelResponse>;
+  loadThreadReplies: (
+    req: SlackLoadThreadRepliesRequest,
+  ) => Promise<SlackLoadThreadRepliesResponse>;
 };
 
 export type MacroApi = {

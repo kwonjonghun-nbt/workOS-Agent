@@ -2,9 +2,13 @@ import { mutationOptions, queryOptions } from '@tanstack/react-query';
 import { slackApi } from '../../api/slack';
 import { slackKeys } from './keys';
 import type {
+  AddThreadChannelRequest,
   FetchMessagesRequest,
   FetchMyReactionsRequest,
   ListChannelsResponse,
+  LoadThreadRepliesRequest,
+  RefreshThreadChannelRequest,
+  RemoveThreadChannelRequest,
   SummarizeRequest,
 } from '../../api/slack';
 
@@ -55,6 +59,33 @@ export const slackQueries = {
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
     }),
+  /**
+   * Registered thread-cache channels (meta only — `addedAt`/`refreshedAt`/count).
+   * Backed by the main-process JSON store, so we never auto-refetch; mutations
+   * invalidate this key explicitly.
+   */
+  listThreadChannels: () =>
+    queryOptions({
+      queryKey: slackKeys.threadChannels(),
+      queryFn: () => slackApi.listThreadChannels(),
+      staleTime: Infinity,
+      gcTime: Infinity,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    }),
+  /** Full snapshot for a single channel. Disk read; no API call. */
+  loadThreadChannel: (channelId: string) =>
+    queryOptions({
+      queryKey: slackKeys.threadChannel(channelId),
+      queryFn: () => slackApi.loadThreadChannel({ channelId }),
+      enabled: !!channelId,
+      staleTime: Infinity,
+      gcTime: Infinity,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    }),
 };
 
 export const slackMutations = {
@@ -78,5 +109,29 @@ export const slackMutations = {
     mutationOptions({
       mutationKey: [...slackKeys.all, 'summarize'] as const,
       mutationFn: (req: SummarizeRequest) => slackApi.summarize(req),
+    }),
+  addThreadChannel: () =>
+    mutationOptions({
+      mutationKey: [...slackKeys.all, 'addThreadChannel'] as const,
+      mutationFn: (req: AddThreadChannelRequest) =>
+        slackApi.addThreadChannel(req),
+    }),
+  refreshThreadChannel: () =>
+    mutationOptions({
+      mutationKey: [...slackKeys.all, 'refreshThreadChannel'] as const,
+      mutationFn: (req: RefreshThreadChannelRequest) =>
+        slackApi.refreshThreadChannel(req),
+    }),
+  removeThreadChannel: () =>
+    mutationOptions({
+      mutationKey: [...slackKeys.all, 'removeThreadChannel'] as const,
+      mutationFn: (req: RemoveThreadChannelRequest) =>
+        slackApi.removeThreadChannel(req),
+    }),
+  loadThreadReplies: () =>
+    mutationOptions({
+      mutationKey: [...slackKeys.all, 'loadThreadReplies'] as const,
+      mutationFn: (req: LoadThreadRepliesRequest) =>
+        slackApi.loadThreadReplies(req),
     }),
 };

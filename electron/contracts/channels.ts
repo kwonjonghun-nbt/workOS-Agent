@@ -142,6 +142,12 @@ export const CHANNELS = {
     fetchMyReactions: 'slack:fetchMyReactions',
     summarize: 'slack:summarize',
     testConnection: 'slack:testConnection',
+    listThreadChannels: 'slack:listThreadChannels',
+    loadThreadChannel: 'slack:loadThreadChannel',
+    addThreadChannel: 'slack:addThreadChannel',
+    refreshThreadChannel: 'slack:refreshThreadChannel',
+    removeThreadChannel: 'slack:removeThreadChannel',
+    loadThreadReplies: 'slack:loadThreadReplies',
   },
   githubPr: {
     listPullRequests: 'githubPr:listPullRequests',

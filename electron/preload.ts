@@ -80,12 +80,22 @@ import type {
   TestSlackConnectionResponse,
 } from './contracts/jira-slack';
 import type {
+  AddOrRefreshThreadChannelResponse,
+  AddThreadChannelRequest,
   FetchMessagesRequest,
   FetchMessagesResponse,
   FetchMyReactionsRequest,
   FetchMyReactionsResponse,
   ListChannelsRequest,
   ListChannelsResponse,
+  ListThreadChannelsResponse,
+  LoadThreadChannelRequest,
+  LoadThreadChannelResponse,
+  LoadThreadRepliesRequest,
+  LoadThreadRepliesResponse,
+  RefreshThreadChannelRequest,
+  RemoveThreadChannelRequest,
+  RemoveThreadChannelResponse,
   SlackTestConnectionResponse,
   SummarizeRequest,
   SummarizeResponse,
@@ -431,6 +441,28 @@ const slack = {
     ipcRenderer.invoke(CHANNELS.slack.summarize, req),
   testConnection: (): Promise<SlackTestConnectionResponse> =>
     ipcRenderer.invoke(CHANNELS.slack.testConnection),
+  listThreadChannels: (): Promise<ListThreadChannelsResponse> =>
+    ipcRenderer.invoke(CHANNELS.slack.listThreadChannels),
+  loadThreadChannel: (
+    req: LoadThreadChannelRequest,
+  ): Promise<LoadThreadChannelResponse> =>
+    ipcRenderer.invoke(CHANNELS.slack.loadThreadChannel, req),
+  addThreadChannel: (
+    req: AddThreadChannelRequest,
+  ): Promise<AddOrRefreshThreadChannelResponse> =>
+    ipcRenderer.invoke(CHANNELS.slack.addThreadChannel, req),
+  refreshThreadChannel: (
+    req: RefreshThreadChannelRequest,
+  ): Promise<AddOrRefreshThreadChannelResponse> =>
+    ipcRenderer.invoke(CHANNELS.slack.refreshThreadChannel, req),
+  removeThreadChannel: (
+    req: RemoveThreadChannelRequest,
+  ): Promise<RemoveThreadChannelResponse> =>
+    ipcRenderer.invoke(CHANNELS.slack.removeThreadChannel, req),
+  loadThreadReplies: (
+    req: LoadThreadRepliesRequest,
+  ): Promise<LoadThreadRepliesResponse> =>
+    ipcRenderer.invoke(CHANNELS.slack.loadThreadReplies, req),
 };
 
 const githubPr = {
