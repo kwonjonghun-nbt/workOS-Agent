@@ -136,6 +136,13 @@ export const CHANNELS = {
     suggestTile: 'macro:suggestTile',
     pickPath: 'macro:pickPath',
   },
+  slack: {
+    listChannels: 'slack:listChannels',
+    fetchMessages: 'slack:fetchMessages',
+    fetchMyReactions: 'slack:fetchMyReactions',
+    summarize: 'slack:summarize',
+    testConnection: 'slack:testConnection',
+  },
   githubPr: {
     listPullRequests: 'githubPr:listPullRequests',
     testConnection: 'githubPr:testConnection',

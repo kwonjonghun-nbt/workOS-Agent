@@ -40,6 +40,9 @@ export class TerminalLlmRepository implements LlmCliRepository {
     private readonly extensionService: ExtensionService,
     private readonly mcpService: McpService,
     private readonly runtime: ExtensionLlmRuntime,
+    // 호출마다 새 확장 터미널 세션을 만들지(true) 기존 세션을 재사용할지(false).
+    // 한 번의 호출 결과를 히스토리로 모으는 확장(예: Slack 요약)에 true.
+    private readonly freshSessionPerCall: boolean = false,
   ) {}
 
   async runText(
@@ -79,12 +82,23 @@ export class TerminalLlmRepository implements LlmCliRepository {
     // Ensure (or reuse) the extension AI terminal session and request the UI
     // to open the panel so the user sees the work happen.
     const envOverride = await this.buildEnv();
-    const sessionId = await this.terminalService.ensureExtensionSession(
-      SYSTEM_DEFAULT_WORKSPACE_ID,
-      this.extensionId,
-      cwd,
-      envOverride,
-    );
+    const sessionId = this.freshSessionPerCall
+      ? await this.terminalService.create(
+          SYSTEM_DEFAULT_WORKSPACE_ID,
+          { cols: 120, rows: 30 },
+          {
+            purpose: 'extension',
+            ownerExtensionId: this.extensionId,
+            cwdOverride: cwd,
+            envOverride,
+          },
+        )
+      : await this.terminalService.ensureExtensionSession(
+          SYSTEM_DEFAULT_WORKSPACE_ID,
+          this.extensionId,
+          cwd,
+          envOverride,
+        );
     const openEvt: ExtensionOpenPanelEvent = {
       extensionId: this.extensionId,
       sessionId,

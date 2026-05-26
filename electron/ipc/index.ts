@@ -53,6 +53,9 @@ import { registerGitHubPrHandlers } from './github-pr.handler';
 import { JsonMacroRepository } from '../repositories/macro.repo';
 import { MacroService } from '../services/macro.service';
 import { registerMacroHandlers } from './macro.handler';
+import { SlackService } from '../services/slack.service';
+import { SlackSummarizeService } from '../services/slack-summarize.service';
+import { registerSlackHandlers } from './slack.handler';
 import { HttpSlackRepository } from '../repositories/slack.repo';
 import { JiraSlackService } from '../services/jira-slack.service';
 import { JiraSlackSchedulerService } from '../services/jira-slack-scheduler.service';
@@ -288,6 +291,21 @@ export function registerIpcHandlers(): Container {
     jiraLlmRepo,
   );
   registerJiraReportHandlers(jiraReportService);
+
+  // ----- Slack Digest extension -----
+  const slackService = new SlackService(slackRepo, extensionService);
+  const slackLlmRepo = new TerminalLlmRepository(
+    'workos.slack',
+    terminalService,
+    workspaceService,
+    extensionService,
+    mcpService,
+    extensionLlmRuntime,
+    // Slack 요약은 매 실행마다 결과를 히스토리에 누적하므로 새 터미널 세션을 만든다.
+    true,
+  );
+  const slackSummarize = new SlackSummarizeService(slackService, slackLlmRepo);
+  registerSlackHandlers(slackService, slackSummarize);
 
   void bootstrapMcp(plane, mcpService, workOSService);
 

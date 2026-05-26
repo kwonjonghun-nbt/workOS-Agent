@@ -126,6 +126,17 @@ import type {
   SuggestTileResponse as MacroSuggestTileResponse,
 } from './macro/types';
 import type {
+  FetchMessagesRequest as SlackFetchMessagesRequest,
+  FetchMessagesResponse as SlackFetchMessagesResponse,
+  FetchMyReactionsRequest as SlackFetchMyReactionsRequest,
+  FetchMyReactionsResponse as SlackFetchMyReactionsResponse,
+  ListChannelsRequest as SlackListChannelsRequest,
+  ListChannelsResponse as SlackListChannelsResponse,
+  SlackTestConnectionResponse,
+  SummarizeRequest as SlackSummarizeRequest,
+  SummarizeResponse as SlackSummarizeResponse,
+} from './slack/types';
+import type {
   FindThreadMessageRequest as JiraSlackFindThreadMessageRequest,
   FindThreadMessageResponse as JiraSlackFindThreadMessageResponse,
   PreviewDailyReportResponse as JiraSlackPreviewDailyReportResponse,
@@ -315,6 +326,16 @@ export type GithubPrApi = {
   }>;
 };
 
+export type SlackApi = {
+  listChannels: (req?: SlackListChannelsRequest) => Promise<SlackListChannelsResponse>;
+  fetchMessages: (req: SlackFetchMessagesRequest) => Promise<SlackFetchMessagesResponse>;
+  fetchMyReactions: (
+    req: SlackFetchMyReactionsRequest,
+  ) => Promise<SlackFetchMyReactionsResponse>;
+  summarize: (req: SlackSummarizeRequest) => Promise<SlackSummarizeResponse>;
+  testConnection: () => Promise<SlackTestConnectionResponse>;
+};
+
 export type MacroApi = {
   getState: () => Promise<MacroState>;
   saveBoard: (req: MacroSaveBoardRequest) => Promise<MacroState>;
@@ -349,6 +370,7 @@ declare global {
       jiraSlack: JiraSlackApi;
       githubPr: GithubPrApi;
       macro: MacroApi;
+      slack: SlackApi;
     };
   }
 }

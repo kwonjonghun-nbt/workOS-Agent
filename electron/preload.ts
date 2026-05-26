@@ -80,6 +80,17 @@ import type {
   TestSlackConnectionResponse,
 } from './contracts/jira-slack';
 import type {
+  FetchMessagesRequest,
+  FetchMessagesResponse,
+  FetchMyReactionsRequest,
+  FetchMyReactionsResponse,
+  ListChannelsRequest,
+  ListChannelsResponse,
+  SlackTestConnectionResponse,
+  SummarizeRequest,
+  SummarizeResponse,
+} from './contracts/slack';
+import type {
   CreateReleaseBranchRequest,
   CreateReleaseBranchResponse,
   CreateReleaseTagRequest,
@@ -407,6 +418,21 @@ const macro = {
     ipcRenderer.invoke(CHANNELS.macro.pickPath, req),
 };
 
+const slack = {
+  listChannels: (req: ListChannelsRequest = {}): Promise<ListChannelsResponse> =>
+    ipcRenderer.invoke(CHANNELS.slack.listChannels, req),
+  fetchMessages: (req: FetchMessagesRequest): Promise<FetchMessagesResponse> =>
+    ipcRenderer.invoke(CHANNELS.slack.fetchMessages, req),
+  fetchMyReactions: (
+    req: FetchMyReactionsRequest,
+  ): Promise<FetchMyReactionsResponse> =>
+    ipcRenderer.invoke(CHANNELS.slack.fetchMyReactions, req),
+  summarize: (req: SummarizeRequest): Promise<SummarizeResponse> =>
+    ipcRenderer.invoke(CHANNELS.slack.summarize, req),
+  testConnection: (): Promise<SlackTestConnectionResponse> =>
+    ipcRenderer.invoke(CHANNELS.slack.testConnection),
+};
+
 const githubPr = {
   listPullRequests: (req: ListPullRequestsRequest): Promise<ListPullRequestsResponse> =>
     ipcRenderer.invoke(CHANNELS.githubPr.listPullRequests, req),
@@ -435,6 +461,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   jiraSlack,
   githubPr,
   macro,
+  slack,
 });
 
 export type ElectronAPI = {
@@ -452,4 +479,5 @@ export type ElectronAPI = {
   jiraSlack: typeof jiraSlack;
   githubPr: typeof githubPr;
   macro: typeof macro;
+  slack: typeof slack;
 };

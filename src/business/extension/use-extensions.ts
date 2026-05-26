@@ -6,6 +6,7 @@ import {
   extensionMutations,
   extensionQueries,
 } from '../../server-state/extension';
+import { terminalKeys } from '../../server-state/terminal';
 import { useExtensionStore, viewKey } from './extension-store';
 
 /** Catalog + per-user state, kept in sync with main via push events. */
@@ -37,6 +38,10 @@ export function useExtensionList() {
       }
       setTerminalOpen(evt.extensionId, true);
       setActiveTerminal(evt.extensionId, evt.sessionId);
+      // 메인에서 새로 만든 세션이 목록에 보이도록 react-query 캐시를 무효화한다.
+      void queryClient.invalidateQueries({
+        queryKey: terminalKeys.listForExtension(evt.extensionId),
+      });
     });
     return off;
   }, [queryClient, setActiveView, setTerminalOpen, setActiveTerminal]);

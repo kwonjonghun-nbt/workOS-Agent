@@ -4,6 +4,7 @@ import { sampleHelloManifest } from './sample-hello.manifest';
 import { workosJiraManifest } from './workos-jira.manifest';
 import { workosGithubPrManifest } from './workos-github-pr.manifest';
 import { workosMacroButtonsManifest } from './workos-macro-buttons.manifest';
+import { workosSlackManifest } from './workos-slack.manifest';
 
 /**
  * Catalog of first-party extensions shipped with the app.
@@ -19,6 +20,7 @@ const RAW_MANIFESTS: unknown[] = [
   workosJiraManifest,
   workosGithubPrManifest,
   workosMacroButtonsManifest,
+  workosSlackManifest,
 ];
 
 export const BUILTIN_EXTENSIONS: ExtensionManifest[] = RAW_MANIFESTS.map((raw, idx) => {

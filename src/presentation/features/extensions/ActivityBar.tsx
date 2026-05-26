@@ -87,6 +87,7 @@ export function ActivityBar() {
 function ActivityIcon({ icon, active }: { icon: string; active: boolean }) {
   if (icon === 'mark:github') return <GitHubMark active={active} />;
   if (icon === 'mark:jira') return <JiraMark active={active} />;
+  if (icon === 'mark:slack') return <SlackMark active={active} />;
   return <span className="leading-none">{icon}</span>;
 }
 
@@ -109,6 +110,34 @@ function JiraMark({ active }: { active: boolean }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden className="h-5 w-5" fill={fill}>
       <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.762a1.005 1.005 0 0 0-1.001-1.005zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.005 1.005 0 0 0 23.013 0z" />
+    </svg>
+  );
+}
+
+function SlackMark({ active }: { active: boolean }) {
+  // Slack 4-color hash mark (simple-icons path). Each rounded quadrant gets
+  // its own brand color; on the active state we slightly brighten the palette.
+  const colors = active
+    ? { a: '#4FD1C5', b: '#F6E27A', c: '#FF9AB8', d: '#7AB8FF' }
+    : { a: '#36C5F0', b: '#ECB22E', c: '#E01E5A', d: '#2EB67D' };
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden className="h-5 w-5">
+      <path
+        fill={colors.c}
+        d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"
+      />
+      <path
+        fill={colors.a}
+        d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"
+      />
+      <path
+        fill={colors.d}
+        d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"
+      />
+      <path
+        fill={colors.b}
+        d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"
+      />
     </svg>
   );
 }
