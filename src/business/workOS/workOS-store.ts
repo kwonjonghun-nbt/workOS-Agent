@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 // 워크OS UI 상태 — 현재 선택된 워크플로/태스크/태스크아이템 (워크스페이스별로 격리)
 
-type View = 'workflows' | 'tasks' | 'diff';
+type View = 'wizard' | 'workflows' | 'tasks' | 'diff';
 
 export type AiWorkflowDraft = {
   draftId: string;

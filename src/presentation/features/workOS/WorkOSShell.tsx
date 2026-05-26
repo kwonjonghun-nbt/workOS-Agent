@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useWorkOSSync } from '../../../business/workOS/use-workOS';
+import { useWizardSync } from '../../../business/wizard/use-wizard';
 import { useWorkOSStore } from '../../../business/workOS/workOS-store';
 import { useHotkey } from '../../shared/use-hotkeys';
 import { WorkflowsView } from './WorkflowsView';
 import { TasksView } from './TasksView';
 import { DiffView } from './DiffView';
+import { WizardView } from './WizardView';
 import { HelpOverlay } from './HelpOverlay';
 import { McpStatusChip } from './McpStatusChip';
 
@@ -16,6 +18,7 @@ type Props = {
 
 export function WorkOSShell({ workspaceId, terminalOpen, onToggleTerminal }: Props) {
   useWorkOSSync();
+  useWizardSync();
   const view = useWorkOSStore((s) => s.viewByWorkspace[workspaceId] ?? 'tasks');
   const setView = useWorkOSStore((s) => s.setView);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -23,6 +26,7 @@ export function WorkOSShell({ workspaceId, terminalOpen, onToggleTerminal }: Pro
   useHotkey('mod+1', () => setView(workspaceId, 'tasks'), [workspaceId]);
   useHotkey('mod+2', () => setView(workspaceId, 'workflows'), [workspaceId]);
   useHotkey('mod+3', () => setView(workspaceId, 'diff'), [workspaceId]);
+  useHotkey('mod+4', () => setView(workspaceId, 'wizard'), [workspaceId]);
   useHotkey('mod+j', () => onToggleTerminal(), [onToggleTerminal]);
   useHotkey('shift+/', () => setHelpOpen((x) => !x));
 
@@ -47,6 +51,12 @@ export function WorkOSShell({ workspaceId, terminalOpen, onToggleTerminal }: Pro
             shortcut="⌘3"
             active={view === 'diff'}
             onClick={() => setView(workspaceId, 'diff')}
+          />
+          <ViewTab
+            label="🤖 자비스"
+            shortcut="⌘4"
+            active={view === 'wizard'}
+            onClick={() => setView(workspaceId, 'wizard')}
           />
         </nav>
         <div className="flex items-center gap-2">
@@ -75,6 +85,7 @@ export function WorkOSShell({ workspaceId, terminalOpen, onToggleTerminal }: Pro
         {view === 'tasks' && <TasksView workspaceId={workspaceId} />}
         {view === 'workflows' && <WorkflowsView workspaceId={workspaceId} />}
         {view === 'diff' && <DiffView workspaceId={workspaceId} />}
+        {view === 'wizard' && <WizardView workspaceId={workspaceId} />}
       </div>
       {helpOpen && <HelpOverlay onClose={() => setHelpOpen(false)} />}
     </div>

@@ -139,6 +139,16 @@ import type {
   TaskItemProgressEvent,
 } from './contracts/workOS';
 import type {
+  WizardApproveProposalRequest,
+  WizardGetRequest,
+  WizardProceedNextRequest,
+  WizardRejectProposalRequest,
+  WizardResetRequest,
+  WizardSendMessageRequest,
+  WizardSession,
+  WizardUpdatedEvent,
+} from './contracts/wizard';
+import type {
   CatalogResponse,
   CreateStepRequest,
   CreateTaskItemRequest,
@@ -308,6 +318,26 @@ const workOS = {
     const wrapped = (_e: IpcRendererEvent, payload: WorkOSChangedEvent) => listener(payload);
     ipcRenderer.on(CHANNELS.workOSEvents.changed, wrapped);
     return () => ipcRenderer.off(CHANNELS.workOSEvents.changed, wrapped);
+  },
+};
+
+const wizard = {
+  get: (req: WizardGetRequest): Promise<WizardSession> =>
+    ipcRenderer.invoke(CHANNELS.wizard.get, req),
+  sendMessage: (req: WizardSendMessageRequest): Promise<WizardSession> =>
+    ipcRenderer.invoke(CHANNELS.wizard.sendMessage, req),
+  approveProposal: (req: WizardApproveProposalRequest): Promise<WizardSession> =>
+    ipcRenderer.invoke(CHANNELS.wizard.approveProposal, req),
+  rejectProposal: (req: WizardRejectProposalRequest): Promise<WizardSession> =>
+    ipcRenderer.invoke(CHANNELS.wizard.rejectProposal, req),
+  proceedNext: (req: WizardProceedNextRequest): Promise<WizardSession> =>
+    ipcRenderer.invoke(CHANNELS.wizard.proceedNext, req),
+  reset: (req: WizardResetRequest): Promise<WizardSession> =>
+    ipcRenderer.invoke(CHANNELS.wizard.reset, req),
+  onUpdated: (listener: (event: WizardUpdatedEvent) => void): (() => void) => {
+    const wrapped = (_e: IpcRendererEvent, payload: WizardUpdatedEvent) => listener(payload);
+    ipcRenderer.on(CHANNELS.wizardEvents.updated, wrapped);
+    return () => ipcRenderer.off(CHANNELS.wizardEvents.updated, wrapped);
   },
 };
 
@@ -516,6 +546,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   terminal,
   workspace,
   workOS,
+  wizard,
   mcp,
   preferences,
   updater,
@@ -536,6 +567,7 @@ export type ElectronAPI = {
   terminal: typeof terminal;
   workspace: typeof workspace;
   workOS: typeof workOS;
+  wizard: typeof wizard;
   mcp: typeof mcp;
   preferences: typeof preferences;
   updater: typeof updater;

@@ -66,6 +66,16 @@ import type {
   WorkOSChangedEvent,
 } from './workOS/types';
 import type {
+  WizardApproveProposalRequest,
+  WizardGetRequest,
+  WizardProceedNextRequest,
+  WizardRejectProposalRequest,
+  WizardResetRequest,
+  WizardSendMessageRequest,
+  WizardSession,
+  WizardUpdatedEvent,
+} from './wizard/types';
+import type {
   McpStatusRequest,
   McpStatusResponse,
   McpToastEvent,
@@ -235,6 +245,16 @@ export type WorkOSApi = {
   importWorkflowDraft: (req: ImportWorkflowDraftRequest) => Promise<ImportWorkflowDraftResponse>;
 
   onChanged: (listener: (event: WorkOSChangedEvent) => void) => () => void;
+};
+
+export type WizardApi = {
+  get: (req: WizardGetRequest) => Promise<WizardSession>;
+  sendMessage: (req: WizardSendMessageRequest) => Promise<WizardSession>;
+  approveProposal: (req: WizardApproveProposalRequest) => Promise<WizardSession>;
+  rejectProposal: (req: WizardRejectProposalRequest) => Promise<WizardSession>;
+  proceedNext: (req: WizardProceedNextRequest) => Promise<WizardSession>;
+  reset: (req: WizardResetRequest) => Promise<WizardSession>;
+  onUpdated: (listener: (event: WizardUpdatedEvent) => void) => () => void;
 };
 
 export type McpApi = {
@@ -412,6 +432,7 @@ declare global {
       terminal: TerminalApi;
       workspace: WorkspaceApi;
       workOS: WorkOSApi;
+      wizard: WizardApi;
       mcp: McpApi;
       preferences: PreferencesApi;
       updater: UpdaterApi;

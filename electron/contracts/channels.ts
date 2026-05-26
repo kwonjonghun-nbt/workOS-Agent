@@ -65,6 +65,17 @@ export const CHANNELS = {
   workOSEvents: {
     changed: 'workOS:changed',
   },
+  wizard: {
+    get: 'wizard:get',
+    sendMessage: 'wizard:sendMessage',
+    approveProposal: 'wizard:approveProposal',
+    rejectProposal: 'wizard:rejectProposal',
+    proceedNext: 'wizard:proceedNext',
+    reset: 'wizard:reset',
+  },
+  wizardEvents: {
+    updated: 'wizard:updated',
+  },
   mcp: {
     status: 'mcp:status',
     setup: 'mcp:setup',

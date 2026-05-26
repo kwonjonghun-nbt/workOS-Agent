@@ -41,8 +41,15 @@ export type ProgressEmitter = {
   emit(workspaceId: string, taskItemId: string, message: string): void;
 };
 
+export type TaskItemCompletionHook = (
+  workspaceId: string,
+  taskItemId: string,
+  output?: string,
+) => void;
+
 export class WorkOSService {
   private readonly cache = new Map<string, WorkOSRepository>();
+  private completionHook: TaskItemCompletionHook | null = null;
 
   constructor(
     private readonly cwd: CwdResolver,
@@ -50,6 +57,14 @@ export class WorkOSService {
     private readonly notify: ChangeNotifier,
     private readonly progress: ProgressEmitter = { emit: () => {} },
   ) {}
+
+  /**
+   * 외부 consumer(WizardService 등) 가 TaskItem 완료를 구독할 수 있는 hook.
+   * mcpComplete 가 호출되면 항상 발화된다 — 비동기 fire-and-forget 으로 처리되어야 한다.
+   */
+  setTaskItemCompletionHook(hook: TaskItemCompletionHook | null): void {
+    this.completionHook = hook;
+  }
 
   private async repo(workspaceId: string): Promise<WorkOSRepository> {
     const root = await this.cwd.resolveCwd(workspaceId);
@@ -507,6 +522,15 @@ export class WorkOSService {
     await r.writeTaskItem(next);
     this.notify.notify(workspaceId, ['task-item']);
     await this.maybeRollupTaskStatus(workspaceId, item.taskId);
+    // 외부 구독자(자비스 위저드 등) 통지 — fire-and-forget.
+    if (this.completionHook) {
+      try {
+        this.completionHook(workspaceId, taskItemId, output);
+      } catch (err) {
+        // hook 실패가 mcpComplete 본 흐름을 막아선 안 된다.
+        console.error('[workOS] completion hook error:', err);
+      }
+    }
     return next;
   }
 
