@@ -25,6 +25,27 @@ type Props = { workspaceId: string };
 
 type ItemStatus = TaskItem['status'];
 
+type TaskBoardViewMode = 'kanban' | 'flow';
+
+const TASK_BOARD_VIEW_STORAGE_KEY = 'workOS:tasks:viewMode';
+
+function useTaskBoardViewMode(): [TaskBoardViewMode, (mode: TaskBoardViewMode) => void] {
+  const [mode, setMode] = useState<TaskBoardViewMode>(() => {
+    if (typeof window === 'undefined') return 'kanban';
+    const saved = window.localStorage.getItem(TASK_BOARD_VIEW_STORAGE_KEY);
+    return saved === 'flow' || saved === 'kanban' ? saved : 'kanban';
+  });
+  const update = (next: TaskBoardViewMode) => {
+    setMode(next);
+    try {
+      window.localStorage.setItem(TASK_BOARD_VIEW_STORAGE_KEY, next);
+    } catch {
+      /* ignore quota / disabled storage */
+    }
+  };
+  return [mode, update];
+}
+
 const KANBAN_COLUMNS: { status: ItemStatus; label: string; tone: string }[] = [
   { status: 'pending', label: '대기', tone: 'border-ink-700 bg-ink-850/30' },
   { status: 'running', label: '실행중', tone: 'border-blue-500/40 bg-blue-500/5' },
@@ -535,7 +556,7 @@ function TaskDetail({ workspaceId, taskId }: { workspaceId: string; taskId: stri
   const setTerminalPanelOpen = useWorkspaceStore((s) => s.setTerminalPanelOpen);
 
   const [reqOpen, setReqOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'kanban' | 'flow'>('kanban');
+  const [viewMode, setViewMode] = useTaskBoardViewMode();
 
   if (!task) return <div className="p-4 text-sm text-ink-500">Task를 찾을 수 없습니다.</div>;
 
