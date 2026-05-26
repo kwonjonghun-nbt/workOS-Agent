@@ -31,3 +31,13 @@ export type TestConnectionResponse = {
   projectKeys: string[];
   matchedIssues: number;
 };
+
+export type GetIssueDetailRequest = { issueKey: string };
+
+export type GetIssueDetailResponse = {
+  key: string;
+  summary: string;
+  issueType: string;
+  parentKey: string | null;
+  descriptionMarkdown: string;
+};

@@ -98,6 +98,7 @@ export const CHANNELS = {
   jira: {
     listMyIssues: 'jira:listMyIssues',
     testConnection: 'jira:testConnection',
+    getIssueDetail: 'jira:getIssueDetail',
   },
   jiraSnapshot: {
     trigger: 'jiraSnapshot:trigger',
@@ -127,6 +128,16 @@ export const CHANNELS = {
     save: 'jiraReports:save',
     delete: 'jiraReports:delete',
     generate: 'jiraReports:generate',
+  },
+  jiraTicketTemplates: {
+    list: 'jiraTicketTemplates:list',
+    get: 'jiraTicketTemplates:get',
+    save: 'jiraTicketTemplates:save',
+    reset: 'jiraTicketTemplates:reset',
+  },
+  jiraTicketReview: {
+    review: 'jiraTicketReview:review',
+    apply: 'jiraTicketReview:apply',
   },
   macro: {
     getState: 'macro:getState',

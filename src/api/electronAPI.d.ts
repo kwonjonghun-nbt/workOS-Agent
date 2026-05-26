@@ -83,6 +83,8 @@ import type {
   UpdateSettingsRequest,
 } from './extension/types';
 import type {
+  GetIssueDetailRequest as JiraGetIssueDetailRequest,
+  GetIssueDetailResponse as JiraGetIssueDetailResponse,
   ListMyIssuesRequest,
   ListMyIssuesResponse,
   TestConnectionResponse,
@@ -114,6 +116,18 @@ import type {
   ReportMeta as JiraReportMeta,
   SaveReportRequest as JiraSaveReportRequest,
 } from './jira/report-types';
+import type {
+  GetTicketTemplateRequest as JiraGetTicketTemplateRequest,
+  ListTicketTemplatesResponse as JiraListTicketTemplatesResponse,
+  SaveTicketTemplateRequest as JiraSaveTicketTemplateRequest,
+  TicketTemplate as JiraTicketTemplate,
+} from './jira/template-types';
+import type {
+  ApplyDescriptionRequest as JiraApplyDescriptionRequest,
+  ApplyDescriptionResponse as JiraApplyDescriptionResponse,
+  ReviewIssueRequest as JiraReviewIssueRequest,
+  ReviewIssueResponse as JiraReviewIssueResponse,
+} from './jira/review-types';
 import type {
   DeleteTileRequest as MacroDeleteTileRequest,
   MacroState,
@@ -256,6 +270,7 @@ export type ExtensionApi = {
 export type JiraApi = {
   listMyIssues: (req: ListMyIssuesRequest) => Promise<ListMyIssuesResponse>;
   testConnection: () => Promise<TestConnectionResponse>;
+  getIssueDetail: (req: JiraGetIssueDetailRequest) => Promise<JiraGetIssueDetailResponse>;
 };
 
 export type JiraSnapshotApi = {
@@ -379,6 +394,18 @@ export type JiraReportsApi = {
   generate: (req: JiraGenerateReportRequest) => Promise<JiraGenerateReportResponse>;
 };
 
+export type JiraTicketTemplatesApi = {
+  list: () => Promise<JiraListTicketTemplatesResponse>;
+  get: (req: JiraGetTicketTemplateRequest) => Promise<JiraTicketTemplate>;
+  save: (req: JiraSaveTicketTemplateRequest) => Promise<JiraTicketTemplate>;
+  reset: (req: JiraGetTicketTemplateRequest) => Promise<JiraTicketTemplate>;
+};
+
+export type JiraTicketReviewApi = {
+  review: (req: JiraReviewIssueRequest) => Promise<JiraReviewIssueResponse>;
+  apply: (req: JiraApplyDescriptionRequest) => Promise<JiraApplyDescriptionResponse>;
+};
+
 declare global {
   interface Window {
     electronAPI: {
@@ -393,6 +420,8 @@ declare global {
       jiraSnapshot: JiraSnapshotApi;
       jiraLabels: JiraLabelsApi;
       jiraReports: JiraReportsApi;
+      jiraTicketTemplates: JiraTicketTemplatesApi;
+      jiraTicketReview: JiraTicketReviewApi;
       jiraSlack: JiraSlackApi;
       githubPr: GithubPrApi;
       macro: MacroApi;

@@ -40,6 +40,8 @@ import type {
   UpdateSettingsRequest,
 } from './contracts/extension';
 import type {
+  GetIssueDetailRequest,
+  GetIssueDetailResponse,
   ListMyIssuesRequest,
   ListMyIssuesResponse,
   TestConnectionResponse,
@@ -71,6 +73,18 @@ import type {
   ReportMeta,
   SaveReportRequest,
 } from './contracts/jira-reports';
+import type {
+  GetTicketTemplateRequest,
+  ListTicketTemplatesResponse,
+  SaveTicketTemplateRequest,
+  TicketTemplate,
+} from './contracts/jira-ticket-template';
+import type {
+  ApplyDescriptionRequest,
+  ApplyDescriptionResponse,
+  ReviewIssueRequest,
+  ReviewIssueResponse,
+} from './contracts/jira-ticket-review';
 import type {
   FindThreadMessageRequest,
   FindThreadMessageResponse,
@@ -355,6 +369,8 @@ const jira = {
     ipcRenderer.invoke(CHANNELS.jira.listMyIssues, req),
   testConnection: (): Promise<TestConnectionResponse> =>
     ipcRenderer.invoke(CHANNELS.jira.testConnection),
+  getIssueDetail: (req: GetIssueDetailRequest): Promise<GetIssueDetailResponse> =>
+    ipcRenderer.invoke(CHANNELS.jira.getIssueDetail, req),
 };
 
 const jiraSnapshot = {
@@ -412,6 +428,24 @@ const jiraReports = {
     ipcRenderer.invoke(CHANNELS.jiraReports.delete, req),
   generate: (req: GenerateReportRequest): Promise<GenerateReportResponse> =>
     ipcRenderer.invoke(CHANNELS.jiraReports.generate, req),
+};
+
+const jiraTicketTemplates = {
+  list: (): Promise<ListTicketTemplatesResponse> =>
+    ipcRenderer.invoke(CHANNELS.jiraTicketTemplates.list),
+  get: (req: GetTicketTemplateRequest): Promise<TicketTemplate> =>
+    ipcRenderer.invoke(CHANNELS.jiraTicketTemplates.get, req),
+  save: (req: SaveTicketTemplateRequest): Promise<TicketTemplate> =>
+    ipcRenderer.invoke(CHANNELS.jiraTicketTemplates.save, req),
+  reset: (req: GetTicketTemplateRequest): Promise<TicketTemplate> =>
+    ipcRenderer.invoke(CHANNELS.jiraTicketTemplates.reset, req),
+};
+
+const jiraTicketReview = {
+  review: (req: ReviewIssueRequest): Promise<ReviewIssueResponse> =>
+    ipcRenderer.invoke(CHANNELS.jiraTicketReview.review, req),
+  apply: (req: ApplyDescriptionRequest): Promise<ApplyDescriptionResponse> =>
+    ipcRenderer.invoke(CHANNELS.jiraTicketReview.apply, req),
 };
 
 const macro = {
@@ -490,6 +524,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   jiraSnapshot,
   jiraLabels,
   jiraReports,
+  jiraTicketTemplates,
+  jiraTicketReview,
   jiraSlack,
   githubPr,
   macro,
@@ -508,6 +544,8 @@ export type ElectronAPI = {
   jiraSnapshot: typeof jiraSnapshot;
   jiraLabels: typeof jiraLabels;
   jiraReports: typeof jiraReports;
+  jiraTicketTemplates: typeof jiraTicketTemplates;
+  jiraTicketReview: typeof jiraTicketReview;
   jiraSlack: typeof jiraSlack;
   githubPr: typeof githubPr;
   macro: typeof macro;

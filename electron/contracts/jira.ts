@@ -40,3 +40,17 @@ export type TestConnectionResponse = {
   projectKeys: string[];
   matchedIssues: number;
 };
+
+export const getIssueDetailRequestSchema = z.object({
+  issueKey: z.string().min(1),
+});
+export type GetIssueDetailRequest = z.infer<typeof getIssueDetailRequestSchema>;
+
+export type GetIssueDetailResponse = {
+  key: string;
+  summary: string;
+  issueType: string;
+  parentKey: string | null;
+  /** ADF → 마크다운으로 변환된 본문. */
+  descriptionMarkdown: string;
+};

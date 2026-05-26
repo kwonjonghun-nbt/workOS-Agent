@@ -6,9 +6,11 @@ import {
   type JiraConfig,
 } from '../domain/jira';
 import type {
+  GetIssueDetailResponse,
   ListMyIssuesResponse,
   TestConnectionResponse,
 } from '../contracts/jira';
+import { adfToMarkdown } from '../domain/ticket-template';
 import type { JiraRepository } from '../repositories/jira.repo';
 import type { ExtensionService } from './extension.service';
 
@@ -48,6 +50,27 @@ export class JiraService {
     const issues = raw.map((r) => mapAtlassianIssue(r, config.baseUrl));
     LOG('listMyIssues result:', issues.length, 'issue(s)');
     return { issues, total: issues.length };
+  }
+
+  async getIssueDetail(issueKey: string): Promise<GetIssueDetailResponse> {
+    const enabled = await this.extensionService.isEnabled(JIRA_EXTENSION_ID);
+    if (!enabled) {
+      throw new ApiError(
+        'VALIDATION',
+        'Jira 확장이 비활성화되어 있습니다. Extensions 패널에서 활성화하세요.',
+      );
+    }
+    const settings = await this.extensionService.getSettings(JIRA_EXTENSION_ID);
+    const config = this.toConfig(settings);
+    LOG('getIssueDetail', issueKey);
+    const issue = await this.repo.getIssueDetail(config, issueKey);
+    return {
+      key: issue.key,
+      summary: issue.summary,
+      issueType: issue.issueType,
+      parentKey: issue.parentKey,
+      descriptionMarkdown: adfToMarkdown(issue.description),
+    };
   }
 
   async testConnection(): Promise<TestConnectionResponse> {

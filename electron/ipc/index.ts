@@ -67,6 +67,11 @@ import { TerminalLlmRepository } from '../repositories/terminal-llm.repo';
 import { FsReportsRepository } from '../repositories/jira-reports.repo';
 import { JiraLabelService } from '../services/jira-label.service';
 import { JiraReportService } from '../services/jira-report.service';
+import { JsonTicketTemplateRepository } from '../repositories/jira-ticket-template.repo';
+import { JiraTicketTemplateService } from '../services/jira-ticket-template.service';
+import { JiraTicketReviewService } from '../services/jira-ticket-review.service';
+import { registerJiraTicketTemplateHandlers } from './jira-ticket-template.handler';
+import { registerJiraTicketReviewHandlers } from './jira-ticket-review.handler';
 import type { SyncProgressEvent } from '../contracts/jira-snapshot';
 
 export type Container = {
@@ -294,6 +299,17 @@ export function registerIpcHandlers(): Container {
     jiraLlmRepo,
   );
   registerJiraReportHandlers(jiraReportService);
+
+  const ticketTemplateRepo = new JsonTicketTemplateRepository(app.getPath('userData'));
+  const jiraTicketTemplateService = new JiraTicketTemplateService(ticketTemplateRepo);
+  registerJiraTicketTemplateHandlers(jiraTicketTemplateService);
+  const jiraTicketReviewService = new JiraTicketReviewService(
+    jiraRepo,
+    ticketTemplateRepo,
+    jiraLlmRepo,
+    extensionService,
+  );
+  registerJiraTicketReviewHandlers(jiraTicketReviewService);
 
   // ----- Slack Digest extension -----
   const slackService = new SlackService(slackRepo, extensionService);

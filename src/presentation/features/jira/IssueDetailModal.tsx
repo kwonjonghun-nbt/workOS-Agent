@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
+  jiraQueries,
   jiraSnapshotQueries,
   type NormalizedIssue,
 } from '../../../server-state/jira';
 import { useIssueModalStore } from '../../../business/jira/issue-modal-store';
+import { TicketReviewPanel } from './TicketReview';
 
 /**
  * Global Jira issue detail modal. Mount once near the app root; opened by
@@ -37,7 +39,7 @@ export function IssueDetailModal() {
       <div
         role="dialog"
         aria-modal="true"
-        className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-ink-700 bg-ink-900 shadow-xl"
+        className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-ink-700 bg-ink-900 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex shrink-0 items-center justify-between border-b border-ink-800 px-4 py-3">
@@ -87,6 +89,7 @@ export function IssueDetailModal() {
 }
 
 function IssueBody({ issue }: { issue: NormalizedIssue }) {
+  const detail = useQuery(jiraQueries.issueDetail(issue.key));
   return (
     <div className="flex flex-col gap-3">
       <h2 className="text-base font-semibold text-ink-100">{issue.summary}</h2>
@@ -107,6 +110,27 @@ function IssueBody({ issue }: { issue: NormalizedIssue }) {
         <Field label="최근 갱신" value={formatDate(issue.updated)} />
       </dl>
 
+      <section>
+        <div className="mb-1 text-[10px] uppercase tracking-wider text-ink-500">
+          상세 내용
+        </div>
+        {detail.isLoading ? (
+          <div className="rounded border border-ink-800 bg-ink-900/40 p-2 text-xs text-ink-500">
+            Jira 에서 본문을 불러오는 중...
+          </div>
+        ) : detail.error ? (
+          <div className="rounded border border-red-800 bg-red-950/30 p-2 text-xs text-red-300">
+            본문을 불러오지 못했습니다: {String(detail.error)}
+          </div>
+        ) : (
+          <pre className="max-h-80 overflow-y-auto whitespace-pre-wrap rounded border border-ink-800 bg-ink-900/40 p-2 font-mono text-xs leading-relaxed text-ink-200">
+            {detail.data?.descriptionMarkdown?.trim()
+              ? detail.data.descriptionMarkdown
+              : '(본문 없음)'}
+          </pre>
+        )}
+      </section>
+
       {issue.labels.length > 0 && (
         <section>
           <div className="mb-1 text-[10px] uppercase tracking-wider text-ink-500">
@@ -124,6 +148,13 @@ function IssueBody({ issue }: { issue: NormalizedIssue }) {
           </div>
         </section>
       )}
+
+      <section className="mt-2 border-t border-ink-800 pt-3">
+        <div className="mb-2 text-[10px] uppercase tracking-wider text-ink-500">
+          내용 검토
+        </div>
+        <TicketReviewPanel issueKey={issue.key} />
+      </section>
     </div>
   );
 }

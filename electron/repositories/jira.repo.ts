@@ -50,6 +50,33 @@ export interface JiraRepository {
     labels: string[],
   ): Promise<void>;
   getMyself(config: JiraConfig): Promise<JiraMyself>;
+  /**
+   * 단일 이슈 조회 — description(ADF) 포함. 검토/제안 흐름 전용.
+   */
+  getIssueDetail(
+    config: JiraConfig,
+    issueKey: string,
+  ): Promise<{
+    key: string;
+    summary: string;
+    issueType: string;
+    parentKey: string | null;
+    description: unknown;
+  }>;
+  /** 부모 이슈(에픽 포함) 의 자식 티켓들을 description 포함해 조회. */
+  searchChildrenOfParent(
+    config: JiraConfig,
+    parentKey: string,
+    maxResults?: number,
+  ): Promise<
+    Array<{ key: string; summary: string; status: string; description: unknown }>
+  >;
+  /** description(ADF) 만 업데이트. */
+  updateIssueDescription(
+    config: JiraConfig,
+    issueKey: string,
+    descriptionAdf: unknown,
+  ): Promise<void>;
 }
 
 const LOG = (...args: unknown[]) => console.log('[jira.repo]', ...args);
@@ -193,6 +220,91 @@ export class HttpJiraRepository implements JiraRepository {
     const url = `${config.baseUrl}/rest/api/3/issue/${encodeURIComponent(issueKey)}`;
     const body = { fields: { labels } };
     LOG('PUT (set labels)', issueKey, labels);
+    await this.request(config, url, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async getIssueDetail(
+    config: JiraConfig,
+    issueKey: string,
+  ): Promise<{
+    key: string;
+    summary: string;
+    issueType: string;
+    parentKey: string | null;
+    description: unknown;
+  }> {
+    const fields = ['summary', 'issuetype', 'parent', 'description'].join(',');
+    const url = `${config.baseUrl}/rest/api/3/issue/${encodeURIComponent(issueKey)}?fields=${fields}`;
+    LOG('GET', url);
+    const res = await this.request(config, url, { method: 'GET' });
+    const json = (await res.json()) as {
+      key?: string;
+      fields?: {
+        summary?: string;
+        issuetype?: { name?: string };
+        parent?: { key?: string } | null;
+        description?: unknown;
+      };
+    };
+    const f = json.fields ?? {};
+    return {
+      key: String(json.key ?? issueKey),
+      summary: String(f.summary ?? ''),
+      issueType: String(f.issuetype?.name ?? ''),
+      parentKey: f.parent?.key ?? null,
+      description: f.description ?? null,
+    };
+  }
+
+  async searchChildrenOfParent(
+    config: JiraConfig,
+    parentKey: string,
+    maxResults = 50,
+  ): Promise<
+    Array<{ key: string; summary: string; status: string; description: unknown }>
+  > {
+    const url = `${config.baseUrl}/rest/api/3/search/jql`;
+    const escapedKey = parentKey.replace(/"/g, '');
+    const jql = `parent = "${escapedKey}"`;
+    const body = {
+      jql,
+      maxResults,
+      fields: ['summary', 'status', 'description'],
+    };
+    LOG('searchChildrenOfParent jql=', jql);
+    const res = await this.request(config, url, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    const json = (await res.json()) as {
+      issues?: Array<{
+        key?: string;
+        fields?: {
+          summary?: string;
+          status?: { name?: string };
+          description?: unknown;
+        };
+      }>;
+    };
+    return (json.issues ?? []).map((i) => ({
+      key: String(i.key ?? ''),
+      summary: String(i.fields?.summary ?? ''),
+      status: String(i.fields?.status?.name ?? ''),
+      description: i.fields?.description ?? null,
+    }));
+  }
+
+  async updateIssueDescription(
+    config: JiraConfig,
+    issueKey: string,
+    descriptionAdf: unknown,
+  ): Promise<void> {
+    const url = `${config.baseUrl}/rest/api/3/issue/${encodeURIComponent(issueKey)}`;
+    const body = { fields: { description: descriptionAdf } };
+    LOG('PUT (description)', issueKey);
     await this.request(config, url, {
       method: 'PUT',
       body: JSON.stringify(body),

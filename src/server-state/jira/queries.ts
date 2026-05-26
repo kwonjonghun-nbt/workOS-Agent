@@ -15,4 +15,13 @@ export const jiraQueries = {
       refetchOnReconnect: false,
       retry: false,
     }),
+  issueDetail: (issueKey: string) =>
+    queryOptions({
+      queryKey: jiraKeys.issueDetail(issueKey),
+      queryFn: () => jiraApi.getIssueDetail({ issueKey }),
+      enabled: !!issueKey,
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+      retry: false,
+    }),
 };
