@@ -24,7 +24,6 @@ import { BUILTIN_EXTENSIONS } from '../builtin-extensions';
 import { TerminalService } from '../services/terminal.service';
 import { WorkspaceService } from '../services/workspace.service';
 import { WorkOSService } from '../services/workOS.service';
-import { WizardService } from '../services/wizard.service';
 import { McpService } from '../services/mcp.service';
 import { PreferencesService } from '../services/preferences.service';
 import { ExtensionService } from '../services/extension.service';
@@ -34,7 +33,6 @@ import { McpControlPlane } from '../infra/mcp-control-plane';
 import { registerTerminalHandlers } from './terminal.handler';
 import { registerWorkspaceHandlers } from './workspace.handler';
 import { registerWorkOSHandlers } from './workOS.handler';
-import { registerWizardHandlers } from './wizard.handler';
 import { registerMcpHandlers } from './mcp.handler';
 import { registerPreferencesHandlers } from './preferences.handler';
 import { registerUpdaterHandlers } from './updater.handler';
@@ -66,7 +64,6 @@ import { JiraSlackService } from '../services/jira-slack.service';
 import { JiraSlackSchedulerService } from '../services/jira-slack-scheduler.service';
 import { JsonLabelNotesRepository } from '../repositories/jira-label-notes.repo';
 import { TerminalLlmRepository } from '../repositories/terminal-llm.repo';
-import { ClaudeCliRepository } from '../repositories/llm-cli.repo';
 import { FsReportsRepository } from '../repositories/jira-reports.repo';
 import { JiraLabelService } from '../services/jira-label.service';
 import { JiraReportService } from '../services/jira-report.service';
@@ -81,7 +78,6 @@ export type Container = {
   workspaceService: WorkspaceService;
   terminalService: TerminalService;
   workOSService: WorkOSService;
-  wizardService: WizardService;
   mcpService: McpService;
   mcpControlPlane: McpControlPlane;
   preferencesService: PreferencesService;
@@ -212,26 +208,6 @@ export function registerIpcHandlers(): Container {
   });
   registerWorkOSHandlers(workOSService);
 
-  const wizardLlm = new ClaudeCliRepository();
-  const wizardService = new WizardService(
-    { resolveCwd: (id) => workspaceService.resolveCwd(id) },
-    workOSService,
-    {
-      updated(workspaceId) {
-        eventBus.broadcast(CHANNELS.wizardEvents.updated, { workspaceId });
-      },
-    },
-    wizardLlm,
-  );
-  // WorkOSService 의 TaskItem 완료 시점에 위저드가 검토 메시지를 푸시할 수 있도록 hook.
-  workOSService.setTaskItemCompletionHook((workspaceId, taskItemId, output) => {
-    void wizardService
-      .notifyTaskItemCompleted(workspaceId, taskItemId, output)
-      .catch((err) => {
-        console.error('[wizard] notifyTaskItemCompleted failed:', err);
-      });
-  });
-  registerWizardHandlers(wizardService);
   registerMcpHandlers(mcpService);
   registerPreferencesHandlers(preferencesService);
   registerUpdaterHandlers();
@@ -378,7 +354,6 @@ export function registerIpcHandlers(): Container {
     workspaceService,
     terminalService,
     workOSService,
-    wizardService,
     mcpService,
     mcpControlPlane: plane,
     preferencesService,

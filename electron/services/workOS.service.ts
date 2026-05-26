@@ -59,7 +59,7 @@ export class WorkOSService {
   ) {}
 
   /**
-   * 외부 consumer(WizardService 등) 가 TaskItem 완료를 구독할 수 있는 hook.
+   * 외부 consumer 가 TaskItem 완료를 구독할 수 있는 hook.
    * mcpComplete 가 호출되면 항상 발화된다 — 비동기 fire-and-forget 으로 처리되어야 한다.
    */
   setTaskItemCompletionHook(hook: TaskItemCompletionHook | null): void {
@@ -1127,7 +1127,12 @@ export class WorkOSService {
 
     // 사용 가능한 카탈로그를 프롬프트에 주입 — Claude가 실재 에이전트만 바인딩하도록.
     const cat = await this.catalog(workspaceId);
-    const agentNames = cat.agents.map((a) => a.name);
+    const agentCatalog =
+      cat.agents.length > 0
+        ? cat.agents
+            .map((a) => `- **${a.name}**${a.description ? `: ${a.description}` : ''}`)
+            .join('\n')
+        : '- (등록된 에이전트가 없습니다. 모든 Step 에 대해 newAgents 를 정의해야 합니다.)';
 
     const body = [
       '# 워크플로 자동 생성 요청',
@@ -1143,8 +1148,14 @@ export class WorkOSService {
       '- 각 Step은 **단일 책임**을 가져야 합니다. "모든 것"을 하는 거대 Step 금지.',
       '- Step 순서는 **실행 순서**입니다 — 의존성이 있는 작업이 뒤에 오도록 정렬하세요.',
       '- 각 Step의 description은 분해 에이전트에게 줄 **책임 정의**입니다. 명확히 적으세요.',
-      '- 가능하면 회사 컨벤션을 강제하는 좁은 전담 스킬/에이전트를 매칭하세요.',
       '- 보통 5~12개 Step이 적절합니다. 너무 잘게 쪼개거나 너무 통합하지 마세요.',
+      '',
+      '## 에이전트 바인딩 규칙 (매우 중요)',
+      '- 각 Step.agentName 은 (a) 아래 "기존 에이전트" 목록의 이름이거나, (b) 동일 JSON 의 newAgents 에 정의한 이름이어야 합니다.',
+      '- 책임이 정확히 맞는 기존 에이전트가 있으면 그것을 선택하세요. **이름만 비슷하다고 고르지 마세요** — 설명을 읽고 책임이 맞을 때만 매칭.',
+      '- 알맞은 기존 에이전트가 없으면 **반드시 newAgents 에 새 에이전트를 정의**하고 그 이름을 사용하세요. (절대로 카탈로그에 없는 이름을 step.agentName 에 임의로 적지 마세요.)',
+      '- 새 에이전트 이름은 소문자/숫자/하이픈만 사용한 kebab-case 로 (예: `frontend-form-implementer`).',
+      '- newAgents[].prompt 는 그 에이전트의 시스템 프롬프트입니다 — 역할/책임/입출력/금지사항 을 구체적으로 적으세요.',
       '',
       '## 출력 규약',
       `다음 경로에 JSON 으로 저장하세요: \`${outputJsonPath}\``,
@@ -1154,25 +1165,30 @@ export class WorkOSService {
       '{',
       '  "name": "워크플로 이름",',
       '  "description": "이 워크플로의 목적 한 문단",',
+      '  "newAgents": [',
+      '    {',
+      '      "name": "kebab-case-agent-name",',
+      '      "description": "이 에이전트가 무엇을 잘하는지 한 줄 (.claude/agents/*.md frontmatter 의 description)",',
+      '      "prompt": "에이전트 시스템 프롬프트. 역할/책임/입출력/제약을 구체적으로."',
+      '    }',
+      '  ],',
       '  "steps": [',
       '    {',
       '      "name": "Step 이름",',
       '      "description": "이 Step의 책임/입출력 (분해 에이전트가 읽음)",',
-      '      "agentName": "이 Step을 수행할 에이전트 이름"',
+      '      "agentName": "기존 또는 newAgents 에 정의한 에이전트 이름"',
       '    }',
       '  ]',
       '}',
       '```',
       '',
-      '## 사용 가능한 에이전트 (가능하면 이 목록에서 선택)',
-      agentNames.length > 0
-        ? agentNames.map((n) => `- ${n}`).join('\n')
-        : '- (워크스페이스의 .claude/agents/ 가 비어 있습니다. 일반 이름을 자유롭게 부여하세요.)',
+      '## 기존 에이전트 (책임이 맞을 때만 선택)',
+      agentCatalog,
       '',
       '## 지시 사항',
       '- 출력은 위 JSON 파일 작성만으로 충분합니다.',
-      '- 작업이 끝나면 "워크플로 드래프트 작성 완료 — N개 Step" 이라고 한 줄 알려주세요.',
-      `- 사용자가 워크OS 앱에서 "📥 드래프트 가져오기" 를 누르면 ${outputJsonPath} 를 읽어 Workflow와 Step 들을 생성합니다.`,
+      '- 작업이 끝나면 "워크플로 드래프트 작성 완료 — N개 Step (신규 에이전트 M개)" 이라고 한 줄 알려주세요.',
+      `- 사용자가 워크OS 앱에서 "📥 드래프트 가져오기" 를 누르면 ${outputJsonPath} 를 읽어 신규 에이전트 .md 파일 → Step → Workflow 순으로 생성합니다.`,
       '',
     ].join('\n');
 
@@ -1244,8 +1260,29 @@ export class WorkOSService {
     if (steps.length === 0)
       throw new ApiError('VALIDATION', 'steps 배열이 비어 있어 워크플로를 만들 수 없습니다');
 
+    // 신규 에이전트 정의가 있으면 먼저 .claude/agents/ 에 파일로 생성한다 (Step 생성 전).
+    const newAgentsRaw = Array.isArray(obj.newAgents) ? obj.newAgents : [];
+    const agentDrafts: Array<{ name: string; description: string; prompt: string }> = [];
+    for (const a of newAgentsRaw) {
+      if (!a || typeof a !== 'object') continue;
+      const ao = a as Record<string, unknown>;
+      const aName = typeof ao.name === 'string' ? ao.name.trim() : '';
+      const aDesc = typeof ao.description === 'string' ? ao.description.trim() : '';
+      const aPrompt = typeof ao.prompt === 'string' ? ao.prompt.trim() : '';
+      if (!aName || !aDesc || !aPrompt) continue;
+      agentDrafts.push({ name: aName, description: aDesc, prompt: aPrompt });
+    }
+    if (agentDrafts.length > 0) {
+      await this.ensureAgents(workspaceId, agentDrafts);
+    }
+
+    // 카탈로그를 다시 읽어 step.agentName 검증에 사용.
+    const cat = await this.catalog(workspaceId);
+    const knownAgents = new Set(cat.agents.map((a) => a.name));
+
     const now = Date.now();
     const stepIds: string[] = [];
+    const unknownAgents: string[] = [];
     for (const s of steps) {
       if (!s || typeof s !== 'object') continue;
       const so = s as Record<string, unknown>;
@@ -1253,6 +1290,10 @@ export class WorkOSService {
       const sDesc = typeof so.description === 'string' ? so.description : '';
       const sAgent = typeof so.agentName === 'string' ? so.agentName.trim() : '';
       if (!sName || !sAgent) continue;
+      if (!knownAgents.has(sAgent)) {
+        unknownAgents.push(`${sName} → ${sAgent}`);
+        continue;
+      }
       const step: Step = {
         id: newId(),
         name: sName,
@@ -1264,8 +1305,15 @@ export class WorkOSService {
       await r.writeStep(step);
       stepIds.push(step.id);
     }
-    if (stepIds.length === 0)
-      throw new ApiError('VALIDATION', '유효한 Step이 한 개도 없습니다 (name/agentName 누락)');
+    if (stepIds.length === 0) {
+      const detail = unknownAgents.length
+        ? ` — 카탈로그에 없는 에이전트가 참조됨: ${unknownAgents.join(', ')} (newAgents 정의 누락)`
+        : '';
+      throw new ApiError(
+        'VALIDATION',
+        `유효한 Step이 한 개도 없습니다 (name/agentName 누락)${detail}`,
+      );
+    }
 
     const wf: Workflow = {
       id: newId(),
@@ -1302,6 +1350,52 @@ export class WorkOSService {
     const agents = await readMarkdownCatalog(path.join(root, '.claude', 'agents'));
     const skills = await readMarkdownCatalog(path.join(root, '.claude', 'skills'));
     return { agents, skills };
+  }
+
+  /**
+   * 새 에이전트 .md 파일들을 워크스페이스 .claude/agents/ 에 생성한다.
+   * 이미 같은 이름의 파일이 있으면 건너뛴다 (덮어쓰지 않음).
+   */
+  async ensureAgents(
+    workspaceId: string,
+    drafts: Array<{ name: string; description: string; prompt: string }>,
+  ): Promise<{ created: string[]; skipped: string[] }> {
+    const created: string[] = [];
+    const skipped: string[] = [];
+    if (drafts.length === 0) return { created, skipped };
+    const root = await this.cwd.resolveCwd(workspaceId);
+    const dir = path.join(root, '.claude', 'agents');
+    await fs.mkdir(dir, { recursive: true });
+    for (const d of drafts) {
+      const safeName = d.name.trim();
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(safeName)) {
+        throw new ApiError(
+          'VALIDATION',
+          `에이전트 이름이 올바르지 않습니다: '${d.name}' (소문자/숫자/하이픈)`,
+        );
+      }
+      const file = path.join(dir, `${safeName}.md`);
+      try {
+        await fs.access(file);
+        skipped.push(safeName);
+        continue;
+      } catch {
+        // 파일 없음 — 생성으로 진행
+      }
+      const desc = d.description.replace(/\r?\n/g, ' ').trim();
+      const body = [
+        '---',
+        `name: ${safeName}`,
+        `description: ${JSON.stringify(desc)}`,
+        '---',
+        '',
+        d.prompt.trim(),
+        '',
+      ].join('\n');
+      await fs.writeFile(file, body, 'utf-8');
+      created.push(safeName);
+    }
+    return { created, skipped };
   }
 
   // -------- Git --------
