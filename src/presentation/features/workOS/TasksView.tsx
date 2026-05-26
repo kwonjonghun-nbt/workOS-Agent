@@ -535,6 +535,7 @@ function TaskDetail({ workspaceId, taskId }: { workspaceId: string; taskId: stri
   const setTerminalPanelOpen = useWorkspaceStore((s) => s.setTerminalPanelOpen);
 
   const [reqOpen, setReqOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'kanban' | 'flow'>('kanban');
 
   if (!task) return <div className="p-4 text-sm text-ink-500">Task를 찾을 수 없습니다.</div>;
 
@@ -563,13 +564,49 @@ function TaskDetail({ workspaceId, taskId }: { workspaceId: string; taskId: stri
           </span>
           <StatusBadge status={task.status} />
           <span>{taskItems.length}개의 TaskItem</span>
-          <button
-            type="button"
-            onClick={() => setReqOpen((x) => !x)}
-            className="ml-auto rounded px-2 py-0.5 text-[11px] text-ink-300 hover:bg-ink-850"
-          >
-            {reqOpen ? '요구사항 접기 ▴' : '요구사항 펼치기 ▾'}
-          </button>
+          <div className="ml-auto flex items-center gap-1">
+            <div
+              className="inline-flex overflow-hidden rounded border border-ink-700 text-[11px]"
+              role="tablist"
+              aria-label="뷰 전환"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === 'kanban'}
+                onClick={() => setViewMode('kanban')}
+                className={`px-2 py-0.5 ${
+                  viewMode === 'kanban'
+                    ? 'bg-claude-500/20 text-claude-200'
+                    : 'text-ink-400 hover:bg-ink-850'
+                }`}
+                title="칸반 뷰"
+              >
+                ▦ 칸반
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === 'flow'}
+                onClick={() => setViewMode('flow')}
+                className={`border-l border-ink-700 px-2 py-0.5 ${
+                  viewMode === 'flow'
+                    ? 'bg-claude-500/20 text-claude-200'
+                    : 'text-ink-400 hover:bg-ink-850'
+                }`}
+                title="플로우 뷰"
+              >
+                ⇢ 플로우
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReqOpen((x) => !x)}
+              className="rounded px-2 py-0.5 text-[11px] text-ink-300 hover:bg-ink-850"
+            >
+              {reqOpen ? '요구사항 접기 ▴' : '요구사항 펼치기 ▾'}
+            </button>
+          </div>
         </div>
         {reqOpen && (
           <textarea
@@ -675,11 +712,18 @@ function TaskDetail({ workspaceId, taskId }: { workspaceId: string; taskId: stri
               아직 분해되지 않았습니다. 위 ‘분해’ 버튼으로 실행 단위를 만들어 주세요.
             </div>
           </div>
-        ) : (
+        ) : viewMode === 'kanban' ? (
           <KanbanBoard
             workspaceId={workspaceId}
             items={taskItems}
             steps={steps}
+          />
+        ) : (
+          <FlowBoard
+            workspaceId={workspaceId}
+            items={taskItems}
+            steps={steps}
+            stepIds={workflow?.stepIds ?? []}
           />
         )}
       </div>
@@ -999,5 +1043,223 @@ function TaskItemDetailModal({
         </footer>
       </div>
     </div>
+  );
+}
+
+const STATUS_CHIP: Record<ItemStatus, { icon: string; cls: string; label: string }> = {
+  pending: { icon: '○', cls: 'bg-ink-800 text-ink-400 border-ink-700', label: '대기' },
+  running: {
+    icon: '▶',
+    cls: 'bg-blue-500/15 text-blue-300 border-blue-500/40',
+    label: '실행중',
+  },
+  completed: {
+    icon: '✓',
+    cls: 'bg-claude-500/15 text-claude-300 border-claude-500/40',
+    label: '완료',
+  },
+  failed: { icon: '✕', cls: 'bg-red-500/15 text-red-300 border-red-500/40', label: '실패' },
+  skipped: { icon: '–', cls: 'bg-ink-800 text-ink-500 border-ink-700', label: '건너뜀' },
+};
+
+function FlowBoard({
+  workspaceId,
+  items,
+  steps,
+  stepIds,
+}: {
+  workspaceId: string;
+  items: TaskItem[];
+  steps: Step[];
+  stepIds: string[];
+}) {
+  const groups = useMemo(() => {
+    const byStep = new Map<string, TaskItem[]>();
+    for (const it of items) {
+      const arr = byStep.get(it.stepId) ?? [];
+      arr.push(it);
+      byStep.set(it.stepId, arr);
+    }
+    for (const arr of byStep.values()) arr.sort((a, b) => a.createdAt - b.createdAt);
+
+    const ordered = stepIds.length
+      ? stepIds.map((id) => ({ step: steps.find((s) => s.id === id) ?? null, id }))
+      : Array.from(byStep.keys()).map((id) => ({
+          step: steps.find((s) => s.id === id) ?? null,
+          id,
+        }));
+
+    return ordered.map(({ step, id }) => ({
+      stepId: id,
+      step,
+      items: byStep.get(id) ?? [],
+    }));
+  }, [items, steps, stepIds]);
+
+  return (
+    <div className="flex h-full min-h-0 items-stretch overflow-x-auto pb-2">
+      {groups.map((g, idx) => {
+        const total = g.items.length;
+        const done = g.items.filter((i) => i.status === 'completed').length;
+        const running = g.items.some((i) => i.status === 'running');
+        const failed = g.items.some((i) => i.status === 'failed');
+        const tone = failed
+          ? 'border-red-500/40 bg-red-500/[0.04]'
+          : running
+            ? 'border-blue-500/40 bg-blue-500/[0.04]'
+            : total > 0 && done === total
+              ? 'border-claude-500/40 bg-claude-500/[0.04]'
+              : 'border-ink-700 bg-ink-900/40';
+        return (
+          <div key={g.stepId} className="flex items-stretch">
+            <div className={`flex h-full w-72 shrink-0 flex-col rounded-lg border ${tone}`}>
+              <div className="flex items-center justify-between gap-2 border-b border-ink-850/60 px-3 py-2">
+                <div className="min-w-0">
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-500">
+                    Step {idx + 1}
+                  </div>
+                  <div className="truncate text-sm font-semibold text-ink-100">
+                    {g.step?.name ?? '(알 수 없는 Step)'}
+                  </div>
+                </div>
+                <span className="rounded bg-ink-850 px-1.5 py-0.5 text-[10px] text-ink-400">
+                  {done}/{total}
+                </span>
+              </div>
+              <ul className="flex-1 space-y-2 overflow-y-auto p-2">
+                {g.items.map((item) => (
+                  <FlowCard
+                    key={item.id}
+                    workspaceId={workspaceId}
+                    item={item}
+                    step={g.step}
+                  />
+                ))}
+                {g.items.length === 0 && (
+                  <li className="rounded border border-dashed border-ink-850 px-2 py-3 text-center text-[11px] text-ink-600">
+                    비어 있음
+                  </li>
+                )}
+              </ul>
+            </div>
+            {idx < groups.length - 1 && (
+              <div
+                className="flex w-8 shrink-0 items-center justify-center text-ink-600"
+                aria-hidden="true"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5"
+                >
+                  <path d="M5 12h14" />
+                  <path d="m13 6 6 6-6 6" />
+                </svg>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {groups.length === 0 && (
+        <div className="flex h-full w-full items-center justify-center text-sm text-ink-500">
+          표시할 Step 이 없습니다.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FlowCard({
+  workspaceId,
+  item,
+  step,
+}: {
+  workspaceId: string;
+  item: TaskItem;
+  step: Step | null;
+}) {
+  const execute = useExecuteTaskItem();
+  const del = useDeleteTaskItem();
+  const setActiveTerminal = useWorkspaceStore((s) => s.setActiveTerminal);
+  const setTerminalPanelOpen = useWorkspaceStore((s) => s.setTerminalPanelOpen);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const chip = STATUS_CHIP[item.status] ?? STATUS_CHIP.pending;
+
+  const handleRun = async () => {
+    try {
+      setTerminalPanelOpen(workspaceId, true);
+      const { sessionId } = await execute.mutateAsync({ workspaceId, taskItemId: item.id });
+      setActiveTerminal(workspaceId, sessionId);
+      toast.info(`▶ "${item.name}" 실행됨`, '새 터미널 세션에서 Claude CLI 가 작업을 수행합니다.');
+    } catch {
+      /* */
+    }
+  };
+
+  return (
+    <>
+      <li className="rounded border border-ink-850 bg-ink-900/70">
+        <button
+          type="button"
+          onClick={() => setDetailOpen(true)}
+          className="flex w-full items-start gap-2 p-2 text-left hover:bg-ink-850/40"
+        >
+          <span
+            className={`mt-0.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full border px-1 text-[10px] font-bold ${chip.cls}`}
+            title={chip.label}
+          >
+            {chip.icon}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium text-white">{item.name}</span>
+            <span className="mt-0.5 block text-[10px] text-ink-500">
+              {item.agentName}
+              {item.sessionId ? ` · ▶ ${item.sessionId.slice(0, 6)}…` : ''}
+            </span>
+          </span>
+        </button>
+        <div className="flex items-center justify-end gap-1 border-t border-ink-850/50 px-2 py-1">
+          {item.status !== 'completed' && (
+            <button
+              type="button"
+              disabled={execute.isPending}
+              onClick={() => void handleRun()}
+              className="rounded bg-claude-500/90 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-claude-400 disabled:opacity-50"
+              title="새 터미널 세션에서 Claude CLI 로 실행"
+            >
+              ▶ 실행
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm(`TaskItem '${item.name}'을 삭제할까요?`)) {
+                void del.mutateAsync({ workspaceId, id: item.id });
+              }
+            }}
+            className="rounded px-1 py-0.5 text-ink-400 hover:bg-ink-850 hover:text-white"
+            aria-label="Delete task item"
+            title="삭제"
+          >
+            ✕
+          </button>
+        </div>
+      </li>
+      {detailOpen && (
+        <TaskItemDetailModal
+          workspaceId={workspaceId}
+          item={item}
+          step={step}
+          onClose={() => setDetailOpen(false)}
+          onRun={() => void handleRun()}
+          running={execute.isPending}
+        />
+      )}
+    </>
   );
 }
