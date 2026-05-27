@@ -78,6 +78,11 @@ export const CHANNELS = {
     getSync: 'preferences:getSync',
     setTheme: 'preferences:setTheme',
   },
+  localStore: {
+    getAllSync: 'localStore:getAllSync',
+    set: 'localStore:set',
+    remove: 'localStore:remove',
+  },
   updater: {
     getStatus: 'updater:getStatus',
     check: 'updater:check',

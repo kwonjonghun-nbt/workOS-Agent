@@ -31,6 +31,11 @@ import type {
   SetupMcpResponse,
 } from './contracts/mcp';
 import type { Preferences, SetThemeRequest } from './contracts/preferences';
+import type {
+  LocalStoreRemoveRequest,
+  LocalStoreSetRequest,
+  LocalStoreSnapshot,
+} from './contracts/local-store';
 import type { UpdaterStatus, UpdaterStatusEvent } from './contracts/updater';
 import type {
   ExtensionListItem,
@@ -335,6 +340,15 @@ const preferences = {
     ipcRenderer.invoke(CHANNELS.preferences.setTheme, req),
 };
 
+const localStore = {
+  getAllSync: (): LocalStoreSnapshot =>
+    ipcRenderer.sendSync(CHANNELS.localStore.getAllSync) as LocalStoreSnapshot,
+  set: (req: LocalStoreSetRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.localStore.set, req),
+  remove: (req: LocalStoreRemoveRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.localStore.remove, req),
+};
+
 const updater = {
   getStatus: (): Promise<UpdaterStatus> => ipcRenderer.invoke(CHANNELS.updater.getStatus),
   check: (): Promise<UpdaterStatus> => ipcRenderer.invoke(CHANNELS.updater.check),
@@ -518,6 +532,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   workOS,
   mcp,
   preferences,
+  localStore,
   updater,
   extension,
   jira,
@@ -538,6 +553,7 @@ export type ElectronAPI = {
   workOS: typeof workOS;
   mcp: typeof mcp;
   preferences: typeof preferences;
+  localStore: typeof localStore;
   updater: typeof updater;
   extension: typeof extension;
   jira: typeof jira;

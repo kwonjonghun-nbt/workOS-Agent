@@ -2,30 +2,14 @@ import { create } from 'zustand';
 
 export type ThemeMode = 'dark' | 'light';
 
-const LEGACY_STORAGE_KEY = 'workos-agent.theme';
-
 function readInitial(): ThemeMode {
   if (typeof window === 'undefined') return 'dark';
-
-  // Prefer the main-process JSON (survives Electron's file:// localStorage quirks).
   try {
     const prefs = window.electronAPI?.preferences?.getSync?.();
     if (prefs?.theme === 'light' || prefs?.theme === 'dark') return prefs.theme;
   } catch {
     /* preload not ready / non-Electron context */
   }
-
-  // Fallback: migrate from legacy localStorage value if present.
-  try {
-    const legacy = window.localStorage.getItem(LEGACY_STORAGE_KEY);
-    if (legacy === 'light' || legacy === 'dark') {
-      void window.electronAPI?.preferences?.setTheme({ theme: legacy });
-      return legacy;
-    }
-  } catch {
-    /* localStorage may be unavailable */
-  }
-
   return 'dark';
 }
 

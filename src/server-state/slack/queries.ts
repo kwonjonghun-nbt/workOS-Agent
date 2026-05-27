@@ -1,5 +1,6 @@
 import { mutationOptions, queryOptions } from '@tanstack/react-query';
 import { slackApi } from '../../api/slack';
+import { getLocal, setLocal } from '../../api/local-store';
 import { slackKeys } from './keys';
 import type {
   AddThreadChannelRequest,
@@ -15,13 +16,13 @@ import type {
 const CHANNEL_CACHE_KEY = 'workos.slack.channels.v1';
 
 /**
- * Slack channel lists are stable enough that we keep them in localStorage
- * across sessions and never auto-refetch. The user explicitly clicks
- * "refresh" when they want to pull a fresh list from Slack.
+ * Slack channel lists are stable enough that we keep them in the app-local
+ * disk store across sessions and never auto-refetch. The user explicitly
+ * clicks "refresh" when they want to pull a fresh list from Slack.
  */
 function readChannelCache(): ListChannelsResponse | undefined {
   try {
-    const raw = localStorage.getItem(CHANNEL_CACHE_KEY);
+    const raw = getLocal(CHANNEL_CACHE_KEY);
     if (!raw) return undefined;
     const parsed = JSON.parse(raw) as ListChannelsResponse;
     if (parsed && parsed.ok === true && Array.isArray(parsed.channels)) {
@@ -36,29 +37,35 @@ function readChannelCache(): ListChannelsResponse | undefined {
 export function writeChannelCache(data: ListChannelsResponse): void {
   try {
     if (data.ok) {
-      localStorage.setItem(CHANNEL_CACHE_KEY, JSON.stringify(data));
+      setLocal(CHANNEL_CACHE_KEY, JSON.stringify(data));
     }
   } catch {
-    // quota exceeded or storage unavailable — silently ignore
+    // serialization failed — silently ignore
   }
 }
 
 export const slackQueries = {
-  listChannels: () =>
-    queryOptions({
+  listChannels: () => {
+    const cached = readChannelCache();
+    return queryOptions({
       queryKey: slackKeys.channels(),
       queryFn: async () => {
         const res = await slackApi.listChannels({});
         writeChannelCache(res);
         return res;
       },
-      initialData: readChannelCache,
+      initialData: cached,
+      // Mark cached data as just-fetched so react-query never treats it as
+      // stale on mount — the only way to re-fetch is the explicit refresh
+      // button (channelsQ.refetch()).
+      initialDataUpdatedAt: cached ? Date.now() : 0,
       staleTime: Infinity,
       gcTime: Infinity,
       refetchOnMount: false,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
-    }),
+    });
+  },
   /**
    * Registered thread-cache channels (meta only — `addedAt`/`refreshedAt`/count).
    * Backed by the main-process JSON store, so we never auto-refetch; mutations

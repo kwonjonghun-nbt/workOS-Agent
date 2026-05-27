@@ -19,6 +19,7 @@ import type { Workspace } from '../domain/workspace';
 import { NodePtyRepository } from '../repositories/pty.repo';
 import { JsonWorkspaceRepository } from '../repositories/workspace.repo';
 import { JsonPreferencesRepository } from '../repositories/preferences.repo';
+import { JsonLocalStoreRepository } from '../repositories/local-store.repo';
 import { JsonExtensionStateRepository } from '../repositories/extension.repo';
 import { BUILTIN_EXTENSIONS } from '../builtin-extensions';
 import { TerminalService } from '../services/terminal.service';
@@ -26,6 +27,7 @@ import { WorkspaceService } from '../services/workspace.service';
 import { WorkOSService } from '../services/workOS.service';
 import { McpService } from '../services/mcp.service';
 import { PreferencesService } from '../services/preferences.service';
+import { LocalStoreService } from '../services/local-store.service';
 import { ExtensionService } from '../services/extension.service';
 import { ExtensionLlmRuntime } from '../services/extension-llm-runtime';
 import { eventBus } from '../infra/event-bus';
@@ -35,6 +37,7 @@ import { registerWorkspaceHandlers } from './workspace.handler';
 import { registerWorkOSHandlers } from './workOS.handler';
 import { registerMcpHandlers } from './mcp.handler';
 import { registerPreferencesHandlers } from './preferences.handler';
+import { registerLocalStoreHandlers } from './local-store.handler';
 import { registerUpdaterHandlers } from './updater.handler';
 import { registerExtensionHandlers } from './extension.handler';
 import { HttpJiraRepository } from '../repositories/jira.repo';
@@ -90,6 +93,8 @@ export function registerIpcHandlers(): Container {
   const workspaceRepo = new JsonWorkspaceRepository(app.getPath('userData'));
   const preferencesRepo = new JsonPreferencesRepository(app.getPath('userData'));
   const preferencesService = new PreferencesService(preferencesRepo);
+  const localStoreRepo = new JsonLocalStoreRepository(app.getPath('userData'));
+  const localStoreService = new LocalStoreService(localStoreRepo);
   const extensionStateRepo = new JsonExtensionStateRepository(app.getPath('userData'));
   const extensionService = new ExtensionService(
     BUILTIN_EXTENSIONS,
@@ -210,6 +215,7 @@ export function registerIpcHandlers(): Container {
 
   registerMcpHandlers(mcpService);
   registerPreferencesHandlers(preferencesService);
+  registerLocalStoreHandlers(localStoreService);
   registerUpdaterHandlers();
   registerExtensionHandlers(extensionService);
 

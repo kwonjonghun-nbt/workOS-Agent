@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ExtensionSettingsForm } from '../extensions/ExtensionSettingsForm';
 import { slackKeys, slackMutations, slackQueries } from '../../../server-state/slack';
+import { getLocal, setLocal } from '../../../api/local-store';
 import {
   customRangeToWindow,
   parseThreadRefFromInput,
@@ -104,7 +105,7 @@ const DIGEST_HISTORY_MAX = 50;
 
 function loadDigestHistory(): DigestHistoryItem[] {
   try {
-    const raw = localStorage.getItem(DIGEST_HISTORY_KEY);
+    const raw = getLocal(DIGEST_HISTORY_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -126,12 +127,12 @@ function randomId(): string {
 
 function saveDigestHistory(items: DigestHistoryItem[]): void {
   try {
-    localStorage.setItem(
+    setLocal(
       DIGEST_HISTORY_KEY,
       JSON.stringify(items.slice(0, DIGEST_HISTORY_MAX)),
     );
   } catch {
-    /* quota or unavailable — fine to ignore */
+    /* JSON.stringify failed — fine to ignore */
   }
 }
 

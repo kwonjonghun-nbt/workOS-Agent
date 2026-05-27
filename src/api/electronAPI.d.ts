@@ -252,6 +252,13 @@ export type PreferencesApi = {
   setTheme: (req: { theme: ThemeMode }) => Promise<void>;
 };
 
+export type LocalStoreSnapshot = Record<string, string>;
+export type LocalStoreApi = {
+  getAllSync: () => LocalStoreSnapshot;
+  set: (req: { key: string; value: string }) => Promise<void>;
+  remove: (req: { key: string }) => Promise<void>;
+};
+
 export type UpdaterApi = {
   getStatus: () => Promise<UpdaterStatus>;
   check: () => Promise<UpdaterStatus>;
@@ -414,6 +421,7 @@ declare global {
       workOS: WorkOSApi;
       mcp: McpApi;
       preferences: PreferencesApi;
+      localStore: LocalStoreApi;
       updater: UpdaterApi;
       extension: ExtensionApi;
       jira: JiraApi;

@@ -18,6 +18,7 @@ import {
 import type { Step, Task, TaskItem } from '../../../server-state/workOS';
 import { useWorkOSStore } from '../../../business/workOS/workOS-store';
 import { useWorkspaceStore } from '../../../business/workspace/workspace-store';
+import { getLocal, setLocal } from '../../../api/local-store';
 import { Split } from '../../shared/Split';
 import { toast } from '../../shared/toast-store';
 
@@ -31,17 +32,12 @@ const TASK_BOARD_VIEW_STORAGE_KEY = 'workOS:tasks:viewMode';
 
 function useTaskBoardViewMode(): [TaskBoardViewMode, (mode: TaskBoardViewMode) => void] {
   const [mode, setMode] = useState<TaskBoardViewMode>(() => {
-    if (typeof window === 'undefined') return 'kanban';
-    const saved = window.localStorage.getItem(TASK_BOARD_VIEW_STORAGE_KEY);
+    const saved = getLocal(TASK_BOARD_VIEW_STORAGE_KEY);
     return saved === 'flow' || saved === 'kanban' ? saved : 'kanban';
   });
   const update = (next: TaskBoardViewMode) => {
     setMode(next);
-    try {
-      window.localStorage.setItem(TASK_BOARD_VIEW_STORAGE_KEY, next);
-    } catch {
-      /* ignore quota / disabled storage */
-    }
+    setLocal(TASK_BOARD_VIEW_STORAGE_KEY, next);
   };
   return [mode, update];
 }

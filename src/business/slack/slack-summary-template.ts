@@ -1,4 +1,5 @@
 import type { SlackSummaryTemplate } from '../../api/slack';
+import { getLocal, setLocal } from '../../api/local-store';
 
 /**
  * Display metadata for the summary templates exposed by the main process.
@@ -24,24 +25,16 @@ const STORE_KEY = 'workos.slack.summaryTemplate.v1';
 
 /** Last picked template, shared across DigestPanel and TopicsPanel. */
 export function loadPreferredTemplate(): SlackSummaryTemplate {
-  try {
-    const raw = localStorage.getItem(STORE_KEY);
-    if (!raw) return DEFAULT_SUMMARY_TEMPLATE;
-    if (SUMMARY_TEMPLATE_OPTIONS.some((o) => o.key === raw)) {
-      return raw as SlackSummaryTemplate;
-    }
-    return DEFAULT_SUMMARY_TEMPLATE;
-  } catch {
-    return DEFAULT_SUMMARY_TEMPLATE;
+  const raw = getLocal(STORE_KEY);
+  if (!raw) return DEFAULT_SUMMARY_TEMPLATE;
+  if (SUMMARY_TEMPLATE_OPTIONS.some((o) => o.key === raw)) {
+    return raw as SlackSummaryTemplate;
   }
+  return DEFAULT_SUMMARY_TEMPLATE;
 }
 
 export function savePreferredTemplate(t: SlackSummaryTemplate): void {
-  try {
-    localStorage.setItem(STORE_KEY, t);
-  } catch {
-    /* quota or unavailable — silently ignore */
-  }
+  setLocal(STORE_KEY, t);
 }
 
 export function templateLabel(t: SlackSummaryTemplate): string {
