@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AiWorkflowGenModal, AiWorkflowResumeBanner } from './AiWorkflowGenModal';
 import {
   useCatalog,
@@ -193,7 +193,10 @@ function PresetCta({ workspaceId }: { workspaceId: string }) {
 function WorkflowEditor({ workspaceId, workflowId }: { workspaceId: string; workflowId: string }) {
   const { data: workflows = [] } = useWorkflows(workspaceId);
   const { data: steps = [] } = useSteps(workspaceId);
+  const { data: catalog } = useCatalog(workspaceId);
   const update = useUpdateWorkflow();
+  const [editing, setEditing] = useState(false);
+  const [detailStepId, setDetailStepId] = useState<string | null>(null);
 
   const wf = workflows.find((w) => w.id === workflowId);
   if (!wf) return <div className="p-4 text-sm text-ink-500">워크플로를 찾을 수 없습니다.</div>;
@@ -201,6 +204,8 @@ function WorkflowEditor({ workspaceId, workflowId }: { workspaceId: string; work
   const byId = new Map(steps.map((s) => [s.id, s]));
   const orderedSteps = wf.stepIds.map((id) => byId.get(id)).filter((s): s is Step => Boolean(s));
   const remaining = steps.filter((s) => !wf.stepIds.includes(s.id));
+  const agentChoices = catalog?.agents ?? [];
+  const detailStep = detailStepId ? steps.find((s) => s.id === detailStepId) ?? null : null;
 
   const move = (idx: number, dir: -1 | 1) => {
     const next = wf.stepIds.slice();
@@ -224,17 +229,32 @@ function WorkflowEditor({ workspaceId, workflowId }: { workspaceId: string; work
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-b border-ink-850 p-3">
-        <input
-          value={wf.name}
-          onChange={(e) =>
-            void update.mutateAsync({
-              workspaceId,
-              id: wf.id,
-              patch: { name: e.target.value },
-            })
-          }
-          className="w-full bg-transparent text-lg font-semibold outline-none"
-        />
+        <div className="flex items-start gap-2">
+          <input
+            value={wf.name}
+            onChange={(e) =>
+              void update.mutateAsync({
+                workspaceId,
+                id: wf.id,
+                patch: { name: e.target.value },
+              })
+            }
+            className="min-w-0 flex-1 bg-transparent text-lg font-semibold outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => setEditing((v) => !v)}
+            className={
+              'flex-shrink-0 rounded border px-2.5 py-1 text-xs font-medium transition ' +
+              (editing
+                ? 'border-claude-500 bg-claude-500/15 text-claude-200 hover:bg-claude-500/25'
+                : 'border-ink-700 text-ink-300 hover:bg-ink-850 hover:text-white')
+            }
+            aria-pressed={editing}
+          >
+            {editing ? '✓ 편집 완료' : '✎ 편집'}
+          </button>
+        </div>
         <textarea
           value={wf.description}
           onChange={(e) =>
@@ -249,8 +269,16 @@ function WorkflowEditor({ workspaceId, workflowId }: { workspaceId: string; work
           rows={2}
         />
       </div>
-      <div className="grid min-h-0 flex-1 grid-cols-2">
-        <section className="flex min-h-0 flex-col border-r border-ink-850">
+      <div
+        className={
+          editing ? 'grid min-h-0 flex-1 grid-cols-2' : 'flex min-h-0 flex-1 flex-col'
+        }
+      >
+        <section
+          className={
+            'flex min-h-0 flex-col ' + (editing ? 'border-r border-ink-850' : '')
+          }
+        >
           <div className="border-b border-ink-850 bg-ink-900/40 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-ink-400">
             Step 순서 ({orderedSteps.length})
           </div>
@@ -258,65 +286,84 @@ function WorkflowEditor({ workspaceId, workflowId }: { workspaceId: string; work
             {orderedSteps.map((step, idx) => (
               <li
                 key={step.id}
-                className="group flex items-center gap-2 border-b border-ink-850/50 px-3 py-2"
+                className="group flex items-center gap-2 border-b border-ink-850/50 px-3 py-2 hover:bg-ink-850/30"
               >
                 <span className="w-6 text-xs text-ink-500">{idx + 1}.</span>
-                <div className="min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={() => setDetailStepId(step.id)}
+                  className="min-w-0 flex-1 text-left"
+                  title="클릭하여 Step 상세 보기"
+                >
                   <div className="truncate text-sm text-white">{step.name}</div>
                   <div className="truncate text-xs text-ink-500">
                     {step.agentNames.join(', ')}
                   </div>
-                </div>
-                <div className="flex gap-0.5 opacity-50 group-hover:opacity-100">
-                  <IconBtn label="위로" onClick={() => move(idx, -1)}>
-                    ↑
-                  </IconBtn>
-                  <IconBtn label="아래로" onClick={() => move(idx, 1)}>
-                    ↓
-                  </IconBtn>
-                  <IconBtn label="제거" onClick={() => remove(idx)}>
-                    ✕
-                  </IconBtn>
-                </div>
+                </button>
+                {editing && (
+                  <div className="flex gap-0.5 opacity-50 group-hover:opacity-100">
+                    <IconBtn label="위로" onClick={() => move(idx, -1)}>
+                      ↑
+                    </IconBtn>
+                    <IconBtn label="아래로" onClick={() => move(idx, 1)}>
+                      ↓
+                    </IconBtn>
+                    <IconBtn label="제거" onClick={() => remove(idx)}>
+                      ✕
+                    </IconBtn>
+                  </div>
+                )}
               </li>
             ))}
             {orderedSteps.length === 0 && (
               <li className="px-3 py-4 text-center text-xs text-ink-500">
-                오른쪽 라이브러리에서 Step을 추가하세요.
+                {editing
+                  ? '오른쪽 라이브러리에서 Step을 추가하세요.'
+                  : '아직 추가된 Step이 없습니다. 우상단 ‘편집’을 눌러 Step을 구성하세요.'}
               </li>
             )}
           </ul>
         </section>
-        <section className="flex min-h-0 flex-col">
-          <div className="border-b border-ink-850 bg-ink-900/40 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-ink-400">
-            Step 라이브러리 — 클릭해서 추가
-          </div>
-          <ul className="flex-1 overflow-y-auto">
-            {remaining.map((step) => (
-              <li
-                key={step.id}
-                className="border-b border-ink-850/50 px-3 py-2 hover:bg-ink-850/40"
-              >
-                <button
-                  type="button"
-                  onClick={() => append(step.id)}
-                  className="w-full text-left"
+        {editing && (
+          <section className="flex min-h-0 flex-col">
+            <div className="border-b border-ink-850 bg-ink-900/40 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-ink-400">
+              Step 라이브러리 — 클릭해서 추가
+            </div>
+            <ul className="flex-1 overflow-y-auto">
+              {remaining.map((step) => (
+                <li
+                  key={step.id}
+                  className="border-b border-ink-850/50 px-3 py-2 hover:bg-ink-850/40"
                 >
-                  <div className="text-sm text-white">+ {step.name}</div>
-                  <div className="truncate text-xs text-ink-500">
-                    {step.agentNames.join(', ')}
-                  </div>
-                </button>
-              </li>
-            ))}
-            {remaining.length === 0 && (
-              <li className="px-3 py-4 text-center text-xs text-ink-500">
-                추가 가능한 Step이 없습니다. ‘Step 라이브러리’ 메뉴에서 만들어 주세요.
-              </li>
-            )}
-          </ul>
-        </section>
+                  <button
+                    type="button"
+                    onClick={() => append(step.id)}
+                    className="w-full text-left"
+                  >
+                    <div className="text-sm text-white">+ {step.name}</div>
+                    <div className="truncate text-xs text-ink-500">
+                      {step.agentNames.join(', ')}
+                    </div>
+                  </button>
+                </li>
+              ))}
+              {remaining.length === 0 && (
+                <li className="px-3 py-4 text-center text-xs text-ink-500">
+                  추가 가능한 Step이 없습니다. ‘Step 라이브러리’ 메뉴에서 만들어 주세요.
+                </li>
+              )}
+            </ul>
+          </section>
+        )}
       </div>
+      {detailStep && (
+        <StepDetailModal
+          workspaceId={workspaceId}
+          step={detailStep}
+          agentChoices={agentChoices}
+          onClose={() => setDetailStepId(null)}
+        />
+      )}
     </div>
   );
 }
@@ -440,12 +487,35 @@ function StepLibrary({ workspaceId }: { workspaceId: string }) {
               className="min-w-0 flex-1 text-left"
             >
               <div className="truncate text-sm font-medium text-white">{step.name}</div>
-              <div className="mt-0.5 flex items-center gap-2 text-[11px] text-ink-500">
-                <span className="rounded bg-ink-850 px-1.5 py-0.5">
-                  {step.agentNames.length > 0 ? step.agentNames.join(', ') : '에이전트 없음'}
-                </span>
-                {step.description && (
-                  <span className="truncate text-ink-600">{step.description}</span>
+              {step.description && (
+                <div className="mt-0.5 truncate text-[11px] text-ink-600">
+                  {step.description}
+                </div>
+              )}
+              <div className="mt-1 flex flex-wrap items-center gap-1 text-[11px] text-ink-500">
+                {step.agentNames.length === 0 ? (
+                  <span className="rounded bg-ink-850 px-1.5 py-0.5">에이전트 없음</span>
+                ) : (
+                  step.agentNames.map((name) => {
+                    const isOrphan = !agentChoices.some((a) => a.name === name);
+                    return (
+                      <span
+                        key={name}
+                        className={
+                          'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] ' +
+                          (isOrphan
+                            ? 'bg-amber-500/15 text-amber-200'
+                            : 'bg-claude-500/15 text-claude-200')
+                        }
+                        title={
+                          isOrphan ? '카탈로그에 없는 에이전트 (이전 데이터)' : undefined
+                        }
+                      >
+                        {name}
+                        {isOrphan && <span className="text-[10px] text-amber-400">(외부)</span>}
+                      </span>
+                    );
+                  })
                 )}
               </div>
             </button>
@@ -720,10 +790,11 @@ function StepDetailModal({
 }: {
   workspaceId: string;
   step: Step;
-  agentChoices: { name: string }[];
+  agentChoices: { name: string; description?: string }[];
   onClose: () => void;
 }) {
   const update = useUpdateStep();
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -744,23 +815,42 @@ function StepDetailModal({
         className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-ink-700 bg-ink-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex items-center justify-between border-b border-ink-850 px-5 py-3">
-          <input
-            autoFocus
-            value={step.name}
-            onChange={(e) =>
-              void update.mutateAsync({
-                workspaceId,
-                id: step.id,
-                patch: { name: e.target.value },
-              })
+        <header className="flex items-center justify-between gap-2 border-b border-ink-850 px-5 py-3">
+          {editing ? (
+            <input
+              autoFocus
+              value={step.name}
+              onChange={(e) =>
+                void update.mutateAsync({
+                  workspaceId,
+                  id: step.id,
+                  patch: { name: e.target.value },
+                })
+              }
+              className="min-w-0 flex-1 bg-transparent text-base font-semibold text-white outline-none"
+            />
+          ) : (
+            <h2 className="min-w-0 flex-1 truncate text-base font-semibold text-white">
+              {step.name}
+            </h2>
+          )}
+          <button
+            type="button"
+            onClick={() => setEditing((v) => !v)}
+            className={
+              'flex-shrink-0 rounded border px-2.5 py-1 text-xs font-medium transition ' +
+              (editing
+                ? 'border-claude-500 bg-claude-500/15 text-claude-200 hover:bg-claude-500/25'
+                : 'border-ink-700 text-ink-300 hover:bg-ink-850 hover:text-white')
             }
-            className="min-w-0 flex-1 bg-transparent text-base font-semibold text-white outline-none"
-          />
+            aria-pressed={editing}
+          >
+            {editing ? '✓ 편집 완료' : '✎ 편집'}
+          </button>
           <button
             type="button"
             onClick={onClose}
-            className="ml-3 rounded px-2 py-0.5 text-ink-400 hover:bg-ink-850 hover:text-white"
+            className="rounded px-2 py-0.5 text-ink-400 hover:bg-ink-850 hover:text-white"
             aria-label="닫기"
           >
             ✕
@@ -771,81 +861,80 @@ function StepDetailModal({
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-400">
               설명 / 책임
             </label>
-            <textarea
-              value={step.description}
-              onChange={(e) =>
-                void update.mutateAsync({
-                  workspaceId,
-                  id: step.id,
-                  patch: { description: e.target.value },
-                })
-              }
-              placeholder="이 Step의 책임 / 분해 프롬프트에 주입될 설명"
-              rows={10}
-              className="w-full resize-y rounded border border-ink-700 bg-ink-950 px-3 py-2 text-sm text-ink-200 outline-none focus:border-claude-500"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-400">
-              Agents <span className="text-ink-500">(복수 선택 가능)</span>
-            </label>
-            <div className="max-h-60 space-y-1 overflow-y-auto rounded border border-ink-700 bg-ink-950 p-2">
-              {(() => {
-                const selected = new Set(step.agentNames);
-                const catalogNames = new Set(agentChoices.map((a) => a.name));
-                const orphans = step.agentNames.filter((n) => !catalogNames.has(n));
-                const toggle = (name: string) => {
-                  const next = new Set(selected);
-                  if (next.has(name)) next.delete(name);
-                  else next.add(name);
-                  const arr = Array.from(next);
-                  if (arr.length === 0) return;
+            {editing ? (
+              <textarea
+                value={step.description}
+                onChange={(e) =>
                   void update.mutateAsync({
                     workspaceId,
                     id: step.id,
-                    patch: { agentNames: arr },
-                  });
-                };
-                return (
-                  <>
-                    {agentChoices.map((a) => (
-                      <label
-                        key={a.name}
-                        className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm text-ink-200 hover:bg-ink-850/60"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selected.has(a.name)}
-                          onChange={() => toggle(a.name)}
-                        />
-                        <span>{a.name}</span>
-                      </label>
-                    ))}
-                    {orphans.map((name) => (
-                      <label
+                    patch: { description: e.target.value },
+                  })
+                }
+                placeholder="이 Step의 책임 / 분해 프롬프트에 주입될 설명"
+                rows={10}
+                className="w-full resize-y rounded border border-ink-700 bg-ink-950 px-3 py-2 text-sm text-ink-200 outline-none focus:border-claude-500"
+              />
+            ) : (
+              <div className="min-h-[3rem] whitespace-pre-wrap rounded border border-ink-850 bg-ink-950/50 px-3 py-2 text-sm text-ink-200">
+                {step.description || (
+                  <span className="text-ink-600">설명이 없습니다.</span>
+                )}
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-400">
+              Agents {editing && <span className="text-ink-500">(복수 선택 가능)</span>}
+            </label>
+            {editing ? (
+              <>
+                <AgentMultiCombobox
+                  choices={agentChoices}
+                  value={step.agentNames}
+                  onChange={(next) => {
+                    if (next.length === 0) return;
+                    void update.mutateAsync({
+                      workspaceId,
+                      id: step.id,
+                      patch: { agentNames: next },
+                    });
+                  }}
+                />
+                <p className="mt-1 text-[11px] text-ink-500">
+                  변경 시 즉시 저장됩니다. 최소 1개 이상 유지해야 합니다.
+                </p>
+              </>
+            ) : (
+              <div className="flex flex-wrap gap-1.5 rounded border border-ink-850 bg-ink-950/50 px-3 py-2">
+                {step.agentNames.length === 0 ? (
+                  <span className="text-sm text-ink-600">에이전트 없음</span>
+                ) : (
+                  step.agentNames.map((name) => {
+                    const isOrphan = !agentChoices.some((c) => c.name === name);
+                    return (
+                      <span
                         key={name}
-                        className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm text-amber-200 hover:bg-ink-850/60"
-                        title="카탈로그에 없는 에이전트 (이전 데이터)"
+                        className={
+                          'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[12px] ' +
+                          (isOrphan
+                            ? 'bg-amber-500/15 text-amber-200'
+                            : 'bg-claude-500/15 text-claude-200')
+                        }
+                        title={
+                          isOrphan ? '카탈로그에 없는 에이전트 (이전 데이터)' : undefined
+                        }
                       >
-                        <input
-                          type="checkbox"
-                          checked
-                          onChange={() => toggle(name)}
-                        />
                         <span>{name}</span>
-                        <span className="text-[10px] text-amber-400">(카탈로그 외)</span>
-                      </label>
-                    ))}
-                    {agentChoices.length === 0 && orphans.length === 0 && (
-                      <p className="px-2 py-1 text-xs text-ink-500">에이전트 카탈로그가 비어 있습니다.</p>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-            <p className="mt-1 text-[11px] text-ink-500">
-              체크 시 즉시 저장됩니다. 최소 1개 이상 유지해야 합니다.
-            </p>
+                        {isOrphan && (
+                          <span className="text-[10px] text-amber-400">(외부)</span>
+                        )}
+                      </span>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
         </div>
         <footer className="flex items-center justify-end gap-2 border-t border-ink-850 bg-ink-900/60 px-5 py-3">
@@ -858,6 +947,177 @@ function StepDetailModal({
           </button>
         </footer>
       </div>
+    </div>
+  );
+}
+
+function AgentMultiCombobox({
+  choices,
+  value,
+  onChange,
+}: {
+  choices: { name: string; description?: string }[];
+  value: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const selectedSet = useMemo(() => new Set(value), [value]);
+  const catalogNames = useMemo(() => new Set(choices.map((c) => c.name)), [choices]);
+  const orphans = useMemo(() => value.filter((n) => !catalogNames.has(n)), [value, catalogNames]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return choices;
+    return choices.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.description?.toLowerCase().includes(q) ?? false),
+    );
+  }, [choices, query]);
+
+  const toggle = (name: string) => {
+    const next = new Set(selectedSet);
+    if (next.has(name)) {
+      if (next.size <= 1) return;
+      next.delete(name);
+    } else {
+      next.add(name);
+    }
+    onChange(Array.from(next));
+  };
+
+  return (
+    <div ref={rootRef} className="relative">
+      <div
+        className="flex min-h-[36px] flex-wrap items-center gap-1 rounded border border-ink-700 bg-ink-950 px-2 py-1.5 focus-within:border-claude-500"
+        onClick={() => {
+          setOpen(true);
+          inputRef.current?.focus();
+        }}
+      >
+        {value.map((name) => {
+          const isOrphan = !catalogNames.has(name);
+          const removable = value.length > 1;
+          return (
+            <span
+              key={name}
+              className={
+                'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[12px] ' +
+                (isOrphan
+                  ? 'bg-amber-500/15 text-amber-200'
+                  : 'bg-claude-500/15 text-claude-200')
+              }
+              title={isOrphan ? '카탈로그에 없는 에이전트 (이전 데이터)' : undefined}
+            >
+              <span>{name}</span>
+              {isOrphan && <span className="text-[10px] text-amber-400">(외부)</span>}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (removable) toggle(name);
+                }}
+                disabled={!removable}
+                className="rounded text-ink-400 hover:bg-ink-800 hover:text-white disabled:opacity-30"
+                aria-label={`${name} 제거`}
+              >
+                ✕
+              </button>
+            </span>
+          );
+        })}
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder={value.length === 0 ? '에이전트 검색…' : '추가 검색…'}
+          className="min-w-[120px] flex-1 bg-transparent px-1 text-sm text-ink-200 outline-none placeholder:text-ink-500"
+        />
+      </div>
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-60 overflow-y-auto rounded border border-ink-700 bg-ink-950 shadow-lg">
+          {orphans.length > 0 && (
+            <div className="border-b border-ink-850/70 px-2 py-1 text-[10px] uppercase tracking-wide text-amber-400">
+              카탈로그 외 (이전 데이터)
+            </div>
+          )}
+          {orphans.map((name) => (
+            <button
+              key={`orphan-${name}`}
+              type="button"
+              onClick={() => toggle(name)}
+              className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm text-amber-200 hover:bg-ink-850/60"
+            >
+              <span className="text-[11px] text-claude-300">✓</span>
+              <span className="flex-1 truncate">{name}</span>
+              <span className="text-[10px] text-amber-400">(외부)</span>
+            </button>
+          ))}
+          {filtered.length === 0 && choices.length > 0 && (
+            <p className="px-2 py-2 text-xs text-ink-500">검색 결과가 없습니다.</p>
+          )}
+          {choices.length === 0 && (
+            <p className="px-2 py-2 text-xs text-ink-500">에이전트 카탈로그가 비어 있습니다.</p>
+          )}
+          {filtered.map((a) => {
+            const checked = selectedSet.has(a.name);
+            return (
+              <button
+                key={a.name}
+                type="button"
+                onClick={() => toggle(a.name)}
+                className={
+                  'flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-ink-850/60 ' +
+                  (checked ? 'text-claude-200' : 'text-ink-200')
+                }
+              >
+                <span
+                  className={
+                    'inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border text-[10px] ' +
+                    (checked
+                      ? 'border-claude-400 bg-claude-500/30 text-claude-100'
+                      : 'border-ink-600')
+                  }
+                >
+                  {checked ? '✓' : ''}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{a.name}</span>
+                  {a.description && (
+                    <span className="block truncate text-[11px] text-ink-500">
+                      {a.description}
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
