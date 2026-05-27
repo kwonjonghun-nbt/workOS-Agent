@@ -1153,9 +1153,24 @@ export class WorkOSService {
       '## 에이전트 바인딩 규칙 (매우 중요)',
       '- 각 Step.agentName 은 (a) 아래 "기존 에이전트" 목록의 이름이거나, (b) 동일 JSON 의 newAgents 에 정의한 이름이어야 합니다.',
       '- 책임이 정확히 맞는 기존 에이전트가 있으면 그것을 선택하세요. **이름만 비슷하다고 고르지 마세요** — 설명을 읽고 책임이 맞을 때만 매칭.',
-      '- 알맞은 기존 에이전트가 없으면 **반드시 newAgents 에 새 에이전트를 정의**하고 그 이름을 사용하세요. (절대로 카탈로그에 없는 이름을 step.agentName 에 임의로 적지 마세요.)',
+      '- 알맞은 기존 에이전트가 없으면 **반드시 (1) 새 스킬 + (2) 새 에이전트 를 함께 정의**하고 그 이름을 사용하세요. (절대로 카탈로그에 없는 이름을 step.agentName 에 임의로 적지 마세요.)',
+      '- 잘 모르겠으면 **터미널에서 사용자에게 직접 물어봐도 됩니다** (대화형 응답 가능). 단, 가능하면 자동 결정으로 끝내는 편이 더 좋습니다.',
+      '',
+      '## 새 스킬 (newSkills) — 원칙/컨벤션 캡슐화',
+      '- 해당 Step 을 구현할 때 지켜야 할 **원칙·컨벤션·체크리스트** 를 .claude/skills/<name>.md 로 만듭니다.',
+      '- 에이전트가 작업할 때 자동으로 컨텍스트로 로드되어 가드레일 역할을 합니다.',
+      '- 새 에이전트가 필요하면 보통 그에 대응하는 새 스킬도 1개 이상 함께 정의해야 합니다.',
+      '- newSkills[].body 는 마크다운 본문 — 원칙/예시/금지사항/체크리스트.',
+      '- newSkills[].description 은 한 줄 트리거 — 어떤 키워드/파일에서 이 스킬이 활성화돼야 하는지 명시.',
+      '',
+      '## 새 에이전트 (newAgents) — 모델 메타 필수',
+      '- newAgents[].prompt 는 시스템 프롬프트 — 역할/책임/입출력/금지사항/연관 스킬을 구체적으로.',
+      '- newAgents[].model 은 그 에이전트가 수행하는 작업 난이도에 맞춰 선택 (필수):',
+      '  - `haiku`: 간단한 라벨링/요약/추출, 짧은 응답, 비용 민감 작업.',
+      '  - `sonnet`: 표준 코드 작성/수정, 디버깅, 일반 리뷰 — **대부분의 개발 작업은 여기**.',
+      '  - `opus`: 아키텍처 설계, 복잡한 분석/리팩토링, 고난도 추론, 보안/성능 깊이 검토.',
+      '- 잘 모르면 `sonnet` 으로. 단순/저비용이면 `haiku`, 진짜 어려운 작업이면 `opus`.',
       '- 새 에이전트 이름은 소문자/숫자/하이픈만 사용한 kebab-case 로 (예: `frontend-form-implementer`).',
-      '- newAgents[].prompt 는 그 에이전트의 시스템 프롬프트입니다 — 역할/책임/입출력/금지사항 을 구체적으로 적으세요.',
       '',
       '## 출력 규약',
       `다음 경로에 JSON 으로 저장하세요: \`${outputJsonPath}\``,
@@ -1165,11 +1180,19 @@ export class WorkOSService {
       '{',
       '  "name": "워크플로 이름",',
       '  "description": "이 워크플로의 목적 한 문단",',
+      '  "newSkills": [',
+      '    {',
+      '      "name": "kebab-case-skill-name",',
+      '      "description": "이 스킬이 언제 활성화돼야 하는지 한 줄 트리거",',
+      '      "body": "마크다운 — 원칙/체크리스트/예시/금지사항"',
+      '    }',
+      '  ],',
       '  "newAgents": [',
       '    {',
       '      "name": "kebab-case-agent-name",',
-      '      "description": "이 에이전트가 무엇을 잘하는지 한 줄 (.claude/agents/*.md frontmatter 의 description)",',
-      '      "prompt": "에이전트 시스템 프롬프트. 역할/책임/입출력/제약을 구체적으로."',
+      '      "description": "이 에이전트가 무엇을 잘하는지 한 줄",',
+      '      "model": "haiku" ,',
+      '      "prompt": "시스템 프롬프트. 역할/책임/입출력/제약, 관련 newSkills 참조."',
       '    }',
       '  ],',
       '  "steps": [',
@@ -1260,18 +1283,13 @@ export class WorkOSService {
     if (steps.length === 0)
       throw new ApiError('VALIDATION', 'steps 배열이 비어 있어 워크플로를 만들 수 없습니다');
 
-    // 신규 에이전트 정의가 있으면 먼저 .claude/agents/ 에 파일로 생성한다 (Step 생성 전).
-    const newAgentsRaw = Array.isArray(obj.newAgents) ? obj.newAgents : [];
-    const agentDrafts: Array<{ name: string; description: string; prompt: string }> = [];
-    for (const a of newAgentsRaw) {
-      if (!a || typeof a !== 'object') continue;
-      const ao = a as Record<string, unknown>;
-      const aName = typeof ao.name === 'string' ? ao.name.trim() : '';
-      const aDesc = typeof ao.description === 'string' ? ao.description.trim() : '';
-      const aPrompt = typeof ao.prompt === 'string' ? ao.prompt.trim() : '';
-      if (!aName || !aDesc || !aPrompt) continue;
-      agentDrafts.push({ name: aName, description: aDesc, prompt: aPrompt });
+    // 신규 스킬 → 신규 에이전트 순으로 생성 (Step 생성 전).
+    // 스킬을 먼저 만들어두면 에이전트가 작업 시 즉시 컨텍스트로 로드된다.
+    const skillDrafts = parseNewSkillDrafts(obj);
+    if (skillDrafts.length > 0) {
+      await this.ensureSkills(workspaceId, skillDrafts);
     }
+    const agentDrafts = parseNewAgentDrafts(obj);
     if (agentDrafts.length > 0) {
       await this.ensureAgents(workspaceId, agentDrafts);
     }
@@ -1344,6 +1362,271 @@ export class WorkOSService {
     return { workflowId: wf.id };
   }
 
+  // -------- AI Workflow Edit --------
+  async requestAiWorkflowEdit(
+    workspaceId: string,
+    workflowId: string,
+    instruction: string,
+    cols: number,
+    rows: number,
+  ): Promise<{
+    draftId: string;
+    sessionId: string;
+    promptFilePath: string;
+    outputJsonPath: string;
+  }> {
+    const r = await this.repo(workspaceId);
+    const wf = await r.readWorkflow(workflowId);
+    if (!wf) throw new ApiError('NOT_FOUND', `workflow not found: ${workflowId}`);
+    const currentSteps: Array<{
+      id: string;
+      name: string;
+      description: string;
+      agentName: string;
+    }> = [];
+    for (const sid of wf.stepIds) {
+      const s = await r.readStep(sid);
+      if (s) {
+        currentSteps.push({
+          id: s.id,
+          name: s.name,
+          description: s.description,
+          agentName: s.agentNames[0] ?? 'general',
+        });
+      }
+    }
+
+    const draftId = newId();
+    const root = await this.cwd.resolveCwd(workspaceId);
+    const editDir = path.join(root, '.claude', 'workOS', 'workflow-edits');
+    await fs.mkdir(editDir, { recursive: true });
+    const outputJsonPath = path.join(editDir, `${draftId}.json`);
+    // 클린 슬레이트 — 이전 실패 잔여 파일 제거.
+    await fs.rm(outputJsonPath, { force: true });
+
+    const cat = await this.catalog(workspaceId);
+    const agentCatalog =
+      cat.agents.length > 0
+        ? cat.agents
+            .map((a) => `- **${a.name}**${a.description ? `: ${a.description}` : ''}`)
+            .join('\n')
+        : '- (등록된 에이전트가 없습니다. 모든 Step 에 대해 newAgents 를 정의해야 합니다.)';
+
+    const body = [
+      '# 워크플로 자동 수정 요청',
+      '',
+      // draftId 를 전달하지 않음 — auto-submit MCP 도구는 신규 워크플로를 만들기 때문.
+      // 수정 결과는 파일 기반으로만 임포트한다.
+      mcpInstructions({}),
+      '당신은 워크OS의 워크플로 설계자입니다. 아래 "현재 워크플로" 와 사용자의 "수정 지시" 를 읽고,',
+      '수정된 워크플로 전체(=Step 시퀀스)를 다시 출력하세요.',
+      '',
+      '## 현재 워크플로',
+      `이름: ${wf.name}`,
+      `설명: ${wf.description || '(설명 없음)'}`,
+      '',
+      '### 현재 Steps (순서대로)',
+      ...(currentSteps.length === 0
+        ? ['(Step 이 비어 있습니다.)']
+        : currentSteps.map(
+            (s, i) =>
+              `${i + 1}. **${s.name}** (agent=${s.agentName})\n   ${s.description || '(설명 없음)'}`,
+          )),
+      '',
+      '## 사용자 수정 지시',
+      instruction,
+      '',
+      '## 수정 원칙',
+      '- 지시 내용에 따라 Step 의 추가/삭제/순서 변경/이름 변경/책임 변경 등을 자유롭게 수행하세요.',
+      '- 지시에 언급되지 않은 기존 Step 은 가급적 그대로 보존하세요 (이름/설명/에이전트 동일).',
+      '- 출력은 "전체 Step 시퀀스" 입니다. 변경분만 적지 말고, 수정 후 최종 Step 배열을 모두 다시 적으세요.',
+      '- 보통 5~12개 Step 이 적절합니다. 너무 잘게 쪼개거나 너무 통합하지 마세요.',
+      '',
+      '## 에이전트 바인딩 규칙 (매우 중요)',
+      '- 각 Step.agentName 은 (a) 아래 "기존 에이전트" 목록의 이름이거나, (b) 동일 JSON 의 newAgents 에 정의한 이름이어야 합니다.',
+      '- 책임이 정확히 맞는 기존 에이전트가 있으면 그것을 선택하세요. **이름만 비슷하다고 고르지 마세요.**',
+      '- 알맞은 기존 에이전트가 없으면 **반드시 (1) 새 스킬 + (2) 새 에이전트 를 함께 정의**하고 그 이름을 사용하세요.',
+      '- 잘 모르겠으면 **터미널에서 사용자에게 직접 물어봐도 됩니다** (대화형). 가능하면 자동 결정이 더 좋습니다.',
+      '- 새 에이전트 이름은 소문자/숫자/하이픈만 사용한 kebab-case 로 (예: `frontend-form-implementer`).',
+      '',
+      '## 새 스킬 (newSkills) — 원칙/컨벤션 캡슐화',
+      '- 해당 Step 을 구현할 때 지켜야 할 **원칙·컨벤션·체크리스트** 를 .claude/skills/<name>.md 로 만듭니다.',
+      '- 새 에이전트가 필요하면 보통 그에 대응하는 새 스킬도 함께 정의해야 합니다.',
+      '- newSkills[].body 는 마크다운 본문, newSkills[].description 은 한 줄 트리거.',
+      '',
+      '## 새 에이전트 (newAgents) — 모델 메타 필수',
+      '- newAgents[].model 은 작업 난이도에 맞춰 선택: `haiku`(간단한 추출/요약) / `sonnet`(표준 개발 작업) / `opus`(아키텍처·고난도 분석).',
+      '- 잘 모르면 `sonnet`. 단순·저비용이면 `haiku`, 진짜 어려운 작업이면 `opus`.',
+      '',
+      '## 출력 규약',
+      `다음 경로에 JSON 으로 저장하세요: \`${outputJsonPath}\``,
+      '',
+      '스키마:',
+      '```json',
+      '{',
+      '  "name": "워크플로 이름 (수정 가능)",',
+      '  "description": "워크플로 설명 (수정 가능)",',
+      '  "newSkills": [',
+      '    { "name": "kebab-case", "description": "트리거 한 줄", "body": "마크다운 원칙/체크리스트" }',
+      '  ],',
+      '  "newAgents": [',
+      '    { "name": "kebab-case", "description": "한 줄", "model": "haiku", "prompt": "시스템 프롬프트" }',
+      '  ],',
+      '  "steps": [',
+      '    { "name": "Step 이름", "description": "Step 책임/설명", "agentName": "에이전트 이름" }',
+      '  ]',
+      '}',
+      '```',
+      '',
+      '## 기존 에이전트 (책임이 맞을 때만 선택)',
+      agentCatalog,
+      '',
+      '## 지시 사항',
+      '- 출력은 위 JSON 파일 작성만으로 충분합니다.',
+      '- 작업이 끝나면 "워크플로 수정 드래프트 작성 완료 — N개 Step (신규 에이전트 M개)" 이라고 한 줄 알려주세요.',
+      `- 사용자가 워크OS 앱에서 "📥 변경 적용" 을 누르면 ${outputJsonPath} 를 읽어 기존 워크플로를 갱신합니다.`,
+      '',
+    ].join('\n');
+
+    const promptFilePath = await r.writePromptFile(draftId, body);
+
+    const sessionId = await this.terminal.create(workspaceId, { cols, rows });
+    try {
+      this.terminal.rename(sessionId, `🛠 워크플로 수정: ${wf.name}`.slice(0, 60));
+    } catch {
+      // ignore
+    }
+    const safePath = promptFilePath.replace(/"/g, '\\"');
+    const line = `claude --dangerously-skip-permissions "Read the file at ${safePath} and execute the instructions inside as if they were my next request."`;
+    setTimeout(() => {
+      try {
+        this.terminal.write(sessionId, `${line}\n`);
+      } catch {
+        // ignore
+      }
+    }, 250);
+
+    return { draftId, sessionId, promptFilePath, outputJsonPath };
+  }
+
+  async importWorkflowEdit(
+    workspaceId: string,
+    workflowId: string,
+    draftId: string,
+  ): Promise<{ workflowId: string }> {
+    const r = await this.repo(workspaceId);
+    const cur = await r.readWorkflow(workflowId);
+    if (!cur) throw new ApiError('NOT_FOUND', `workflow not found: ${workflowId}`);
+    const root = await this.cwd.resolveCwd(workspaceId);
+    const outPath = path.join(root, '.claude', 'workOS', 'workflow-edits', `${draftId}.json`);
+
+    let raw: string;
+    try {
+      raw = await fs.readFile(outPath, 'utf-8');
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        throw new ApiError(
+          'NOT_FOUND',
+          `워크플로 수정 드래프트 파일을 찾을 수 없습니다: ${outPath}\nClaude CLI 가 아직 작성 중일 수 있습니다.`,
+        );
+      }
+      throw err;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      throw new ApiError('VALIDATION', `드래프트 JSON 파싱 실패: ${(e as Error).message}`);
+    }
+    if (!parsed || typeof parsed !== 'object') {
+      throw new ApiError('VALIDATION', '드래프트는 JSON 객체여야 합니다');
+    }
+    const obj = parsed as Record<string, unknown>;
+    const name =
+      typeof obj.name === 'string' && obj.name.trim() ? obj.name.trim() : cur.name;
+    const description =
+      typeof obj.description === 'string' ? obj.description : cur.description;
+    const steps = Array.isArray(obj.steps) ? obj.steps : [];
+    if (steps.length === 0) {
+      throw new ApiError('VALIDATION', 'steps 배열이 비어 있어 워크플로를 갱신할 수 없습니다');
+    }
+
+    // 신규 스킬 → 신규 에이전트 순서로 생성.
+    const skillDrafts = parseNewSkillDrafts(obj);
+    if (skillDrafts.length > 0) {
+      await this.ensureSkills(workspaceId, skillDrafts);
+    }
+    const agentDrafts = parseNewAgentDrafts(obj);
+    if (agentDrafts.length > 0) {
+      await this.ensureAgents(workspaceId, agentDrafts);
+    }
+    const cat = await this.catalog(workspaceId);
+    const knownAgents = new Set(cat.agents.map((a) => a.name));
+
+    // 기존 Step 은 삭제하지 않는다 — 다른 워크플로/Task 가 참조할 수 있고,
+    // 사용자가 Step 라이브러리의 "중복 정리" 도구로 직접 정리할 수 있다.
+    const now = Date.now();
+    const newStepIds: string[] = [];
+    const unknownAgents: string[] = [];
+    for (const s of steps) {
+      if (!s || typeof s !== 'object') continue;
+      const so = s as Record<string, unknown>;
+      const sName = typeof so.name === 'string' ? so.name.trim() : '';
+      const sDesc = typeof so.description === 'string' ? so.description : '';
+      const sAgent = typeof so.agentName === 'string' ? so.agentName.trim() : '';
+      if (!sName || !sAgent) continue;
+      if (!knownAgents.has(sAgent)) {
+        unknownAgents.push(`${sName} → ${sAgent}`);
+        continue;
+      }
+      const step: Step = {
+        id: newId(),
+        name: sName,
+        description: sDesc,
+        agentNames: [sAgent],
+        createdAt: now,
+        updatedAt: now,
+      };
+      await r.writeStep(step);
+      newStepIds.push(step.id);
+    }
+    if (newStepIds.length === 0) {
+      const detail = unknownAgents.length
+        ? ` — 카탈로그에 없는 에이전트가 참조됨: ${unknownAgents.join(', ')} (newAgents 정의 누락)`
+        : '';
+      throw new ApiError(
+        'VALIDATION',
+        `유효한 Step이 한 개도 없습니다 (name/agentName 누락)${detail}`,
+      );
+    }
+
+    const next: Workflow = {
+      ...cur,
+      name,
+      description,
+      stepIds: newStepIds,
+      updatedAt: Date.now(),
+    };
+    await r.writeWorkflow(next);
+    this.notify.notify(workspaceId, ['step', 'workflow']);
+
+    // 드래프트 파일 archive.
+    try {
+      const archived = path.join(
+        root,
+        '.claude',
+        'workOS',
+        'workflow-edits',
+        `${draftId}.imported.json`,
+      );
+      await fs.rename(outPath, archived);
+    } catch {
+      // ignore
+    }
+
+    return { workflowId: cur.id };
+  }
+
   // -------- Catalog --------
   async catalog(workspaceId: string): Promise<CatalogResponse> {
     const root = await this.cwd.resolveCwd(workspaceId);
@@ -1358,7 +1641,12 @@ export class WorkOSService {
    */
   async ensureAgents(
     workspaceId: string,
-    drafts: Array<{ name: string; description: string; prompt: string }>,
+    drafts: Array<{
+      name: string;
+      description: string;
+      prompt: string;
+      model?: string;
+    }>,
   ): Promise<{ created: string[]; skipped: string[] }> {
     const created: string[] = [];
     const skipped: string[] = [];
@@ -1383,13 +1671,67 @@ export class WorkOSService {
         // 파일 없음 — 생성으로 진행
       }
       const desc = d.description.replace(/\r?\n/g, ' ').trim();
+      const rawModel = (d.model ?? '').trim().toLowerCase();
+      // Claude Code 의 agent frontmatter 가 인식하는 값만 통과 — 미지정/오타는 sonnet 으로 안전 fallback.
+      const model =
+        rawModel === 'haiku' || rawModel === 'sonnet' || rawModel === 'opus'
+          ? rawModel
+          : 'sonnet';
+      const body = [
+        '---',
+        `name: ${safeName}`,
+        `description: ${JSON.stringify(desc)}`,
+        `model: ${model}`,
+        '---',
+        '',
+        d.prompt.trim(),
+        '',
+      ].join('\n');
+      await fs.writeFile(file, body, 'utf-8');
+      created.push(safeName);
+    }
+    return { created, skipped };
+  }
+
+  /**
+   * 새 스킬 .md 파일들을 워크스페이스 .claude/skills/ 에 생성한다.
+   * 이미 같은 이름의 파일이 있으면 건너뛴다 (덮어쓰지 않음).
+   * 에이전트가 따라야 할 원칙/컨벤션을 캡슐화한다.
+   */
+  async ensureSkills(
+    workspaceId: string,
+    drafts: Array<{ name: string; description: string; body: string }>,
+  ): Promise<{ created: string[]; skipped: string[] }> {
+    const created: string[] = [];
+    const skipped: string[] = [];
+    if (drafts.length === 0) return { created, skipped };
+    const root = await this.cwd.resolveCwd(workspaceId);
+    const dir = path.join(root, '.claude', 'skills');
+    await fs.mkdir(dir, { recursive: true });
+    for (const d of drafts) {
+      const safeName = d.name.trim();
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(safeName)) {
+        throw new ApiError(
+          'VALIDATION',
+          `스킬 이름이 올바르지 않습니다: '${d.name}' (소문자/숫자/하이픈)`,
+        );
+      }
+      const file = path.join(dir, `${safeName}.md`);
+      try {
+        await fs.access(file);
+        skipped.push(safeName);
+        continue;
+      } catch {
+        // 파일 없음 — 생성
+      }
+      const desc = d.description.replace(/\r?\n/g, ' ').trim();
       const body = [
         '---',
         `name: ${safeName}`,
         `description: ${JSON.stringify(desc)}`,
         '---',
         '',
-        d.prompt.trim(),
+        d.body.trim(),
         '',
       ].join('\n');
       await fs.writeFile(file, body, 'utf-8');
@@ -1672,6 +2014,41 @@ function mcpInstructions(opts: { taskItemId?: string; taskId?: string; draftId?:
     '',
   );
   return lines.join('\n');
+}
+
+function parseNewAgentDrafts(
+  obj: Record<string, unknown>,
+): Array<{ name: string; description: string; prompt: string; model?: string }> {
+  const raw = Array.isArray(obj.newAgents) ? obj.newAgents : [];
+  const out: Array<{ name: string; description: string; prompt: string; model?: string }> = [];
+  for (const a of raw) {
+    if (!a || typeof a !== 'object') continue;
+    const ao = a as Record<string, unknown>;
+    const name = typeof ao.name === 'string' ? ao.name.trim() : '';
+    const description = typeof ao.description === 'string' ? ao.description.trim() : '';
+    const prompt = typeof ao.prompt === 'string' ? ao.prompt.trim() : '';
+    const model = typeof ao.model === 'string' ? ao.model.trim() : undefined;
+    if (!name || !description || !prompt) continue;
+    out.push({ name, description, prompt, model });
+  }
+  return out;
+}
+
+function parseNewSkillDrafts(
+  obj: Record<string, unknown>,
+): Array<{ name: string; description: string; body: string }> {
+  const raw = Array.isArray(obj.newSkills) ? obj.newSkills : [];
+  const out: Array<{ name: string; description: string; body: string }> = [];
+  for (const s of raw) {
+    if (!s || typeof s !== 'object') continue;
+    const so = s as Record<string, unknown>;
+    const name = typeof so.name === 'string' ? so.name.trim() : '';
+    const description = typeof so.description === 'string' ? so.description.trim() : '';
+    const body = typeof so.body === 'string' ? so.body.trim() : '';
+    if (!name || !description || !body) continue;
+    out.push({ name, description, body });
+  }
+  return out;
 }
 
 async function readMarkdownCatalog(

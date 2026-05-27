@@ -128,4 +128,28 @@ export const workOSMutations = {
       Error,
       { workspaceId: string; draftId: string }
     >({ mutationFn: (r) => workOSApi.importWorkflowDraft(r) }),
+
+  requestAiWorkflowEdit: () =>
+    mutationOptions<
+      {
+        draftId: string;
+        sessionId: string;
+        promptFilePath: string;
+        outputJsonPath: string;
+      },
+      Error,
+      {
+        workspaceId: string;
+        workflowId: string;
+        instruction: string;
+        cols?: number;
+        rows?: number;
+      }
+    >({ mutationFn: (r) => workOSApi.requestAiWorkflowEdit(r) }),
+  importWorkflowEdit: () =>
+    mutationOptions<
+      { workflowId: string },
+      Error,
+      { workspaceId: string; workflowId: string; draftId: string }
+    >({ mutationFn: (r) => workOSApi.importWorkflowEdit(r) }),
 };

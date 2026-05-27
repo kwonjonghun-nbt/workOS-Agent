@@ -171,3 +171,13 @@ export function useRequestAiWorkflowGen() {
 export function useImportWorkflowDraft() {
   return useMutation(workOSMutations.importWorkflowDraft());
 }
+export function useRequestAiWorkflowEdit() {
+  const invalidate = useInvalidateTerminalsOnSpawn();
+  return useMutation({
+    ...workOSMutations.requestAiWorkflowEdit(),
+    onSuccess: (_data, vars) => invalidate(vars.workspaceId),
+  });
+}
+export function useImportWorkflowEdit() {
+  return useMutation(workOSMutations.importWorkflowEdit());
+}

@@ -171,9 +171,13 @@ import type {
   ImportDecompositionRequest,
   ImportWorkflowDraftRequest,
   ImportWorkflowDraftResponse,
+  ImportWorkflowEditRequest,
+  ImportWorkflowEditResponse,
   ListByWorkspaceRequest,
   RequestAiDecomposeRequest,
   RequestAiDecomposeResponse,
+  RequestAiWorkflowEditRequest,
+  RequestAiWorkflowEditResponse,
   RequestAiWorkflowGenRequest,
   RequestAiWorkflowGenResponse,
   SeedPresetRequest,
@@ -308,6 +312,12 @@ const workOS = {
     ipcRenderer.invoke(CHANNELS.workOS.requestAiWorkflowGen, req),
   importWorkflowDraft: (req: ImportWorkflowDraftRequest): Promise<ImportWorkflowDraftResponse> =>
     ipcRenderer.invoke(CHANNELS.workOS.importWorkflowDraft, req),
+  requestAiWorkflowEdit: (
+    req: RequestAiWorkflowEditRequest,
+  ): Promise<RequestAiWorkflowEditResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.requestAiWorkflowEdit, req),
+  importWorkflowEdit: (req: ImportWorkflowEditRequest): Promise<ImportWorkflowEditResponse> =>
+    ipcRenderer.invoke(CHANNELS.workOS.importWorkflowEdit, req),
 
   onChanged: (listener: (event: WorkOSChangedEvent) => void): (() => void) => {
     const wrapped = (_e: IpcRendererEvent, payload: WorkOSChangedEvent) => listener(payload);

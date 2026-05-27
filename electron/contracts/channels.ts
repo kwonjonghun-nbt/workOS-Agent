@@ -61,6 +61,8 @@ export const CHANNELS = {
     importDecomposition: 'workOS:importDecomposition',
     requestAiWorkflowGen: 'workOS:requestAiWorkflowGen',
     importWorkflowDraft: 'workOS:importWorkflowDraft',
+    requestAiWorkflowEdit: 'workOS:requestAiWorkflowEdit',
+    importWorkflowEdit: 'workOS:importWorkflowEdit',
   },
   workOSEvents: {
     changed: 'workOS:changed',

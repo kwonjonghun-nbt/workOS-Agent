@@ -48,9 +48,13 @@ import type {
   ImportDecompositionRequest,
   ImportWorkflowDraftRequest,
   ImportWorkflowDraftResponse,
+  ImportWorkflowEditRequest,
+  ImportWorkflowEditResponse,
   ListByWorkspaceRequest,
   RequestAiDecomposeRequest,
   RequestAiDecomposeResponse,
+  RequestAiWorkflowEditRequest,
+  RequestAiWorkflowEditResponse,
   RequestAiWorkflowGenRequest,
   RequestAiWorkflowGenResponse,
   SeedPresetRequest,
@@ -233,6 +237,10 @@ export type WorkOSApi = {
     req: RequestAiWorkflowGenRequest,
   ) => Promise<RequestAiWorkflowGenResponse>;
   importWorkflowDraft: (req: ImportWorkflowDraftRequest) => Promise<ImportWorkflowDraftResponse>;
+  requestAiWorkflowEdit: (
+    req: RequestAiWorkflowEditRequest,
+  ) => Promise<RequestAiWorkflowEditResponse>;
+  importWorkflowEdit: (req: ImportWorkflowEditRequest) => Promise<ImportWorkflowEditResponse>;
 
   onChanged: (listener: (event: WorkOSChangedEvent) => void) => () => void;
 };

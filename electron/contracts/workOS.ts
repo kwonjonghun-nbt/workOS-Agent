@@ -370,6 +370,32 @@ export const importWorkflowDraftRequestSchema = z.object({
 export type ImportWorkflowDraftRequest = z.infer<typeof importWorkflowDraftRequestSchema>;
 export type ImportWorkflowDraftResponse = { workflowId: string };
 
+// AI 워크플로 수정 — 기존 워크플로를 자연어 지시로 수정.
+// 출력 스키마는 생성과 동일하지만 import 시 신규 워크플로를 만들지 않고
+// 대상 워크플로의 name/description/stepIds 를 교체한다.
+export const requestAiWorkflowEditRequestSchema = z.object({
+  workspaceId: z.string().min(1),
+  workflowId: idSchema,
+  instruction: z.string().min(1),
+  cols: z.number().int().positive().default(80),
+  rows: z.number().int().positive().default(24),
+});
+export type RequestAiWorkflowEditRequest = z.infer<typeof requestAiWorkflowEditRequestSchema>;
+export type RequestAiWorkflowEditResponse = {
+  draftId: string;
+  sessionId: string;
+  promptFilePath: string;
+  outputJsonPath: string;
+};
+
+export const importWorkflowEditRequestSchema = z.object({
+  workspaceId: z.string().min(1),
+  workflowId: idSchema,
+  draftId: z.string().regex(/^[A-Za-z0-9_-]+$/),
+});
+export type ImportWorkflowEditRequest = z.infer<typeof importWorkflowEditRequestSchema>;
+export type ImportWorkflowEditResponse = { workflowId: string };
+
 // MCP submit — direct decomposition push (no file)
 export const decompositionSubmitItemSchema = z.object({
   stepId: idSchema,

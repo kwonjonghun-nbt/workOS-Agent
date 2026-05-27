@@ -21,6 +21,8 @@ import {
   gitUnstagePathsRequestSchema,
   importDecompositionRequestSchema,
   importWorkflowDraftRequestSchema,
+  importWorkflowEditRequestSchema,
+  requestAiWorkflowEditRequestSchema,
   listByWorkspaceRequestSchema,
   requestAiDecomposeRequestSchema,
   requestAiWorkflowGenRequestSchema,
@@ -222,6 +224,27 @@ export function registerWorkOSHandlers(service: WorkOSService): void {
     wrap(async () => {
       const { workspaceId, draftId } = importWorkflowDraftRequestSchema.parse(raw);
       return service.importWorkflowDraft(workspaceId, draftId);
+    }),
+  );
+
+  ipcMain.handle(CHANNELS.workOS.requestAiWorkflowEdit, async (_e, raw) =>
+    wrap(async () => {
+      const req = requestAiWorkflowEditRequestSchema.parse(raw);
+      return service.requestAiWorkflowEdit(
+        req.workspaceId,
+        req.workflowId,
+        req.instruction,
+        req.cols,
+        req.rows,
+      );
+    }),
+  );
+
+  ipcMain.handle(CHANNELS.workOS.importWorkflowEdit, async (_e, raw) =>
+    wrap(async () => {
+      const { workspaceId, workflowId, draftId } =
+        importWorkflowEditRequestSchema.parse(raw);
+      return service.importWorkflowEdit(workspaceId, workflowId, draftId);
     }),
   );
 }

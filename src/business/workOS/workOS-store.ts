@@ -12,18 +12,30 @@ export type AiWorkflowDraft = {
   startedAt: number;
 };
 
+// 워크플로별 AI 수정 진행 상태. 모달을 닫아도 보존되어 "이어서 진행" 가능.
+export type AiWorkflowEditDraft = {
+  draftId: string;
+  outputJsonPath: string;
+  instruction: string;
+  sessionId: string;
+  startedAt: number;
+};
+
 type WorkOSUiState = {
   viewByWorkspace: Record<string, View | undefined>;
   selectedWorkflowByWorkspace: Record<string, string | null | undefined>;
   selectedTaskByWorkspace: Record<string, string | null | undefined>;
   selectedTaskItemByWorkspace: Record<string, string | null | undefined>;
   aiWorkflowDraftByWorkspace: Record<string, AiWorkflowDraft | undefined>;
+  // key: workflowId (전역 유일).
+  aiWorkflowEditDraftByWorkflow: Record<string, AiWorkflowEditDraft | undefined>;
 
   setView: (workspaceId: string, view: View) => void;
   selectWorkflow: (workspaceId: string, id: string | null) => void;
   selectTask: (workspaceId: string, id: string | null) => void;
   selectTaskItem: (workspaceId: string, id: string | null) => void;
   setAiWorkflowDraft: (workspaceId: string, draft: AiWorkflowDraft | null) => void;
+  setAiWorkflowEditDraft: (workflowId: string, draft: AiWorkflowEditDraft | null) => void;
 };
 
 export const useWorkOSStore = create<WorkOSUiState>((set) => ({
@@ -32,6 +44,7 @@ export const useWorkOSStore = create<WorkOSUiState>((set) => ({
   selectedTaskByWorkspace: {},
   selectedTaskItemByWorkspace: {},
   aiWorkflowDraftByWorkspace: {},
+  aiWorkflowEditDraftByWorkflow: {},
 
   setView: (workspaceId, view) =>
     set((s) => ({ viewByWorkspace: { ...s.viewByWorkspace, [workspaceId]: view } })),
@@ -53,5 +66,12 @@ export const useWorkOSStore = create<WorkOSUiState>((set) => ({
       if (draft) next[workspaceId] = draft;
       else delete next[workspaceId];
       return { aiWorkflowDraftByWorkspace: next };
+    }),
+  setAiWorkflowEditDraft: (workflowId, draft) =>
+    set((s) => {
+      const next = { ...s.aiWorkflowEditDraftByWorkflow };
+      if (draft) next[workflowId] = draft;
+      else delete next[workflowId];
+      return { aiWorkflowEditDraftByWorkflow: next };
     }),
 }));

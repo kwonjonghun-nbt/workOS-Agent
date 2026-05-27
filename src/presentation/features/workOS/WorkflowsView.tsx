@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AiWorkflowGenModal, AiWorkflowResumeBanner } from './AiWorkflowGenModal';
 import {
+  AiWorkflowEditModal,
+  AiWorkflowEditResumeBanner,
+} from './AiWorkflowEditModal';
+import {
   useCatalog,
   useCreateStep,
   useCreateWorkflow,
@@ -197,6 +201,7 @@ function WorkflowEditor({ workspaceId, workflowId }: { workspaceId: string; work
   const update = useUpdateWorkflow();
   const [editing, setEditing] = useState(false);
   const [detailStepId, setDetailStepId] = useState<string | null>(null);
+  const [aiEditOpen, setAiEditOpen] = useState(false);
 
   const wf = workflows.find((w) => w.id === workflowId);
   if (!wf) return <div className="p-4 text-sm text-ink-500">워크플로를 찾을 수 없습니다.</div>;
@@ -228,6 +233,11 @@ function WorkflowEditor({ workspaceId, workflowId }: { workspaceId: string; work
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      <AiWorkflowEditResumeBanner
+        workspaceId={workspaceId}
+        workflowId={wf.id}
+        onResume={() => setAiEditOpen(true)}
+      />
       <div className="border-b border-ink-850 p-3">
         <div className="flex items-start gap-2">
           <input
@@ -241,6 +251,14 @@ function WorkflowEditor({ workspaceId, workflowId }: { workspaceId: string; work
             }
             className="min-w-0 flex-1 bg-transparent text-lg font-semibold outline-none"
           />
+          <button
+            type="button"
+            onClick={() => setAiEditOpen(true)}
+            className="flex-shrink-0 rounded border border-sky-500/40 bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20"
+            title="자연어로 이 워크플로를 수정합니다."
+          >
+            🛠 AI 로 수정
+          </button>
           <button
             type="button"
             onClick={() => setEditing((v) => !v)}
@@ -362,6 +380,14 @@ function WorkflowEditor({ workspaceId, workflowId }: { workspaceId: string; work
           step={detailStep}
           agentChoices={agentChoices}
           onClose={() => setDetailStepId(null)}
+        />
+      )}
+      {aiEditOpen && (
+        <AiWorkflowEditModal
+          workspaceId={workspaceId}
+          workflowId={wf.id}
+          workflowName={wf.name}
+          onClose={() => setAiEditOpen(false)}
         />
       )}
     </div>

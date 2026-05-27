@@ -225,6 +225,26 @@ export type RequestAiWorkflowGenResponse = {
 export type ImportWorkflowDraftRequest = { workspaceId: string; draftId: string };
 export type ImportWorkflowDraftResponse = { workflowId: string };
 
+export type RequestAiWorkflowEditRequest = {
+  workspaceId: string;
+  workflowId: string;
+  instruction: string;
+  cols?: number;
+  rows?: number;
+};
+export type RequestAiWorkflowEditResponse = {
+  draftId: string;
+  sessionId: string;
+  promptFilePath: string;
+  outputJsonPath: string;
+};
+export type ImportWorkflowEditRequest = {
+  workspaceId: string;
+  workflowId: string;
+  draftId: string;
+};
+export type ImportWorkflowEditResponse = { workflowId: string };
+
 export type WorkOSChangedEvent = {
   workspaceId: string;
   kinds: Array<'step' | 'workflow' | 'task' | 'task-item'>;
