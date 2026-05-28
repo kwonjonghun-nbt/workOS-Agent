@@ -23,7 +23,7 @@ export function ExtensionsManager() {
   }
 
   return (
-    <ul className="flex flex-col">
+    <ul className="flex h-full flex-col overflow-y-auto">
       {extensions.map((ext) => (
         <CatalogRow key={ext.manifest.id} ext={ext} />
       ))}
