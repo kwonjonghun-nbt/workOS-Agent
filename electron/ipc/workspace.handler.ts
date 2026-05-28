@@ -22,7 +22,6 @@ const toDto = (w: {
   lastOpenedAt: number;
   kind: WorkspaceKind;
   taskSource: TaskSource;
-  jiraDefaultIssueType?: string;
 }): WorkspaceDto => ({
   id: w.id,
   name: w.name,
@@ -31,7 +30,6 @@ const toDto = (w: {
   lastOpenedAt: w.lastOpenedAt,
   kind: w.kind,
   taskSource: w.taskSource,
-  jiraDefaultIssueType: w.jiraDefaultIssueType,
 });
 
 export function registerWorkspaceHandlers(service: WorkspaceService): void {

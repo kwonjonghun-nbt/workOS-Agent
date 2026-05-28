@@ -51,7 +51,7 @@ export type ProgressEmitter = {
 export type WorkspaceLookup = {
   read(
     workspaceId: string,
-  ): Promise<{ taskSource: 'local' | 'jira'; jiraDefaultIssueType?: string } | null>;
+  ): Promise<{ taskSource: 'local' | 'jira' } | null>;
 };
 
 export type TaskItemCompletionHook = (

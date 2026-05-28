@@ -16,7 +16,6 @@ type WorkspaceJson = {
   lastOpenedAt: number;
   kind?: WorkspaceKind;
   taskSource?: TaskSource;
-  jiraDefaultIssueType?: string;
 };
 
 type FileShape = {
@@ -45,7 +44,6 @@ export class JsonWorkspaceRepository implements WorkspaceRepository {
             w.lastOpenedAt,
             w.kind ?? 'user',
             w.taskSource ?? 'local',
-            w.jiraDefaultIssueType,
           ),
       );
     } catch (err) {

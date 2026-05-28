@@ -18,8 +18,10 @@ export const workspaceSchema = z.object({
   // Task source for all workflows under this workspace. Workspace-level
   // single setting — workflows do not override this.
   taskSource: taskSourceSchema.default('local'),
-  jiraDefaultIssueType: z.string().optional(),
 });
+// 과거에는 워크스페이스 단위로 jiraDefaultIssueType 을 저장했다. 이제는 Task 모달에서
+// 매번 선택하므로 더 이상 스키마에 없다 — 디스크에 남은 잔존 필드는 repository load 단계에서
+// 무시되고, 다음 저장 시 자연스럽게 사라진다.
 export type Workspace = z.infer<typeof workspaceSchema>;
 
 export const updateWorkspaceSettingsRequestSchema = z.object({
@@ -27,7 +29,6 @@ export const updateWorkspaceSettingsRequestSchema = z.object({
   patch: z
     .object({
       taskSource: taskSourceSchema.optional(),
-      jiraDefaultIssueType: z.string().optional(),
     })
     .strict(),
 });

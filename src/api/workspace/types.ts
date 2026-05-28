@@ -9,14 +9,12 @@ export type Workspace = {
   lastOpenedAt: number;
   kind: WorkspaceKind;
   taskSource: TaskSource;
-  jiraDefaultIssueType?: string;
 };
 
 export type UpdateWorkspaceSettingsRequest = {
   id: string;
   patch: {
     taskSource?: TaskSource;
-    jiraDefaultIssueType?: string;
   };
 };
 

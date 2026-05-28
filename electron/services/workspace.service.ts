@@ -110,7 +110,7 @@ export class WorkspaceService {
 
   async updateSettings(
     id: string,
-    patch: { taskSource?: TaskSource; jiraDefaultIssueType?: string },
+    patch: { taskSource?: TaskSource },
   ): Promise<Workspace> {
     const list = await this.ensureLoaded();
     const ws = list.find((w) => w.id === id);

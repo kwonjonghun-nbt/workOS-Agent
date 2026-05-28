@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation } from '@tanstack/react-query';
 import { workspaceMutations } from '../../../server-state/workspace';
 import type { TaskSource, Workspace } from '../../../api/workspace';
@@ -14,12 +15,36 @@ type Props = {
 export function WorkspaceSettingsButton({ workspace }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [panelPos, setPanelPos] = useState<{ top: number; right: number } | null>(null);
   const update = useMutation(workspaceMutations.updateSettings());
+
+  useLayoutEffect(() => {
+    if (!open || !buttonRef.current) return;
+    const measure = () => {
+      const rect = buttonRef.current!.getBoundingClientRect();
+      setPanelPos({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      });
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const onDocClick = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (rootRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
@@ -35,19 +60,13 @@ export function WorkspaceSettingsButton({ workspace }: Props) {
   const onTaskSourceChange = (taskSource: TaskSource) => {
     void update.mutateAsync({ id: workspace.id, patch: { taskSource } });
   };
-  const onIssueTypeChange = (jiraDefaultIssueType: string) => {
-    void update.mutateAsync({
-      id: workspace.id,
-      patch: { jiraDefaultIssueType },
-    });
-  };
 
   const taskSource = workspace.taskSource ?? 'local';
-  const issueType = workspace.jiraDefaultIssueType ?? 'Story';
 
   return (
     <div ref={rootRef} className="app-no-drag relative">
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-400 transition-colors hover:bg-ink-850/70 hover:text-ink-100"
@@ -57,9 +76,11 @@ export function WorkspaceSettingsButton({ workspace }: Props) {
       >
         <span className="text-sm leading-none">⚙</span>
       </button>
-      {open && (
+      {open && panelPos && createPortal(
         <div
-          className="absolute right-0 top-full z-30 mt-1 w-72 rounded-lg border border-ink-700 bg-ink-900 p-3 shadow-2xl"
+          ref={panelRef}
+          style={{ top: panelPos.top, right: panelPos.right }}
+          className="app-no-drag fixed z-[1000] w-72 rounded-lg border border-ink-700 bg-ink-900 p-3 shadow-2xl"
           role="dialog"
           aria-label="워크스페이스 설정"
         >
@@ -94,23 +115,8 @@ export function WorkspaceSettingsButton({ workspace }: Props) {
               이 워크스페이스의 모든 워크플로가 이 설정을 따릅니다.
             </p>
           </div>
-          {taskSource === 'jira' && (
-            <div>
-              <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-                Jira 기본 이슈 타입
-              </div>
-              <input
-                value={issueType}
-                onChange={(e) => onIssueTypeChange(e.target.value)}
-                placeholder="예: Story"
-                className="w-full rounded border border-ink-700 bg-ink-950 px-2 py-1 text-xs text-ink-200 outline-none focus:border-claude-500"
-              />
-              <p className="mt-1 text-[10px] text-ink-500">
-                새 Jira 부모 티켓을 만들 때 사용할 기본 issueType.
-              </p>
-            </div>
-          )}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

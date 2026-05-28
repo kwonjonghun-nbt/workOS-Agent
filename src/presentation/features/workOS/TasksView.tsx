@@ -316,13 +316,14 @@ function NewTaskModal({
   const [jiraChildMode, setJiraChildMode] = useState<'all' | 'explicit' | 'future-only'>('all');
   const [jiraChildKeysText, setJiraChildKeysText] = useState('');
   const createJiraIssue = useMutation(jiraMutations.createIssue());
+  const [jiraNewIssueType, setJiraNewIssueType] =
+    useState<'Epic' | 'Story' | 'Task' | 'Sub-task'>('Story');
   const { data: jiraChildrenData } = useQuery(
     jiraQueries.issueChildren(jiraParentKeyConfirmed),
   );
 
   const workspace = workspaces.find((w) => w.id === workspaceId);
   const workspaceTaskSource = workspace?.taskSource ?? 'local';
-  const workspaceJiraDefaultIssueType = workspace?.jiraDefaultIssueType;
   const isJiraWorkflow = workspaceTaskSource === 'jira';
 
   useEffect(() => {
@@ -349,7 +350,7 @@ function NewTaskModal({
           resolvedJiraParentKey = jiraParentKey.trim() || undefined;
         } else {
           if (jiraNewSummary.trim()) {
-            const issueType = workspaceJiraDefaultIssueType ?? 'Story';
+            const issueType = jiraNewIssueType;
             const created_issue = await createJiraIssue.mutateAsync({
               summary: jiraNewSummary.trim(),
               issueType,
@@ -528,10 +529,32 @@ function NewTaskModal({
                 </div>
               ) : (
                 <div className="space-y-2">
+                  <div>
+                    <label className="mb-1 block text-[11px] text-ink-500">
+                      이슈 타입
+                    </label>
+                    <select
+                      value={jiraNewIssueType}
+                      onChange={(e) =>
+                        setJiraNewIssueType(
+                          e.target.value as typeof jiraNewIssueType,
+                        )
+                      }
+                      className="w-full rounded border border-ink-700 bg-ink-950 px-3 py-2 text-sm outline-none focus:border-claude-500"
+                    >
+                      <option value="Epic">Epic (에픽)</option>
+                      <option value="Story">Story</option>
+                      <option value="Task">Task</option>
+                      <option value="Sub-task">Sub-task</option>
+                    </select>
+                    <p className="mt-1 text-[11px] text-ink-500">
+                      Epic = 부모 에픽 신규 생성, Story/Task = 에픽 없는 작업, Sub-task = 기존 부모의 하위.
+                    </p>
+                  </div>
                   <input
                     value={jiraNewSummary}
                     onChange={(e) => setJiraNewSummary(e.target.value)}
-                    placeholder={`새 ${workspaceJiraDefaultIssueType ?? 'Story'} 제목`}
+                    placeholder={`새 ${jiraNewIssueType} 제목`}
                     className="w-full rounded border border-ink-700 bg-ink-950 px-3 py-2 text-sm outline-none focus:border-claude-500"
                   />
                   <textarea

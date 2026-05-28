@@ -200,7 +200,6 @@ export function registerIpcHandlers(): Container {
         if (!ws) return null;
         return {
           taskSource: ws.taskSource,
-          jiraDefaultIssueType: ws.jiraDefaultIssueType,
         };
       },
     },
