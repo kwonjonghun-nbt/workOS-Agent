@@ -306,6 +306,74 @@ const TOOLS = [
     },
     route: '/v1/extension/llm-result',
   },
+  {
+    name: 'workos_jira_create_issue',
+    description:
+      'Create a new Jira issue via the Jira extension. Use for creating a parent ticket (Epic/Story) for a workflow Task, or for creating child tickets under a parent. If attachToTaskId is omitted, the currently running TaskItem\'s parent Task is used automatically (when in jira mode with childMode !== "all"); the response includes autoAttachedToTaskId if this happened.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        summary: { type: 'string' },
+        issueType: {
+          type: 'string',
+          description: 'e.g. "Epic", "Story", "Task", "Sub-task"',
+        },
+        parentKey: {
+          type: 'string',
+          description:
+            'Optional parent issue key (Epic key for Story, Story key for Sub-task)',
+        },
+        description: { type: 'string' },
+        projectKey: {
+          type: 'string',
+          description: 'Optional. Defaults to first configured project key.',
+        },
+        attachToTaskId: {
+          type: 'string',
+          description:
+            'Optional workOS Task id. If provided, the created issue key is appended to that Task.jiraExplicitChildKeys. If omitted, the currently running TaskItem\'s parent Task is used automatically when applicable.',
+        },
+      },
+      required: ['summary', 'issueType'],
+    },
+    route: '/v1/jira/create-issue',
+  },
+  {
+    name: 'workos_jira_get_issue',
+    description:
+      'Get a Jira issue summary (key, summary, status, issueType, parentKey).',
+    inputSchema: {
+      type: 'object',
+      properties: { issueKey: { type: 'string' } },
+      required: ['issueKey'],
+    },
+    route: '/v1/jira/get-issue',
+  },
+  {
+    name: 'workos_jira_list_children',
+    description:
+      'List child issues under a parent (Epic → Stories/Tasks; Story/Task → Sub-tasks).',
+    inputSchema: {
+      type: 'object',
+      properties: { parentKey: { type: 'string' } },
+      required: ['parentKey'],
+    },
+    route: '/v1/jira/list-children',
+  },
+  {
+    name: 'workos_jira_transition_issue',
+    description:
+      'Transition a Jira issue to a new status by transition name (e.g. "In Progress", "Done").',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        issueKey: { type: 'string' },
+        transitionName: { type: 'string' },
+      },
+      required: ['issueKey', 'transitionName'],
+    },
+    route: '/v1/jira/transition-issue',
+  },
 ];
 
 // ---------- server -----------------------------------------------------------

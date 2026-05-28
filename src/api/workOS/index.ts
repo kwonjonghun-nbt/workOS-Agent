@@ -73,6 +73,8 @@ export const workOSApi = {
   updateTask: (req: UpdateTaskRequest) => api().updateTask(req),
   deleteTask: (req: DeleteTaskRequest) => api().deleteTask(req),
   decomposeTask: (req: DecomposeTaskRequest) => api().decomposeTask(req),
+  refreshJiraTaskStatus: (req: { workspaceId: string; taskId: string }) =>
+    api().refreshJiraTaskStatus(req),
 
   listTaskItems: (req: ListByWorkspaceRequest) => api().listTaskItems(req),
   createTaskItem: (req: CreateTaskItemRequest) => api().createTaskItem(req),

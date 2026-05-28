@@ -112,6 +112,28 @@ export const MCP_TOOLS: McpToolDescriptor[] = [
       '확장 프로그램이 워크OS-Agent 에게 의뢰한 AI 작업의 최종 결과(또는 에러)를 제출한다. ' +
       'requestId 는 프롬프트 파일에 명시된 식별자. content 가 있으면 성공, error 가 있으면 실패.',
   },
+  {
+    name: 'workos_jira_create_issue',
+    title: 'Jira 이슈 생성',
+    description:
+      'Jira 확장을 통해 새 이슈를 생성한다. 워크플로 Task 의 부모 티켓(Epic/Story) 또는 자식 티켓 생성에 사용. attachToTaskId 가 주어지면 생성된 이슈 키가 해당 workOS Task.jiraChildKeys 에 append 된다.',
+  },
+  {
+    name: 'workos_jira_get_issue',
+    title: 'Jira 이슈 조회',
+    description: 'Jira 이슈의 key/summary/status/issueType/parentKey 를 가져온다.',
+  },
+  {
+    name: 'workos_jira_list_children',
+    title: 'Jira 자식 이슈 목록',
+    description:
+      '부모 이슈 아래의 자식 티켓들을 조회한다 (Epic → Story/Task, Story/Task → Sub-task).',
+  },
+  {
+    name: 'workos_jira_transition_issue',
+    title: 'Jira 상태 전환',
+    description: 'transition 이름(예: "In Progress", "Done") 으로 Jira 이슈 상태를 전환한다.',
+  },
 ];
 
 // --------- Push events ---------------------------------------------------

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   useCreateTask,
   useDecomposeTask,
+  useRefreshJiraTaskStatus,
   useDeleteTask,
   useDeleteTaskItem,
   useExecuteTaskItem,
@@ -16,6 +18,7 @@ import {
   useWorkflows,
 } from '../../../business/workOS/use-workOS';
 import type { Step, Task, TaskItem } from '../../../server-state/workOS';
+import { jiraMutations, jiraQueries } from '../../../server-state/jira';
 import { useWorkOSStore } from '../../../business/workOS/workOS-store';
 import { useWorkspaceStore } from '../../../business/workspace/workspace-store';
 import { getLocal, setLocal } from '../../../api/local-store';
@@ -302,6 +305,22 @@ function NewTaskModal({
   const [mode, setMode] = useState<'none' | 'quick' | 'ai'>('ai');
   const [submitting, setSubmitting] = useState(false);
 
+  // Jira 관련 상태
+  const [jiraParentMode, setJiraParentMode] = useState<'existing' | 'new'>('existing');
+  const [jiraParentKey, setJiraParentKey] = useState('');
+  const [jiraParentKeyConfirmed, setJiraParentKeyConfirmed] = useState('');
+  const [jiraNewSummary, setJiraNewSummary] = useState('');
+  const [jiraNewDescription, setJiraNewDescription] = useState('');
+  const [jiraChildMode, setJiraChildMode] = useState<'all' | 'explicit' | 'future-only'>('all');
+  const [jiraChildKeysText, setJiraChildKeysText] = useState('');
+  const createJiraIssue = useMutation(jiraMutations.createIssue());
+  const { data: jiraChildrenData } = useQuery(
+    jiraQueries.issueChildren(jiraParentKeyConfirmed),
+  );
+
+  const selectedWorkflow = workflows.find((w) => w.id === workflowId);
+  const isJiraWorkflow = (selectedWorkflow?.taskSource ?? 'local') === 'jira';
+
   useEffect(() => {
     if (!workflowId && workflows[0]) setWorkflowId(workflows[0].id);
   }, [workflows, workflowId]);
@@ -320,11 +339,39 @@ function NewTaskModal({
     if (!canSubmit) return;
     setSubmitting(true);
     try {
+      let resolvedJiraParentKey: string | undefined;
+      if (isJiraWorkflow) {
+        if (jiraParentMode === 'existing') {
+          resolvedJiraParentKey = jiraParentKey.trim() || undefined;
+        } else {
+          if (jiraNewSummary.trim()) {
+            const issueType = selectedWorkflow?.jiraDefaultIssueType ?? 'Story';
+            const created_issue = await createJiraIssue.mutateAsync({
+              summary: jiraNewSummary.trim(),
+              issueType,
+              description: jiraNewDescription.trim() || undefined,
+            });
+            resolvedJiraParentKey = created_issue.key;
+          }
+        }
+      }
+
+      let resolvedExplicitChildKeys: string[] | undefined;
+      if (isJiraWorkflow && jiraChildMode === 'explicit') {
+        resolvedExplicitChildKeys = jiraChildKeysText
+          .split(/[\s,]+/)
+          .map((k) => k.trim())
+          .filter((k) => k.length > 0);
+      }
+
       const created = await create.mutateAsync({
         workspaceId,
         workflowId,
         title: title.trim(),
         requirement: requirement.trim() || undefined,
+        jiraParentKey: resolvedJiraParentKey,
+        jiraChildMode: isJiraWorkflow ? jiraChildMode : undefined,
+        jiraExplicitChildKeys: resolvedExplicitChildKeys,
       });
 
       // createTask 응답에 requirement 가 반영되지 않을 수 있어 한 번 더 보강.
@@ -436,6 +483,118 @@ function NewTaskModal({
             </select>
           </div>
 
+          {isJiraWorkflow && (
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-400">
+                Jira 부모 티켓
+              </label>
+              <div className="flex gap-3 text-xs mb-2">
+                {(['existing', 'new'] as const).map((m) => (
+                  <label key={m} className="flex cursor-pointer items-center gap-1">
+                    <input
+                      type="radio"
+                      name="jiraParentMode"
+                      value={m}
+                      checked={jiraParentMode === m}
+                      onChange={() => setJiraParentMode(m)}
+                      className="accent-claude-500"
+                    />
+                    <span className="text-ink-300">
+                      {m === 'existing' ? '기존 티켓 사용' : '새 티켓 생성'}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {jiraParentMode === 'existing' ? (
+                <div className="flex gap-2">
+                  <input
+                    value={jiraParentKey}
+                    onChange={(e) => setJiraParentKey(e.target.value)}
+                    placeholder="예: PROJ-123"
+                    className="flex-1 rounded border border-ink-700 bg-ink-950 px-3 py-2 text-sm outline-none focus:border-claude-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setJiraParentKeyConfirmed(jiraParentKey.trim())}
+                    disabled={!jiraParentKey.trim()}
+                    className="rounded border border-ink-700 px-3 py-2 text-xs text-ink-200 hover:bg-ink-850 disabled:opacity-40"
+                  >
+                    확인
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <input
+                    value={jiraNewSummary}
+                    onChange={(e) => setJiraNewSummary(e.target.value)}
+                    placeholder={`새 ${selectedWorkflow?.jiraDefaultIssueType ?? 'Story'} 제목`}
+                    className="w-full rounded border border-ink-700 bg-ink-950 px-3 py-2 text-sm outline-none focus:border-claude-500"
+                  />
+                  <textarea
+                    value={jiraNewDescription}
+                    onChange={(e) => setJiraNewDescription(e.target.value)}
+                    placeholder="설명 (선택)"
+                    rows={2}
+                    className="w-full resize-none rounded border border-ink-700 bg-ink-950 px-3 py-2 text-sm outline-none focus:border-claude-500"
+                  />
+                </div>
+              )}
+              {jiraParentMode === 'existing' && jiraParentKeyConfirmed && jiraChildrenData && (
+                <div className="mt-2 rounded border border-ink-700 bg-ink-950 px-3 py-2 text-xs">
+                  <div className="font-medium text-ink-200">
+                    [{jiraChildrenData.parent.key}] {jiraChildrenData.parent.summary}
+                  </div>
+                  <div className="mt-1 text-ink-500">
+                    자식 {jiraChildrenData.children.length}개
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-3">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-400">
+                  자식 티켓 가져오기 모드
+                </label>
+                <div className="flex flex-wrap gap-3 text-xs mb-2">
+                  {(
+                    [
+                      ['all', '전부'],
+                      ['explicit', '수동 지정'],
+                      ['future-only', '이후 새로 생성된 것만'],
+                    ] as const
+                  ).map(([m, label]) => (
+                    <label key={m} className="flex cursor-pointer items-center gap-1">
+                      <input
+                        type="radio"
+                        name="jiraChildMode"
+                        value={m}
+                        checked={jiraChildMode === m}
+                        onChange={() => setJiraChildMode(m)}
+                        className="accent-claude-500"
+                      />
+                      <span className="text-ink-300">{label}</span>
+                    </label>
+                  ))}
+                </div>
+                {jiraChildMode === 'explicit' && (
+                  <textarea
+                    value={jiraChildKeysText}
+                    onChange={(e) => setJiraChildKeysText(e.target.value)}
+                    placeholder="예: PROJ-101, PROJ-102, PROJ-103"
+                    rows={2}
+                    className="w-full resize-none rounded border border-ink-700 bg-ink-950 px-3 py-2 font-mono text-xs text-white outline-none focus:border-claude-500"
+                  />
+                )}
+                <p className="mt-1 text-[11px] text-ink-500">
+                  {jiraChildMode === 'all' && '부모 에픽 아래의 모든 자식을 TaskItem 으로 가져옵니다.'}
+                  {jiraChildMode === 'explicit' &&
+                    '입력한 자식 키만 TaskItem 으로 가져옵니다 (콤마/공백 구분).'}
+                  {jiraChildMode === 'future-only' &&
+                    '빈 상태로 시작하고, 워크플로 실행 중 새로 생성된 자식만 자동 attach 됩니다.'}
+                </p>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-400">
               요구사항 / 분해 프롬프트
@@ -546,6 +705,7 @@ function TaskDetail({ workspaceId, taskId }: { workspaceId: string; taskId: stri
   const task = tasks.find((t) => t.id === taskId);
   const updateTask = useUpdateTask();
   const decompose = useDecomposeTask();
+  const refreshJira = useRefreshJiraTaskStatus();
   const aiDecompose = useRequestAiDecompose();
   const importDecomp = useImportDecomposition();
   const setActiveTerminal = useWorkspaceStore((s) => s.setActiveTerminal);
@@ -582,6 +742,19 @@ function TaskDetail({ workspaceId, taskId }: { workspaceId: string; taskId: stri
           <StatusBadge status={task.status} />
           <span>{taskItems.length}개의 TaskItem</span>
           <div className="ml-auto flex items-center gap-1">
+            {workflow?.taskSource === 'jira' && task.jiraParentKey ? (
+              <button
+                type="button"
+                onClick={() =>
+                  void refreshJira.mutateAsync({ workspaceId, taskId: task.id })
+                }
+                disabled={refreshJira.isPending}
+                title="지라에서 자식 티켓 상태를 다시 가져옵니다"
+                className="rounded border border-ink-700 px-2 py-0.5 text-[11px] text-ink-300 hover:bg-ink-850 disabled:opacity-50"
+              >
+                {refreshJira.isPending ? '동기화 중…' : '🔄 지라 동기화'}
+              </button>
+            ) : null}
             <div
               className="inline-flex overflow-hidden rounded border border-ink-700 text-[11px]"
               role="tablist"
@@ -844,7 +1017,31 @@ function KanbanCard({
           onClick={() => setDetailOpen(true)}
           className="flex w-full flex-col gap-1 p-2 text-left hover:bg-ink-850/40"
         >
-          <div className="truncate text-sm font-medium text-white">{item.name}</div>
+          <div className="flex items-start gap-1.5">
+            <span className="truncate text-sm font-medium text-white">{item.name}</span>
+            {item.jiraIssueKey && (
+              <a
+                href={`#jira-${item.jiraIssueKey}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.open(`https://jira.atlassian.com/browse/${item.jiraIssueKey}`, '_blank');
+                }}
+                className="flex-shrink-0 rounded bg-blue-500/20 px-1.5 py-0.5 text-[10px] font-medium text-blue-300 hover:bg-blue-500/30"
+                title={`Jira: ${item.jiraIssueKey}`}
+              >
+                {item.jiraIssueKey}
+              </a>
+            )}
+            {item.syncError && (
+              <span
+                className="flex-shrink-0 cursor-help text-amber-400"
+                title={`Jira sync 실패: ${item.syncError}`}
+              >
+                ⚠
+              </span>
+            )}
+          </div>
           <div className="flex flex-wrap items-center gap-1 text-[10px] text-ink-500">
             <span className="rounded bg-ink-850 px-1.5 py-0.5">{item.agentName}</span>
             {step && <span className="text-ink-600">{step.name}</span>}
@@ -1233,7 +1430,31 @@ function FlowCard({
             {chip.icon}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium text-white">{item.name}</span>
+            <span className="flex items-start gap-1.5">
+              <span className="block truncate text-sm font-medium text-white">{item.name}</span>
+              {item.jiraIssueKey && (
+                <a
+                  href={`#jira-${item.jiraIssueKey}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.open(`https://jira.atlassian.com/browse/${item.jiraIssueKey}`, '_blank');
+                  }}
+                  className="flex-shrink-0 rounded bg-blue-500/20 px-1.5 py-0.5 text-[10px] font-medium text-blue-300 hover:bg-blue-500/30"
+                  title={`Jira: ${item.jiraIssueKey}`}
+                >
+                  {item.jiraIssueKey}
+                </a>
+              )}
+              {item.syncError && (
+                <span
+                  className="flex-shrink-0 cursor-help text-amber-400"
+                  title={`Jira sync 실패: ${item.syncError}`}
+                >
+                  ⚠
+                </span>
+              )}
+            </span>
             <span className="mt-0.5 block text-[10px] text-ink-500">
               {item.agentName}
               {item.sessionId ? ` · ▶ ${item.sessionId.slice(0, 6)}…` : ''}

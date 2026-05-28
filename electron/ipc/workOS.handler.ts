@@ -6,6 +6,7 @@ import {
   createTaskRequestSchema,
   createWorkflowRequestSchema,
   decomposeTaskRequestSchema,
+  refreshJiraTaskStatusRequestSchema,
   deleteStepRequestSchema,
   findDuplicateStepsRequestSchema,
   mergeDuplicateStepsRequestSchema,
@@ -114,6 +115,13 @@ export function registerWorkOSHandlers(service: WorkOSService): void {
     wrap(async () => {
       const { workspaceId, taskId } = decomposeTaskRequestSchema.parse(raw);
       return service.decomposeTask(workspaceId, taskId);
+    }),
+  );
+
+  ipcMain.handle(CHANNELS.workOS.refreshJiraTaskStatus, async (_e, raw) =>
+    wrap(async () => {
+      const { workspaceId, taskId } = refreshJiraTaskStatusRequestSchema.parse(raw);
+      return service.refreshJiraTaskStatus(workspaceId, taskId);
     }),
   );
 

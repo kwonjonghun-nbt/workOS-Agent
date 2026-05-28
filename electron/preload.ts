@@ -45,11 +45,19 @@ import type {
   UpdateSettingsRequest,
 } from './contracts/extension';
 import type {
+  CreateIssueRequest,
+  CreateIssueResponse,
   GetIssueDetailRequest,
   GetIssueDetailResponse,
+  GetTransitionsRequest,
+  GetTransitionsResponse,
+  ListIssueChildrenRequest,
+  ListIssueChildrenResponse,
   ListMyIssuesRequest,
   ListMyIssuesResponse,
   TestConnectionResponse,
+  TransitionIssueRequest,
+  TransitionIssueResponse,
 } from './contracts/jira';
 import type {
   GetLatestResponse,
@@ -273,6 +281,8 @@ const workOS = {
     ipcRenderer.invoke(CHANNELS.workOS.deleteTask, req),
   decomposeTask: (req: DecomposeTaskRequest): Promise<TaskItem[]> =>
     ipcRenderer.invoke(CHANNELS.workOS.decomposeTask, req),
+  refreshJiraTaskStatus: (req: { workspaceId: string; taskId: string }): Promise<{ updatedItems: number }> =>
+    ipcRenderer.invoke(CHANNELS.workOS.refreshJiraTaskStatus, req),
 
   listTaskItems: (req: ListByWorkspaceRequest): Promise<TaskItem[]> =>
     ipcRenderer.invoke(CHANNELS.workOS.listTaskItems, req),
@@ -395,6 +405,14 @@ const jira = {
     ipcRenderer.invoke(CHANNELS.jira.testConnection),
   getIssueDetail: (req: GetIssueDetailRequest): Promise<GetIssueDetailResponse> =>
     ipcRenderer.invoke(CHANNELS.jira.getIssueDetail, req),
+  createIssue: (req: CreateIssueRequest): Promise<CreateIssueResponse> =>
+    ipcRenderer.invoke(CHANNELS.jira.createIssue, req),
+  listIssueChildren: (req: ListIssueChildrenRequest): Promise<ListIssueChildrenResponse> =>
+    ipcRenderer.invoke(CHANNELS.jira.listIssueChildren, req),
+  getTransitions: (req: GetTransitionsRequest): Promise<GetTransitionsResponse> =>
+    ipcRenderer.invoke(CHANNELS.jira.getTransitions, req),
+  transitionIssue: (req: TransitionIssueRequest): Promise<TransitionIssueResponse> =>
+    ipcRenderer.invoke(CHANNELS.jira.transitionIssue, req),
 };
 
 const jiraSnapshot = {

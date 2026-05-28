@@ -77,6 +77,36 @@ export interface JiraRepository {
     issueKey: string,
     descriptionAdf: unknown,
   ): Promise<void>;
+  /** 신규 이슈 생성. parentKey 가 있으면 부모 링크. */
+  createIssue(
+    config: JiraConfig,
+    args: {
+      projectKey: string;
+      summary: string;
+      issueType: string;
+      parentKey?: string;
+      description?: string;
+    },
+  ): Promise<{ key: string; issueType: string }>;
+  /** 부모 이슈 메타와 자식 티켓들을 함께 반환. */
+  getIssueChildren(
+    config: JiraConfig,
+    parentKey: string,
+  ): Promise<{
+    parent: { key: string; summary: string; issueType: string; status: string };
+    children: Array<{ key: string; summary: string; issueType: string; status: string }>;
+  }>;
+  /** 사용 가능한 transition 목록. */
+  getTransitions(
+    config: JiraConfig,
+    issueKey: string,
+  ): Promise<Array<{ id: string; name: string; to: string }>>;
+  /** transition id 로 상태 전환. */
+  transitionIssue(
+    config: JiraConfig,
+    issueKey: string,
+    transitionId: string,
+  ): Promise<void>;
 }
 
 const LOG = (...args: unknown[]) => console.log('[jira.repo]', ...args);
@@ -307,6 +337,158 @@ export class HttpJiraRepository implements JiraRepository {
     LOG('PUT (description)', issueKey);
     await this.request(config, url, {
       method: 'PUT',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async createIssue(
+    config: JiraConfig,
+    args: {
+      projectKey: string;
+      summary: string;
+      issueType: string;
+      parentKey?: string;
+      description?: string;
+    },
+  ): Promise<{ key: string; issueType: string }> {
+    const url = `${config.baseUrl}/rest/api/3/issue`;
+    const fields: Record<string, unknown> = {
+      project: { key: args.projectKey },
+      summary: args.summary,
+      issuetype: { name: args.issueType },
+    };
+    if (args.parentKey) {
+      fields.parent = { key: args.parentKey };
+    }
+    if (args.description && args.description.trim() !== '') {
+      fields.description = {
+        type: 'doc',
+        version: 1,
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: args.description }],
+          },
+        ],
+      };
+    }
+    LOG('POST createIssue', url, 'projectKey=', args.projectKey, 'issueType=', args.issueType);
+    const res = await this.request(config, url, {
+      method: 'POST',
+      body: JSON.stringify({ fields }),
+    });
+    const json = (await res.json()) as { key?: string };
+    if (!json.key) {
+      throw new ApiError('INTERNAL', 'Jira createIssue: 응답에 key 가 없습니다.');
+    }
+    return { key: json.key, issueType: args.issueType };
+  }
+
+  async getIssueChildren(
+    config: JiraConfig,
+    parentKey: string,
+  ): Promise<{
+    parent: { key: string; summary: string; issueType: string; status: string };
+    children: Array<{ key: string; summary: string; issueType: string; status: string }>;
+  }> {
+    // 부모 이슈 조회
+    const parentUrl = `${config.baseUrl}/rest/api/3/issue/${encodeURIComponent(parentKey)}?fields=summary,issuetype,status`;
+    LOG('GET parent', parentUrl);
+    const parentRes = await this.request(config, parentUrl, { method: 'GET' });
+    const parentJson = (await parentRes.json()) as {
+      key?: string;
+      fields?: {
+        summary?: string;
+        issuetype?: { name?: string };
+        status?: { name?: string };
+      };
+    };
+    const parent = {
+      key: String(parentJson.key ?? parentKey),
+      summary: String(parentJson.fields?.summary ?? ''),
+      issueType: String(parentJson.fields?.issuetype?.name ?? ''),
+      status: String(parentJson.fields?.status?.name ?? ''),
+    };
+
+    // 자식 검색 — 일반 자식(parent) + Epic Link 호환(classic Jira Epic→Story).
+    // 일부 인스턴스는 "Epic Link" field name 을 지원하지 않으므로 400 응답 시 fallback.
+    const searchUrl = `${config.baseUrl}/rest/api/3/search/jql`;
+    const escapedKey = parentKey.replace(/"/g, '');
+    const primaryJql = `parent = "${escapedKey}" OR "Epic Link" = "${escapedKey}"`;
+    const fallbackJql = `parent = "${escapedKey}"`;
+    const fields = ['summary', 'status', 'issuetype'];
+
+    const runSearch = async (jql: string) => {
+      LOG('getIssueChildren jql=', jql);
+      const res = await this.request(config, searchUrl, {
+        method: 'POST',
+        body: JSON.stringify({ jql, maxResults: 100, fields }),
+      });
+      return (await res.json()) as {
+        issues?: Array<{
+          key?: string;
+          fields?: {
+            summary?: string;
+            status?: { name?: string };
+            issuetype?: { name?: string };
+          };
+        }>;
+      };
+    };
+
+    let json: Awaited<ReturnType<typeof runSearch>>;
+    try {
+      json = await runSearch(primaryJql);
+    } catch (err) {
+      // Epic Link field 미지원 인스턴스(400) 시 parent 단독으로 재시도.
+      const msg = err instanceof Error ? err.message : String(err);
+      if (/\b400\b/.test(msg) || /Epic Link/i.test(msg)) {
+        LOG('Epic Link JQL rejected, retrying with parent only');
+        json = await runSearch(fallbackJql);
+      } else {
+        throw err;
+      }
+    }
+    const children = (json.issues ?? []).map((i) => ({
+      key: String(i.key ?? ''),
+      summary: String(i.fields?.summary ?? ''),
+      issueType: String(i.fields?.issuetype?.name ?? ''),
+      status: String(i.fields?.status?.name ?? ''),
+    }));
+    return { parent, children };
+  }
+
+  async getTransitions(
+    config: JiraConfig,
+    issueKey: string,
+  ): Promise<Array<{ id: string; name: string; to: string }>> {
+    const url = `${config.baseUrl}/rest/api/3/issue/${encodeURIComponent(issueKey)}/transitions`;
+    LOG('GET transitions', url);
+    const res = await this.request(config, url, { method: 'GET' });
+    const json = (await res.json()) as {
+      transitions?: Array<{
+        id?: string;
+        name?: string;
+        to?: { name?: string };
+      }>;
+    };
+    return (json.transitions ?? []).map((t) => ({
+      id: String(t.id ?? ''),
+      name: String(t.name ?? ''),
+      to: String(t.to?.name ?? ''),
+    }));
+  }
+
+  async transitionIssue(
+    config: JiraConfig,
+    issueKey: string,
+    transitionId: string,
+  ): Promise<void> {
+    const url = `${config.baseUrl}/rest/api/3/issue/${encodeURIComponent(issueKey)}/transitions`;
+    const body = { transition: { id: transitionId } };
+    LOG('POST transition', issueKey, 'transitionId=', transitionId);
+    await this.request(config, url, {
+      method: 'POST',
       body: JSON.stringify(body),
     });
   }

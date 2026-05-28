@@ -92,6 +92,9 @@ export function useDeleteTask() {
 export function useDecomposeTask() {
   return useMutation(workOSMutations.decomposeTask());
 }
+export function useRefreshJiraTaskStatus() {
+  return useMutation(workOSMutations.refreshJiraTaskStatus());
+}
 export function useCreateTaskItem() {
   return useMutation(workOSMutations.createTaskItem());
 }

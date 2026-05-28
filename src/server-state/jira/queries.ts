@@ -24,4 +24,22 @@ export const jiraQueries = {
       refetchOnWindowFocus: false,
       retry: false,
     }),
+  issueChildren: (parentKey: string) =>
+    queryOptions({
+      queryKey: jiraKeys.issueChildren(parentKey),
+      queryFn: () => jiraApi.listIssueChildren({ parentKey }),
+      enabled: !!parentKey,
+      staleTime: 0,
+      refetchOnWindowFocus: false,
+      retry: false,
+    }),
+  transitions: (issueKey: string) =>
+    queryOptions({
+      queryKey: jiraKeys.transitions(issueKey),
+      queryFn: () => jiraApi.getTransitions({ issueKey }),
+      enabled: !!issueKey,
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+      retry: false,
+    }),
 };

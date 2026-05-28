@@ -43,6 +43,7 @@ import { registerExtensionHandlers } from './extension.handler';
 import { HttpJiraRepository } from '../repositories/jira.repo';
 import { JsonJiraSnapshotRepository } from '../repositories/jira-snapshot.repo';
 import { JiraService } from '../services/jira.service';
+import { JiraTaskSyncAdapter } from '../services/jira-task-sync.adapter';
 import { JiraSnapshotService } from '../services/jira-snapshot.service';
 import { JiraSchedulerService } from '../services/jira-scheduler.service';
 import { registerJiraHandlers } from './jira.handler';
@@ -222,6 +223,11 @@ export function registerIpcHandlers(): Container {
   const jiraRepo = new HttpJiraRepository();
   const jiraService = new JiraService(jiraRepo, extensionService);
   registerJiraHandlers(jiraService);
+  // Wire Jira sync port into workOS so jira-mode workflows can create tickets,
+  // discover children, and auto-transition status on TaskItem updates.
+  // workOS knows only about the TaskSyncPort abstraction — the adapter wraps JiraService.
+  const jiraTaskSync = new JiraTaskSyncAdapter(jiraService);
+  workOSService.setTaskSyncPort(jiraTaskSync);
 
   const githubPrRepo = new HttpGitHubPrRepository();
   const githubPrService = new GitHubPrService(githubPrRepo, extensionService);
@@ -341,7 +347,7 @@ export function registerIpcHandlers(): Container {
   );
   registerSlackThreadHandlers(slackThreadsService);
 
-  void bootstrapMcp(plane, mcpService, workOSService);
+  void bootstrapMcp(plane, mcpService, workOSService, jiraService);
 
   // Route for the new MCP tool `workos_extension_llm_result`.
   plane.on('/v1/extension/llm-result', async (body) => {
@@ -372,10 +378,11 @@ async function bootstrapMcp(
   plane: McpControlPlane,
   mcpService: McpService,
   workOSService: WorkOSService,
+  jiraService: JiraService,
 ): Promise<void> {
   // Bind routes + start the plane FIRST so `mcp:setup` works even before the
   // script install completes (file I/O can be slow on first launch / locked FS).
-  bindControlPlane(plane, workOSService);
+  bindControlPlane(plane, workOSService, jiraService);
   try {
     await plane.start();
     console.log(
@@ -436,7 +443,11 @@ async function installMcpServerScript(): Promise<string> {
   return target;
 }
 
-function bindControlPlane(plane: McpControlPlane, svc: WorkOSService): void {
+function bindControlPlane(
+  plane: McpControlPlane,
+  svc: WorkOSService,
+  jiraService: JiraService,
+): void {
   const wrap =
     <Req, Res>(fn: (workspaceId: string, body: Req) => Promise<Res>) =>
     async (body: unknown, ctx: { workspaceId: string }) =>
@@ -567,4 +578,67 @@ function bindControlPlane(plane: McpControlPlane, svc: WorkOSService): void {
       return { ok: true };
     }),
   );
+
+  // ----- Jira (workflow-driven) routes -----
+  plane.on('/v1/jira/create-issue', async (body, ctx) => {
+    const args = body as {
+      summary: string;
+      issueType: string;
+      parentKey?: string;
+      description?: string;
+      projectKey?: string;
+      attachToTaskId?: string;
+    };
+    // attachToTaskId 가 비어있으면 현재 실행 중인 TaskItem 의 parent Task 로 자동 추론.
+    let resolvedAttachToTaskId = args.attachToTaskId;
+    let autoAttachedToTaskId: string | undefined;
+    if (!resolvedAttachToTaskId) {
+      try {
+        const running = await svc.findRunningTaskItem(ctx.workspaceId);
+        if (running) {
+          const task = await svc.readTask(ctx.workspaceId, running.taskId);
+          if (
+            task &&
+            task.jiraParentKey &&
+            task.jiraChildMode &&
+            task.jiraChildMode !== 'all'
+          ) {
+            resolvedAttachToTaskId = task.id;
+            autoAttachedToTaskId = task.id;
+          }
+        }
+      } catch (err) {
+        console.error('[ipc] auto-attach inference failed (non-fatal):', err);
+      }
+    }
+    const created = await jiraService.createIssue(args);
+    if (resolvedAttachToTaskId) {
+      try {
+        await svc.attachJiraChildKey(
+          ctx.workspaceId,
+          resolvedAttachToTaskId,
+          created.key,
+        );
+      } catch (err) {
+        console.error('[ipc] attachJiraChildKey failed (non-fatal):', err);
+      }
+    }
+    return { ...created, autoAttachedToTaskId };
+  });
+  plane.on('/v1/jira/get-issue', async (body) => {
+    const { issueKey } = body as { issueKey: string };
+    return jiraService.getIssueDetail(issueKey);
+  });
+  plane.on('/v1/jira/list-children', async (body) => {
+    const { parentKey } = body as { parentKey: string };
+    return jiraService.listIssueChildren(parentKey);
+  });
+  plane.on('/v1/jira/transition-issue', async (body) => {
+    const { issueKey, transitionId, transitionName } = body as {
+      issueKey: string;
+      transitionId?: string;
+      transitionName?: string;
+    };
+    return jiraService.transitionIssue(issueKey, { transitionId, transitionName });
+  });
 }

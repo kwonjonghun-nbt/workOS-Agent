@@ -5,8 +5,10 @@ import { JiraLabels } from './JiraLabels';
 import { JiraReports } from './JiraReports';
 import { JiraTestConnection } from './JiraTestConnection';
 import { JiraSlackSettings } from './JiraSlackSettings';
+import { JiraTransitionMapEditor } from './JiraTransitionMapEditor';
 import { TicketTemplates } from './TicketTemplates';
 import { ExtensionSettingsForm } from '../extensions/ExtensionSettingsForm';
+import { useExtensionList } from '../../../business/extension/use-extensions';
 
 type Section =
   | 'tasks'
@@ -73,6 +75,11 @@ export function JiraWorkspace() {
 }
 
 function SettingsSection() {
+  const extQuery = useExtensionList();
+  const ext = extQuery.data?.find((e) => e.manifest.id === 'workos.jira');
+  const statusTransitionsJson =
+    typeof ext?.settings.statusTransitions === 'string' ? ext.settings.statusTransitions : '';
+
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4">
       <div className="rounded border border-ink-800 bg-ink-900/50 p-3 text-xs leading-relaxed text-ink-300">
@@ -82,6 +89,9 @@ function SettingsSection() {
       <ExtensionSettingsForm extensionId="workos.jira" />
       <div className="border-t border-ink-800 pt-4">
         <JiraTestConnection />
+      </div>
+      <div className="border-t border-ink-800 pt-4">
+        <JiraTransitionMapEditor currentJson={statusTransitionsJson} />
       </div>
     </div>
   );

@@ -65,6 +65,14 @@ export const workOSMutations = {
     mutationOptions<TaskItem[], Error, DecomposeTaskRequest>({
       mutationFn: (r) => workOSApi.decomposeTask(r),
     }),
+  refreshJiraTaskStatus: () =>
+    mutationOptions<
+      { updatedItems: number },
+      Error,
+      { workspaceId: string; taskId: string }
+    >({
+      mutationFn: (r) => workOSApi.refreshJiraTaskStatus(r),
+    }),
 
   createTaskItem: () =>
     mutationOptions<TaskItem, Error, CreateTaskItemRequest>({

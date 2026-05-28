@@ -81,6 +81,20 @@ export const workosJiraManifest = {
           description: '매일 이 시각에 데일리 리포트를 자동 전송합니다. 비워두면 자동 전송을 끕니다.',
           default: '10:00',
         },
+        statusTransitions: {
+          type: 'string',
+          title: '상태 전환 매핑 (JSON)',
+          description:
+            'TaskItem status → Jira transition. JSON 으로 직접 편집하거나, 워크OS Jira 설정의 "상태 전환 매핑 편집기" UI에서 키-값으로 편집하세요. 값은 transition 이름 문자열 또는 {id,name,toStatus} 객체.',
+          default: '{"in_progress":"In Progress","completed":"Done"}',
+        },
+        statusTransitionsByProject: {
+          type: 'string',
+          title: '프로젝트별 상태 전환 매핑 (JSON, 선택)',
+          description:
+            '특정 프로젝트 키별로 statusTransitions 를 override 합니다. 예: {"PROJ":{"in_progress":{"id":"21","name":"In Progress"}}}. 비워두면 statusTransitions 가 모든 프로젝트에 적용됩니다.',
+          default: '',
+        },
       },
     },
     eventHooks: [],

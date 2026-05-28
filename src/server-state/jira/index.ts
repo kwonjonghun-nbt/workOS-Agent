@@ -1,5 +1,6 @@
 export { jiraKeys } from './keys';
 export { jiraQueries } from './queries';
+export { jiraMutations } from './mutations';
 export {
   jiraSnapshotKeys,
   jiraSnapshotQueries,

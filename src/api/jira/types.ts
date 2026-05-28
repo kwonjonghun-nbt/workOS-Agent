@@ -41,3 +41,56 @@ export type GetIssueDetailResponse = {
   parentKey: string | null;
   descriptionMarkdown: string;
 };
+
+// ----- Workflow ↔ Jira integration ----------------------------------------
+
+export type CreateIssueRequest = {
+  summary: string;
+  issueType: string;
+  parentKey?: string;
+  description?: string;
+  projectKey?: string;
+};
+
+export type CreateIssueResponse = {
+  key: string;
+  url: string;
+  issueType: string;
+};
+
+export type ListIssueChildrenRequest = { parentKey: string };
+
+export type JiraChildIssue = {
+  key: string;
+  summary: string;
+  issueType: string;
+  status: string;
+};
+
+export type ListIssueChildrenResponse = {
+  parent: JiraChildIssue;
+  children: JiraChildIssue[];
+};
+
+export type GetTransitionsRequest = { issueKey: string };
+
+export type JiraTransition = {
+  id: string;
+  name: string;
+  to: string;
+};
+
+export type GetTransitionsResponse = {
+  transitions: JiraTransition[];
+};
+
+export type TransitionIssueRequest = {
+  issueKey: string;
+  transitionId?: string;
+  transitionName?: string;
+};
+
+export type TransitionIssueResponse = {
+  ok: true;
+  toStatus: string;
+};

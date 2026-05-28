@@ -20,6 +20,8 @@ export const workflowSchema = z.object({
   description: z.string().default(''),
   tags: z.array(z.string()).optional(),
   stepIds: z.array(idSchema),
+  taskSource: z.enum(['local', 'jira']).default('local'),
+  jiraDefaultIssueType: z.string().optional(),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
 });
@@ -28,16 +30,46 @@ export type Workflow = z.infer<typeof workflowSchema>;
 export const taskStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'archived']);
 export type TaskStatus = z.infer<typeof taskStatusSchema>;
 
-export const taskSchema = z.object({
-  id: idSchema,
-  workflowId: idSchema,
-  requirement: z.string().default(''),
-  title: z.string().min(1),
-  status: taskStatusSchema,
-  taskItemIds: z.array(idSchema),
-  createdAt: z.number().int(),
-  updatedAt: z.number().int(),
-});
+export const jiraChildModeSchema = z.enum(['all', 'explicit', 'future-only']);
+export type JiraChildMode = z.infer<typeof jiraChildModeSchema>;
+
+// 호환을 위해 deprecated `jiraChildKeys` 입력을 받아 `jiraChildMode` +
+// `jiraExplicitChildKeys` 로 매핑한다. 다음 write 시 자연스럽게 신규 필드만 저장된다.
+//   undefined        → 변경 없음 (기본 'all' 의미와 동일하므로 모드 미설정 유지)
+//   []               → mode='future-only', explicit=[]
+//   non-empty array  → mode='explicit',    explicit=<keys>
+export const taskSchema = z
+  .object({
+    id: idSchema,
+    workflowId: idSchema,
+    requirement: z.string().default(''),
+    title: z.string().min(1),
+    status: taskStatusSchema,
+    taskItemIds: z.array(idSchema),
+    jiraParentKey: z.string().optional(),
+    jiraParentType: z.string().optional(),
+    // 자식 가져오기 방식 — 명시 안 되면 'all' 과 동치(undefined 호환).
+    jiraChildMode: jiraChildModeSchema.optional(),
+    // mode='explicit' 일 때 사용. mode='future-only' 에서 attach 시에도 누적됨.
+    jiraExplicitChildKeys: z.array(z.string()).optional(),
+    // @deprecated — 기존 저장본 호환용. transform 으로 신규 필드로 흡수된 뒤 제거.
+    jiraChildKeys: z.array(z.string()).optional(),
+    createdAt: z.number().int(),
+    updatedAt: z.number().int(),
+  })
+  .transform((v) => {
+    if (v.jiraChildKeys !== undefined && v.jiraChildMode === undefined) {
+      if (v.jiraChildKeys.length === 0) {
+        v.jiraChildMode = 'future-only';
+        v.jiraExplicitChildKeys = v.jiraExplicitChildKeys ?? [];
+      } else {
+        v.jiraChildMode = 'explicit';
+        v.jiraExplicitChildKeys = v.jiraExplicitChildKeys ?? v.jiraChildKeys;
+      }
+    }
+    delete (v as { jiraChildKeys?: unknown }).jiraChildKeys;
+    return v;
+  });
 export type Task = z.infer<typeof taskSchema>;
 
 export const taskItemStatusSchema = z.enum([
@@ -60,11 +92,14 @@ export const taskItemSchema = z.object({
   agentName: z.string().min(1),
   dependsOn: z.array(idSchema).optional(),
   status: taskItemStatusSchema,
+  jiraIssueKey: z.string().optional(),
   sessionId: z.string().optional(),
   promptFilePath: z.string().optional(),
   output: z.string().optional(),
   artifactPath: z.string().optional(),
   error: z.string().optional(),
+  // 외부 작업 동기화(Jira transition 등) 실패 사유. 성공 시 undefined 로 클리어.
+  syncError: z.string().optional(),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
   startedAt: z.number().optional(),
@@ -147,6 +182,8 @@ export const createWorkflowRequestSchema = workspaceIdReq.extend({
   description: z.string().default(''),
   stepIds: z.array(idSchema).default([]),
   tags: z.array(z.string()).optional(),
+  taskSource: z.enum(['local', 'jira']).optional(),
+  jiraDefaultIssueType: z.string().optional(),
 });
 export type CreateWorkflowRequest = z.infer<typeof createWorkflowRequestSchema>;
 
@@ -158,6 +195,8 @@ export const updateWorkflowRequestSchema = workspaceIdReq.extend({
       description: z.string().optional(),
       stepIds: z.array(idSchema).optional(),
       tags: z.array(z.string()).optional(),
+      taskSource: z.enum(['local', 'jira']).optional(),
+      jiraDefaultIssueType: z.string().optional(),
     })
     .strict(),
 });
@@ -171,6 +210,9 @@ export const createTaskRequestSchema = workspaceIdReq.extend({
   workflowId: idSchema,
   title: z.string().min(1),
   requirement: z.string().default(''),
+  jiraParentKey: z.string().optional(),
+  jiraChildMode: jiraChildModeSchema.optional(),
+  jiraExplicitChildKeys: z.array(z.string()).optional(),
 });
 export type CreateTaskRequest = z.infer<typeof createTaskRequestSchema>;
 
@@ -182,6 +224,9 @@ export const updateTaskRequestSchema = workspaceIdReq.extend({
       requirement: z.string().optional(),
       status: taskStatusSchema.optional(),
       taskItemIds: z.array(idSchema).optional(),
+      jiraParentKey: z.string().optional(),
+      jiraChildMode: jiraChildModeSchema.optional(),
+      jiraExplicitChildKeys: z.array(z.string()).optional(),
     })
     .strict(),
 });
@@ -195,6 +240,12 @@ export type DeleteTaskRequest = z.infer<typeof deleteTaskRequestSchema>;
 export const decomposeTaskRequestSchema = workspaceIdReq.extend({ taskId: idSchema });
 export type DecomposeTaskRequest = z.infer<typeof decomposeTaskRequestSchema>;
 
+// 지라 → workOS 역방향 status sync — 부모 티켓의 자식 status 를 가져와 TaskItem 에 반영.
+// transition 은 호출하지 않는다(역방향, 무한루프 방지).
+export const refreshJiraTaskStatusRequestSchema = workspaceIdReq.extend({ taskId: idSchema });
+export type RefreshJiraTaskStatusRequest = z.infer<typeof refreshJiraTaskStatusRequestSchema>;
+export type RefreshJiraTaskStatusResponse = { updatedItems: number };
+
 // TaskItem
 export const createTaskItemRequestSchema = workspaceIdReq.extend({
   taskId: idSchema,
@@ -203,6 +254,7 @@ export const createTaskItemRequestSchema = workspaceIdReq.extend({
   description: z.string().default(''),
   prompt: z.string().default(''),
   agentName: z.string().min(1),
+  jiraIssueKey: z.string().optional(),
 });
 export type CreateTaskItemRequest = z.infer<typeof createTaskItemRequestSchema>;
 
@@ -217,6 +269,8 @@ export const updateTaskItemRequestSchema = workspaceIdReq.extend({
       status: taskItemStatusSchema.optional(),
       output: z.string().optional(),
       error: z.string().optional(),
+      jiraIssueKey: z.string().optional(),
+      syncError: z.string().optional().nullable(),
     })
     .strict(),
 });

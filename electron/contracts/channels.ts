@@ -41,6 +41,7 @@ export const CHANNELS = {
     updateTask: 'workOS:updateTask',
     deleteTask: 'workOS:deleteTask',
     decomposeTask: 'workOS:decomposeTask',
+    refreshJiraTaskStatus: 'workOS:refreshJiraTaskStatus',
 
     listTaskItems: 'workOS:listTaskItems',
     createTaskItem: 'workOS:createTaskItem',
@@ -106,6 +107,10 @@ export const CHANNELS = {
     listMyIssues: 'jira:listMyIssues',
     testConnection: 'jira:testConnection',
     getIssueDetail: 'jira:getIssueDetail',
+    createIssue: 'jira:createIssue',
+    listIssueChildren: 'jira:listIssueChildren',
+    getTransitions: 'jira:getTransitions',
+    transitionIssue: 'jira:transitionIssue',
   },
   jiraSnapshot: {
     trigger: 'jiraSnapshot:trigger',

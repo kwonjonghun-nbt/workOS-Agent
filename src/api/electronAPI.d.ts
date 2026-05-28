@@ -87,11 +87,19 @@ import type {
   UpdateSettingsRequest,
 } from './extension/types';
 import type {
+  CreateIssueRequest as JiraCreateIssueRequest,
+  CreateIssueResponse as JiraCreateIssueResponse,
   GetIssueDetailRequest as JiraGetIssueDetailRequest,
   GetIssueDetailResponse as JiraGetIssueDetailResponse,
+  GetTransitionsRequest as JiraGetTransitionsRequest,
+  GetTransitionsResponse as JiraGetTransitionsResponse,
+  ListIssueChildrenRequest as JiraListIssueChildrenRequest,
+  ListIssueChildrenResponse as JiraListIssueChildrenResponse,
   ListMyIssuesRequest,
   ListMyIssuesResponse,
   TestConnectionResponse,
+  TransitionIssueRequest as JiraTransitionIssueRequest,
+  TransitionIssueResponse as JiraTransitionIssueResponse,
 } from './jira/types';
 import type {
   MetaData as JiraSnapshotMeta,
@@ -215,6 +223,7 @@ export type WorkOSApi = {
   updateTask: (req: UpdateTaskRequest) => Promise<Task>;
   deleteTask: (req: DeleteTaskRequest) => Promise<void>;
   decomposeTask: (req: DecomposeTaskRequest) => Promise<TaskItem[]>;
+  refreshJiraTaskStatus: (req: { workspaceId: string; taskId: string }) => Promise<{ updatedItems: number }>;
 
   listTaskItems: (req: ListByWorkspaceRequest) => Promise<TaskItem[]>;
   createTaskItem: (req: CreateTaskItemRequest) => Promise<TaskItem>;
@@ -286,6 +295,10 @@ export type JiraApi = {
   listMyIssues: (req: ListMyIssuesRequest) => Promise<ListMyIssuesResponse>;
   testConnection: () => Promise<TestConnectionResponse>;
   getIssueDetail: (req: JiraGetIssueDetailRequest) => Promise<JiraGetIssueDetailResponse>;
+  createIssue: (req: JiraCreateIssueRequest) => Promise<JiraCreateIssueResponse>;
+  listIssueChildren: (req: JiraListIssueChildrenRequest) => Promise<JiraListIssueChildrenResponse>;
+  getTransitions: (req: JiraGetTransitionsRequest) => Promise<JiraGetTransitionsResponse>;
+  transitionIssue: (req: JiraTransitionIssueRequest) => Promise<JiraTransitionIssueResponse>;
 };
 
 export type JiraSnapshotApi = {

@@ -2,6 +2,9 @@ import { promises as fs } from 'node:fs';
 import { exec, execFile } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { eventBus } from '../infra/event-bus';
+import { CHANNELS } from '../contracts/channels';
+import type { McpToastEvent } from '../contracts/mcp';
 import type {
   CatalogResponse,
   CreateStepRequest,
@@ -19,6 +22,7 @@ import type {
   Step,
   Task,
   TaskItem,
+  TaskItemStatus,
   UpdateStepRequest,
   UpdateTaskItemRequest,
   UpdateTaskRequest,
@@ -26,6 +30,7 @@ import type {
   Workflow,
 } from '../contracts/workOS';
 import { newId } from '../domain/ids';
+import type { TaskSyncPort } from '../domain/task-sync-port';
 import { ApiError } from '../infra/error';
 import { WorkOSRepository } from '../repositories/workOS.repo';
 import type { TerminalService } from './terminal.service';
@@ -50,6 +55,7 @@ export type TaskItemCompletionHook = (
 export class WorkOSService {
   private readonly cache = new Map<string, WorkOSRepository>();
   private completionHook: TaskItemCompletionHook | null = null;
+  private taskSyncPort: TaskSyncPort | null = null;
 
   constructor(
     private readonly cwd: CwdResolver,
@@ -64,6 +70,15 @@ export class WorkOSService {
    */
   setTaskItemCompletionHook(hook: TaskItemCompletionHook | null): void {
     this.completionHook = hook;
+  }
+
+  /**
+   * 외부 작업 추적 시스템(Jira 등) 동기화 포트 주입.
+   * workflow.taskSource !== 'local' 인 경우에만 사용된다.
+   * 순환 의존을 피하기 위해 setter 로 주입한다.
+   */
+  setTaskSyncPort(port: TaskSyncPort | null): void {
+    this.taskSyncPort = port;
   }
 
   private async repo(workspaceId: string): Promise<WorkOSRepository> {
@@ -241,6 +256,8 @@ export class WorkOSService {
       description: req.description ?? '',
       stepIds: req.stepIds ?? [],
       tags: req.tags,
+      taskSource: req.taskSource ?? 'local',
+      jiraDefaultIssueType: req.jiraDefaultIssueType,
       createdAt: now,
       updatedAt: now,
     };
@@ -286,7 +303,26 @@ export class WorkOSService {
     const r = await this.repo(req.workspaceId);
     const wf = await r.readWorkflow(req.workflowId);
     if (!wf) throw new ApiError('NOT_FOUND', `workflow not found: ${req.workflowId}`);
+
+    let jiraParentKey: string | undefined;
+    let jiraParentType: string | undefined;
+    if (wf.taskSource === 'jira') {
+      if (!req.jiraParentKey) {
+        throw new ApiError(
+          'VALIDATION',
+          '지라 기반 워크플로우는 jiraParentKey가 필요합니다.',
+        );
+      }
+      if (!this.taskSyncPort) {
+        throw new ApiError('INTERNAL', 'Task sync port is not wired.');
+      }
+      const detail = await this.taskSyncPort.getParent(req.jiraParentKey);
+      jiraParentKey = detail.key;
+      jiraParentType = detail.issueType;
+    }
+
     const now = Date.now();
+    const isJira = wf.taskSource === 'jira';
     const v: Task = {
       id: newId(),
       workflowId: req.workflowId,
@@ -294,12 +330,85 @@ export class WorkOSService {
       title: req.title.trim(),
       status: 'pending',
       taskItemIds: [],
+      jiraParentKey,
+      jiraParentType,
+      jiraChildMode: isJira ? req.jiraChildMode : undefined,
+      jiraExplicitChildKeys: isJira ? req.jiraExplicitChildKeys : undefined,
       createdAt: now,
       updatedAt: now,
     };
     await r.writeTask(v);
     this.notify.notify(req.workspaceId, ['task']);
     return v;
+  }
+
+  /**
+   * 워크플로 실행 중 새로 만들어진 Jira 자식 티켓을 Task 에 attach.
+   * jiraExplicitChildKeys 끝에 append (중복 제거). mode 가 'all' 이면 다음 sync 시
+   * 무시되지만 attach 자체는 항상 누적해 둔다.
+   */
+  async attachJiraChildKey(
+    workspaceId: string,
+    taskId: string,
+    jiraKey: string,
+  ): Promise<void> {
+    const r = await this.repo(workspaceId);
+    const task = await r.readTask(taskId);
+    if (!task) throw new ApiError('NOT_FOUND', `task not found: ${taskId}`);
+    const existing = task.jiraExplicitChildKeys ?? [];
+    if (existing.includes(jiraKey)) return;
+    const next: Task = {
+      ...task,
+      jiraExplicitChildKeys: [...existing, jiraKey],
+      updatedAt: Date.now(),
+    };
+    await r.writeTask(next);
+    this.notify.notify(workspaceId, ['task']);
+  }
+
+  /** Repo passthrough — control plane uses this to look up parent Task. */
+  async readTask(workspaceId: string, taskId: string): Promise<Task | null> {
+    return (await this.repo(workspaceId)).readTask(taskId);
+  }
+
+  /** 가장 최근에 시작된 running TaskItem 반환. control plane 자동 attach 추론용. */
+  async findRunningTaskItem(workspaceId: string): Promise<TaskItem | null> {
+    const items = await (await this.repo(workspaceId)).listTaskItems();
+    const running = items.filter((i) => i.status === 'running');
+    if (running.length === 0) return null;
+    running.sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0));
+    return running[0] ?? null;
+  }
+
+  /** Jira 모드 Task 의 자식 티켓 status 를 외부에서 가져와 TaskItem 에 역방향 반영. */
+  async refreshJiraTaskStatus(
+    workspaceId: string,
+    taskId: string,
+  ): Promise<{ updatedItems: number }> {
+    if (!this.taskSyncPort) return { updatedItems: 0 };
+    const r = await this.repo(workspaceId);
+    const task = await r.readTask(taskId);
+    if (!task) throw new ApiError('NOT_FOUND', `task not found: ${taskId}`);
+    if (!task.jiraParentKey) return { updatedItems: 0 };
+    const wf = await r.readWorkflow(task.workflowId);
+    if (!wf || wf.taskSource !== 'jira') return { updatedItems: 0 };
+
+    const children = await this.taskSyncPort.listChildren(task.jiraParentKey);
+    const items = await r.listTaskItems();
+    let updated = 0;
+    for (const child of children) {
+      const newStatus = mapJiraStatusToTaskItem(child.status);
+      if (!newStatus) continue;
+      const cur = items.find(
+        (i) => i.taskId === task.id && i.jiraIssueKey === child.key,
+      );
+      if (!cur) continue;
+      if (cur.status === newStatus) continue;
+      await r.writeTaskItem({ ...cur, status: newStatus, updatedAt: Date.now() });
+      updated += 1;
+    }
+    if (updated > 0) this.notify.notify(workspaceId, ['task-item']);
+    return { updatedItems: updated };
   }
 
   async updateTask(req: UpdateTaskRequest): Promise<Task> {
@@ -322,14 +431,50 @@ export class WorkOSService {
     this.notify.notify(workspaceId, ['task', 'task-item']);
   }
 
+  /**
+   * Router — taskSource 에 따라 로컬/외부 분해를 위임. 외부 시그니처 유지.
+   */
   async decomposeTask(workspaceId: string, taskId: string): Promise<TaskItem[]> {
     const r = await this.repo(workspaceId);
     const task = await r.readTask(taskId);
     if (!task) throw new ApiError('NOT_FOUND', `task not found: ${taskId}`);
     const wf = await r.readWorkflow(task.workflowId);
     if (!wf) throw new ApiError('NOT_FOUND', `workflow not found: ${task.workflowId}`);
+    return wf.taskSource === 'jira'
+      ? this.syncFromJiraParent(workspaceId, taskId)
+      : this.decomposeFromWorkflow(workspaceId, taskId);
+  }
 
-    // 기존 TaskItem 정리
+  /**
+   * 공통 후처리 — TaskItem 목록을 Task 에 반영하고 알림.
+   */
+  private async finalizeDecomposition(
+    workspaceId: string,
+    task: Task,
+    created: TaskItem[],
+  ): Promise<TaskItem[]> {
+    const r = await this.repo(workspaceId);
+    const next: Task = {
+      ...task,
+      taskItemIds: created.map((c) => c.id),
+      status: created.length ? 'in_progress' : task.status,
+      updatedAt: Date.now(),
+    };
+    await r.writeTask(next);
+    this.notify.notify(workspaceId, ['task', 'task-item']);
+    return created;
+  }
+
+  /**
+   * 로컬 워크플로 기반 분해 — Step 시퀀스마다 TaskItem 1개.
+   */
+  async decomposeFromWorkflow(workspaceId: string, taskId: string): Promise<TaskItem[]> {
+    const r = await this.repo(workspaceId);
+    const task = await r.readTask(taskId);
+    if (!task) throw new ApiError('NOT_FOUND', `task not found: ${taskId}`);
+    const wf = await r.readWorkflow(task.workflowId);
+    if (!wf) throw new ApiError('NOT_FOUND', `workflow not found: ${task.workflowId}`);
+
     for (const id of task.taskItemIds) await r.deleteTaskItem(id);
 
     const created: TaskItem[] = [];
@@ -354,15 +499,80 @@ export class WorkOSService {
       await r.writeTaskItem(item);
       created.push(item);
     }
-    const next: Task = {
-      ...task,
-      taskItemIds: created.map((c) => c.id),
-      status: created.length ? 'in_progress' : task.status,
-      updatedAt: Date.now(),
-    };
-    await r.writeTask(next);
-    this.notify.notify(workspaceId, ['task', 'task-item']);
-    return created;
+    return this.finalizeDecomposition(workspaceId, task, created);
+  }
+
+  /**
+   * Jira 부모 티켓 기반 분해 — 자식 티켓을 jiraChildMode 에 따라 필터링해 TaskItem 으로 변환.
+   *   mode 미지정/'all' → 모든 자식
+   *   'explicit'        → jiraExplicitChildKeys 에 명시된 키만
+   *   'future-only'     → 아무것도 가져오지 않음 (이후 attach 로 채워짐)
+   */
+  async syncFromJiraParent(workspaceId: string, taskId: string): Promise<TaskItem[]> {
+    const r = await this.repo(workspaceId);
+    const task = await r.readTask(taskId);
+    if (!task) throw new ApiError('NOT_FOUND', `task not found: ${taskId}`);
+    const wf = await r.readWorkflow(task.workflowId);
+    if (!wf) throw new ApiError('NOT_FOUND', `workflow not found: ${task.workflowId}`);
+
+    if (!task.jiraParentKey) {
+      throw new ApiError('VALIDATION', '지라 부모 티켓이 지정되지 않았습니다.');
+    }
+    if (!this.taskSyncPort) {
+      throw new ApiError('INTERNAL', 'Task sync port is not wired.');
+    }
+    const firstStepId = wf.stepIds[0];
+    if (!firstStepId) {
+      throw new ApiError('VALIDATION', '워크플로우에 step이 없습니다.');
+    }
+    const firstStep = await r.readStep(firstStepId);
+    const agentName = firstStep?.agentNames[0] ?? 'general';
+
+    for (const id of task.taskItemIds) await r.deleteTaskItem(id);
+
+    const mode = task.jiraChildMode ?? 'all';
+    let filtered: Array<{ key: string; summary: string; issueType: string; status: string }> = [];
+    if (mode === 'future-only') {
+      filtered = [];
+    } else {
+      const children = await this.taskSyncPort.listChildren(task.jiraParentKey);
+      if (mode === 'explicit') {
+        const allow = task.jiraExplicitChildKeys ?? [];
+        const childKeySet = new Set(children.map((c) => c.key));
+        const missing = allow.filter((k) => !childKeySet.has(k));
+        if (missing.length > 0) {
+          console.warn(
+            `[workOS.service] jiraExplicitChildKeys 에 명시되었으나 실제 children 에 없는 키 (무시): ${missing.join(', ')}`,
+          );
+        }
+        const allowSet = new Set(allow);
+        filtered = children.filter((c) => allowSet.has(c.key));
+      } else {
+        filtered = children;
+      }
+    }
+
+    const now = Date.now();
+    const created: TaskItem[] = [];
+    for (const child of filtered) {
+      const item: TaskItem = {
+        id: newId(),
+        taskId: task.id,
+        stepId: firstStepId,
+        workflowId: wf.id,
+        name: `[${child.key}] ${child.summary}`,
+        description: `Jira ${child.issueType} · status=${child.status}`,
+        agentName,
+        prompt: '',
+        status: 'pending',
+        jiraIssueKey: child.key,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await r.writeTaskItem(item);
+      created.push(item);
+    }
+    return this.finalizeDecomposition(workspaceId, task, created);
   }
 
   // -------- TaskItems --------
@@ -387,6 +597,7 @@ export class WorkOSService {
       agentName: req.agentName,
       prompt: req.prompt ?? '',
       status: 'pending',
+      jiraIssueKey: req.jiraIssueKey,
       createdAt: now,
       updatedAt: now,
     };
@@ -404,9 +615,50 @@ export class WorkOSService {
     const r = await this.repo(req.workspaceId);
     const cur = await r.readTaskItem(req.id);
     if (!cur) throw new ApiError('NOT_FOUND', `task item not found: ${req.id}`);
-    const next: TaskItem = { ...cur, ...req.patch, updatedAt: Date.now() };
+    const statusChanged =
+      req.patch.status !== undefined && req.patch.status !== cur.status;
+    // syncError 는 null 로 명시적 클리어를 허용 — TaskItem 타입은 undefined 만 받으므로 normalize.
+    const { syncError: patchSyncError, ...restPatch } = req.patch;
+    const next: TaskItem = {
+      ...cur,
+      ...restPatch,
+      ...(patchSyncError !== undefined
+        ? { syncError: patchSyncError ?? undefined }
+        : {}),
+      updatedAt: Date.now(),
+    };
     await r.writeTaskItem(next);
     this.notify.notify(req.workspaceId, ['task-item']);
+
+    // Auto-transition the linked external issue when TaskItem status changes.
+    // Non-fatal: failures are logged, syncError is written, and a toast is broadcast.
+    if (statusChanged && next.jiraIssueKey && this.taskSyncPort) {
+      try {
+        await this.taskSyncPort.transitionItem(next.jiraIssueKey, next.status);
+        // 성공 시 syncError 클리어.
+        if (next.syncError !== undefined) {
+          const cleared: TaskItem = { ...next, syncError: undefined, updatedAt: Date.now() };
+          await r.writeTaskItem(cleared);
+          this.notify.notify(req.workspaceId, ['task-item']);
+          return cleared;
+        }
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        console.error('[workOS.service] task sync transition failed (non-fatal):', err);
+        // toast 브로드캐스트
+        const toast: McpToastEvent = {
+          workspaceId: req.workspaceId,
+          level: 'warn',
+          message: `지라 transition 실패: ${next.jiraIssueKey} — ${reason}`,
+        };
+        eventBus.broadcast(CHANNELS.mcpEvents.toast, toast);
+        // syncError 기록
+        const withError: TaskItem = { ...next, syncError: reason, updatedAt: Date.now() };
+        await r.writeTaskItem(withError);
+        this.notify.notify(req.workspaceId, ['task-item']);
+        return withError;
+      }
+    }
     return next;
   }
 
@@ -767,6 +1019,7 @@ export class WorkOSService {
       name: name.trim(),
       description,
       stepIds,
+      taskSource: 'local',
       createdAt: now,
       updatedAt: now,
     };
@@ -921,6 +1174,7 @@ export class WorkOSService {
       description:
         'docs/concept.md §6 의 표준 워크플로 — 자유롭게 편집/복제하여 본인 스타일로 다듬으세요.',
       stepIds,
+      taskSource: 'local',
       createdAt: now,
       updatedAt: now,
     };
@@ -1338,6 +1592,7 @@ export class WorkOSService {
       name,
       description,
       stepIds,
+      taskSource: 'local',
       createdAt: now,
       updatedAt: now,
     };
@@ -1892,6 +2147,29 @@ async function isUntrackedFile(cwd: string, filePath: string): Promise<boolean> 
   } catch {
     return true;
   }
+}
+
+/** Jira status name → TaskItem status. 정규화된 fallback 테이블 — 매핑 없으면 null. */
+const JIRA_STATUS_TO_TASKITEM: Record<string, TaskItemStatus> = {
+  'to do': 'pending',
+  'todo': 'pending',
+  'open': 'pending',
+  'backlog': 'pending',
+  'in progress': 'running',
+  'in review': 'running',
+  'review': 'running',
+  'doing': 'running',
+  'done': 'completed',
+  'closed': 'completed',
+  'resolved': 'completed',
+  'cancelled': 'skipped',
+  'canceled': 'skipped',
+  "won't do": 'failed',
+  'rejected': 'failed',
+};
+
+function mapJiraStatusToTaskItem(jiraStatusName: string): TaskItemStatus | null {
+  return JIRA_STATUS_TO_TASKITEM[jiraStatusName.trim().toLowerCase()] ?? null;
 }
 
 function parsePorcelain(out: string): FileChange[] {

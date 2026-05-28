@@ -16,11 +16,14 @@ export type Workflow = {
   description: string;
   tags?: string[];
   stepIds: string[];
+  taskSource?: 'local' | 'jira';
+  jiraDefaultIssueType?: string;
   createdAt: number;
   updatedAt: number;
 };
 
 export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'archived';
+export type JiraChildMode = 'all' | 'explicit' | 'future-only';
 export type Task = {
   id: string;
   workflowId: string;
@@ -28,6 +31,10 @@ export type Task = {
   title: string;
   status: TaskStatus;
   taskItemIds: string[];
+  jiraParentKey?: string;
+  jiraParentType?: string;
+  jiraChildMode?: JiraChildMode;
+  jiraExplicitChildKeys?: string[];
   createdAt: number;
   updatedAt: number;
 };
@@ -44,11 +51,13 @@ export type TaskItem = {
   agentName: string;
   dependsOn?: string[];
   status: TaskItemStatus;
+  jiraIssueKey?: string;
   sessionId?: string;
   promptFilePath?: string;
   output?: string;
   artifactPath?: string;
   error?: string;
+  syncError?: string;
   createdAt: number;
   updatedAt: number;
   startedAt?: number;
@@ -94,11 +103,13 @@ export type CreateWorkflowRequest = {
   description?: string;
   stepIds?: string[];
   tags?: string[];
+  taskSource?: 'local' | 'jira';
+  jiraDefaultIssueType?: string;
 };
 export type UpdateWorkflowRequest = {
   workspaceId: string;
   id: string;
-  patch: Partial<Pick<Workflow, 'name' | 'description' | 'stepIds' | 'tags'>>;
+  patch: Partial<Pick<Workflow, 'name' | 'description' | 'stepIds' | 'tags' | 'taskSource' | 'jiraDefaultIssueType'>>;
 };
 export type DeleteWorkflowRequest = { workspaceId: string; id: string };
 
@@ -107,11 +118,25 @@ export type CreateTaskRequest = {
   workflowId: string;
   title: string;
   requirement?: string;
+  jiraParentKey?: string;
+  jiraChildMode?: JiraChildMode;
+  jiraExplicitChildKeys?: string[];
 };
 export type UpdateTaskRequest = {
   workspaceId: string;
   id: string;
-  patch: Partial<Pick<Task, 'title' | 'requirement' | 'status' | 'taskItemIds'>>;
+  patch: Partial<
+    Pick<
+      Task,
+      | 'title'
+      | 'requirement'
+      | 'status'
+      | 'taskItemIds'
+      | 'jiraParentKey'
+      | 'jiraChildMode'
+      | 'jiraExplicitChildKeys'
+    >
+  >;
 };
 export type DeleteTaskRequest = { workspaceId: string; id: string };
 export type DecomposeTaskRequest = { workspaceId: string; taskId: string };
@@ -130,7 +155,7 @@ export type UpdateTaskItemRequest = {
   id: string;
   patch: Partial<
     Pick<TaskItem, 'name' | 'description' | 'prompt' | 'agentName' | 'status' | 'output' | 'error'>
-  >;
+  > & { syncError?: string | null };
 };
 export type DeleteTaskItemRequest = { workspaceId: string; id: string };
 export type ExecuteTaskItemRequest = {
