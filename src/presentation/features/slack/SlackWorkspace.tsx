@@ -761,6 +761,12 @@ function TopicsPanel(props: {
   const [search, setSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [days, setDays] = useState<number>(TOPIC_DAYS_DEFAULT);
+  // Per-channel set of thread ts values that are "new" since the last refresh —
+  // either freshly appeared parents or existing parents whose replyCount changed.
+  // Cleared when the user refreshes again or removes the channel.
+  const [newTsByChannel, setNewTsByChannel] = useState<
+    Record<string, Set<string>>
+  >({});
 
   const addM = useMutation(slackMutations.addThreadChannel());
   const refreshM = useMutation(slackMutations.refreshThreadChannel());
@@ -814,6 +820,25 @@ function TopicsPanel(props: {
       {
         onSuccess: (data) => {
           if (data.ok) {
+            // Diff against the pre-update cache so the user can see which
+            // threads appeared or had new replies in this refresh.
+            const prev = qc.getQueryData<
+              | { ok: true; cache: { threads: SlackThreadParent[] } }
+              | { ok: false; error: string }
+              | undefined
+            >(slackKeys.threadChannel(channelId));
+            const prevByTs = new Map<string, SlackThreadParent>();
+            if (prev?.ok) {
+              for (const t of prev.cache.threads) prevByTs.set(t.ts, t);
+            }
+            const next = new Set<string>();
+            for (const t of data.cache.threads) {
+              const before = prevByTs.get(t.ts);
+              if (!before || before.replyCount !== t.replyCount) {
+                next.add(t.ts);
+              }
+            }
+            setNewTsByChannel((m) => ({ ...m, [channelId]: next }));
             qc.setQueryData(slackKeys.threadChannel(channelId), data);
           }
           invalidateAll();
@@ -832,6 +857,11 @@ function TopicsPanel(props: {
         onSuccess: () => {
           qc.removeQueries({ queryKey: slackKeys.threadChannel(channelId) });
           if (activeChannelId === channelId) setActiveChannelId(null);
+          setNewTsByChannel((m) => {
+            if (!(channelId in m)) return m;
+            const { [channelId]: _drop, ...rest } = m;
+            return rest;
+          });
           invalidateAll();
         },
       },
@@ -974,6 +1004,7 @@ function TopicsPanel(props: {
               history={props.history}
               addHistoryAndOpen={props.addHistoryAndOpen}
               openExistingSummary={props.openExistingSummary}
+              newTs={newTsByChannel[activeChannelId]}
             />
           ) : (
             <Card>
@@ -1026,6 +1057,7 @@ function ChannelThreadList(props: {
   history: DigestHistoryItem[];
   addHistoryAndOpen: (item: DigestHistoryItem) => void;
   openExistingSummary: (id: string) => void;
+  newTs: Set<string> | undefined;
 }) {
   const cacheQ = useQuery(slackQueries.loadThreadChannel(props.channelId));
   const [filter, setFilter] = useState<TopicFilter>('bracket');
@@ -1117,6 +1149,7 @@ function ChannelThreadList(props: {
               existingSummary={summaryByTs.get(t.ts) ?? null}
               addHistoryAndOpen={props.addHistoryAndOpen}
               openExistingSummary={props.openExistingSummary}
+              isNew={props.newTs?.has(t.ts) ?? false}
             />
           ))}
         </ul>
@@ -1134,6 +1167,7 @@ function ThreadItem(props: {
   existingSummary: DigestHistoryItem | null;
   addHistoryAndOpen: (item: DigestHistoryItem) => void;
   openExistingSummary: (id: string) => void;
+  isNew: boolean;
 }) {
   const {
     channelId,
@@ -1144,6 +1178,7 @@ function ThreadItem(props: {
     existingSummary,
     addHistoryAndOpen,
     openExistingSummary,
+    isNew,
   } = props;
   const qc = useQueryClient();
   const loadM = useMutation(slackMutations.loadThreadReplies());
@@ -1263,6 +1298,14 @@ function ThreadItem(props: {
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5 truncate font-medium text-ink-100">
               <span className="truncate">{firstLine}</span>
+              {isNew && (
+                <span
+                  className="shrink-0 rounded bg-rose-500/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-rose-200"
+                  title="최근 갱신에서 새로 추가됐거나 답글이 늘어난 스레드"
+                >
+                  NEW
+                </span>
+              )}
               {existingSummary?.result.ok && (
                 <span
                   className="shrink-0 rounded bg-emerald-600/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-emerald-300"
