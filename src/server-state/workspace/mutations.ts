@@ -5,6 +5,7 @@ import type {
   RemoveWorkspaceRequest,
   RenameWorkspaceRequest,
   SetActiveWorkspaceRequest,
+  UpdateWorkspaceSettingsRequest,
   Workspace,
 } from '../../api/workspace';
 import type { OpenDialogResponse } from '../../api/workspace';
@@ -32,10 +33,19 @@ const openDialogOptions = mutationOptions<OpenDialogResponse, Error, void>({
   mutationFn: () => workspaceApi.openDialog(),
 });
 
+const updateSettingsOptions = mutationOptions<
+  Workspace,
+  Error,
+  UpdateWorkspaceSettingsRequest
+>({
+  mutationFn: (req) => workspaceApi.updateSettings(req),
+});
+
 export const workspaceMutations = {
   add: () => addOptions,
   remove: () => removeOptions,
   rename: () => renameOptions,
   setActive: () => setActiveOptions,
+  updateSettings: () => updateSettingsOptions,
   openDialog: () => openDialogOptions,
 };

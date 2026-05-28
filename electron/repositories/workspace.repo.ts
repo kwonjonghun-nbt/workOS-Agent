@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { Workspace } from '../domain/workspace';
-import type { WorkspaceKind } from '../contracts/workspace';
+import type { TaskSource, WorkspaceKind } from '../contracts/workspace';
 
 export interface WorkspaceRepository {
   load(): Promise<Workspace[]>;
@@ -15,6 +15,8 @@ type WorkspaceJson = {
   createdAt: number;
   lastOpenedAt: number;
   kind?: WorkspaceKind;
+  taskSource?: TaskSource;
+  jiraDefaultIssueType?: string;
 };
 
 type FileShape = {
@@ -42,6 +44,8 @@ export class JsonWorkspaceRepository implements WorkspaceRepository {
             w.createdAt,
             w.lastOpenedAt,
             w.kind ?? 'user',
+            w.taskSource ?? 'local',
+            w.jiraDefaultIssueType,
           ),
       );
     } catch (err) {

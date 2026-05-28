@@ -14,14 +14,15 @@ export const stepSchema = z.object({
 });
 export type Step = z.infer<typeof stepSchema>;
 
+// Legacy `taskSource` / `jiraDefaultIssueType` fields on saved workflow JSON
+// are silently dropped here (zod strips unknown keys by default), since these
+// settings now live at the workspace level.
 export const workflowSchema = z.object({
   id: idSchema,
   name: z.string().min(1),
   description: z.string().default(''),
   tags: z.array(z.string()).optional(),
   stepIds: z.array(idSchema),
-  taskSource: z.enum(['local', 'jira']).default('local'),
-  jiraDefaultIssueType: z.string().optional(),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
 });
@@ -182,8 +183,6 @@ export const createWorkflowRequestSchema = workspaceIdReq.extend({
   description: z.string().default(''),
   stepIds: z.array(idSchema).default([]),
   tags: z.array(z.string()).optional(),
-  taskSource: z.enum(['local', 'jira']).optional(),
-  jiraDefaultIssueType: z.string().optional(),
 });
 export type CreateWorkflowRequest = z.infer<typeof createWorkflowRequestSchema>;
 
@@ -195,8 +194,6 @@ export const updateWorkflowRequestSchema = workspaceIdReq.extend({
       description: z.string().optional(),
       stepIds: z.array(idSchema).optional(),
       tags: z.array(z.string()).optional(),
-      taskSource: z.enum(['local', 'jira']).optional(),
-      jiraDefaultIssueType: z.string().optional(),
     })
     .strict(),
 });

@@ -5,7 +5,9 @@ import {
   removeWorkspaceRequestSchema,
   renameWorkspaceRequestSchema,
   setActiveWorkspaceRequestSchema,
+  updateWorkspaceSettingsRequestSchema,
   type OpenDialogResponse,
+  type TaskSource,
   type Workspace as WorkspaceDto,
   type WorkspaceKind,
 } from '../contracts/workspace';
@@ -19,6 +21,8 @@ const toDto = (w: {
   createdAt: number;
   lastOpenedAt: number;
   kind: WorkspaceKind;
+  taskSource: TaskSource;
+  jiraDefaultIssueType?: string;
 }): WorkspaceDto => ({
   id: w.id,
   name: w.name,
@@ -26,6 +30,8 @@ const toDto = (w: {
   createdAt: w.createdAt,
   lastOpenedAt: w.lastOpenedAt,
   kind: w.kind,
+  taskSource: w.taskSource,
+  jiraDefaultIssueType: w.jiraDefaultIssueType,
 });
 
 export function registerWorkspaceHandlers(service: WorkspaceService): void {
@@ -75,6 +81,19 @@ export function registerWorkspaceHandlers(service: WorkspaceService): void {
       throw toApiError(err);
     }
   });
+
+  ipcMain.handle(
+    CHANNELS.workspace.updateSettings,
+    async (_e, raw): Promise<WorkspaceDto> => {
+      try {
+        const { id, patch } = updateWorkspaceSettingsRequestSchema.parse(raw);
+        const ws = await service.updateSettings(id, patch);
+        return toDto(ws);
+      } catch (err) {
+        throw toApiError(err);
+      }
+    },
+  );
 
   ipcMain.handle(CHANNELS.workspace.openDialog, async (): Promise<OpenDialogResponse> => {
     try {

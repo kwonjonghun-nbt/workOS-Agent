@@ -19,6 +19,7 @@ import type {
   RemoveWorkspaceRequest,
   RenameWorkspaceRequest,
   SetActiveWorkspaceRequest,
+  UpdateWorkspaceSettingsRequest,
   Workspace,
   WorkspaceChangedEvent,
 } from './contracts/workspace';
@@ -240,6 +241,8 @@ const workspace = {
     ipcRenderer.invoke(CHANNELS.workspace.rename, req),
   setActive: (req: SetActiveWorkspaceRequest): Promise<void> =>
     ipcRenderer.invoke(CHANNELS.workspace.setActive, req),
+  updateSettings: (req: UpdateWorkspaceSettingsRequest): Promise<Workspace> =>
+    ipcRenderer.invoke(CHANNELS.workspace.updateSettings, req),
   openDialog: (): Promise<OpenDialogResponse> => ipcRenderer.invoke(CHANNELS.workspace.openDialog),
   onChanged: (listener: (event: WorkspaceChangedEvent) => void): (() => void) => {
     const wrapped = (_e: IpcRendererEvent, payload: WorkspaceChangedEvent) => listener(payload);

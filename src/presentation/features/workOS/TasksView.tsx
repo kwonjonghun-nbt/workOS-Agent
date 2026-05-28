@@ -21,6 +21,7 @@ import type { Step, Task, TaskItem } from '../../../server-state/workOS';
 import { jiraMutations, jiraQueries } from '../../../server-state/jira';
 import { useWorkOSStore } from '../../../business/workOS/workOS-store';
 import { useWorkspaceStore } from '../../../business/workspace/workspace-store';
+import { useWorkspaceList } from '../../../business/workspace/use-workspace';
 import { getLocal, setLocal } from '../../../api/local-store';
 import { Split } from '../../shared/Split';
 import { toast } from '../../shared/toast-store';
@@ -292,6 +293,7 @@ function NewTaskModal({
   onCreated: (taskId: string) => void;
 }) {
   const { data: workflows = [] } = useWorkflows(workspaceId);
+  const { data: workspaces = [] } = useWorkspaceList();
   const create = useCreateTask();
   const decompose = useDecomposeTask();
   const aiDecompose = useRequestAiDecompose();
@@ -318,8 +320,10 @@ function NewTaskModal({
     jiraQueries.issueChildren(jiraParentKeyConfirmed),
   );
 
-  const selectedWorkflow = workflows.find((w) => w.id === workflowId);
-  const isJiraWorkflow = (selectedWorkflow?.taskSource ?? 'local') === 'jira';
+  const workspace = workspaces.find((w) => w.id === workspaceId);
+  const workspaceTaskSource = workspace?.taskSource ?? 'local';
+  const workspaceJiraDefaultIssueType = workspace?.jiraDefaultIssueType;
+  const isJiraWorkflow = workspaceTaskSource === 'jira';
 
   useEffect(() => {
     if (!workflowId && workflows[0]) setWorkflowId(workflows[0].id);
@@ -345,7 +349,7 @@ function NewTaskModal({
           resolvedJiraParentKey = jiraParentKey.trim() || undefined;
         } else {
           if (jiraNewSummary.trim()) {
-            const issueType = selectedWorkflow?.jiraDefaultIssueType ?? 'Story';
+            const issueType = workspaceJiraDefaultIssueType ?? 'Story';
             const created_issue = await createJiraIssue.mutateAsync({
               summary: jiraNewSummary.trim(),
               issueType,
@@ -527,7 +531,7 @@ function NewTaskModal({
                   <input
                     value={jiraNewSummary}
                     onChange={(e) => setJiraNewSummary(e.target.value)}
-                    placeholder={`새 ${selectedWorkflow?.jiraDefaultIssueType ?? 'Story'} 제목`}
+                    placeholder={`새 ${workspaceJiraDefaultIssueType ?? 'Story'} 제목`}
                     className="w-full rounded border border-ink-700 bg-ink-950 px-3 py-2 text-sm outline-none focus:border-claude-500"
                   />
                   <textarea
@@ -701,6 +705,9 @@ function TaskDetail({ workspaceId, taskId }: { workspaceId: string; taskId: stri
   const { data: items = [] } = useTaskItems(workspaceId);
   const { data: steps = [] } = useSteps(workspaceId);
   const { data: workflows = [] } = useWorkflows(workspaceId);
+  const { data: workspaces = [] } = useWorkspaceList();
+  const workspace = workspaces.find((w) => w.id === workspaceId);
+  const workspaceTaskSource = workspace?.taskSource ?? 'local';
 
   const task = tasks.find((t) => t.id === taskId);
   const updateTask = useUpdateTask();
@@ -742,7 +749,7 @@ function TaskDetail({ workspaceId, taskId }: { workspaceId: string; taskId: stri
           <StatusBadge status={task.status} />
           <span>{taskItems.length}개의 TaskItem</span>
           <div className="ml-auto flex items-center gap-1">
-            {workflow?.taskSource === 'jira' && task.jiraParentKey ? (
+            {workspaceTaskSource === 'jira' && task.jiraParentKey ? (
               <button
                 type="button"
                 onClick={() =>

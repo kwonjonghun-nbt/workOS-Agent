@@ -3,6 +3,9 @@ import { z } from 'zod';
 export const workspaceKindSchema = z.enum(['user', 'system']);
 export type WorkspaceKind = z.infer<typeof workspaceKindSchema>;
 
+export const taskSourceSchema = z.enum(['local', 'jira']);
+export type TaskSource = z.infer<typeof taskSourceSchema>;
+
 export const workspaceSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -12,8 +15,25 @@ export const workspaceSchema = z.object({
   // Defaults to 'user'. 'system' workspaces are hidden from list() and act as
   // a sandbox for extension-owned terminals/CLI runs.
   kind: workspaceKindSchema.default('user'),
+  // Task source for all workflows under this workspace. Workspace-level
+  // single setting — workflows do not override this.
+  taskSource: taskSourceSchema.default('local'),
+  jiraDefaultIssueType: z.string().optional(),
 });
 export type Workspace = z.infer<typeof workspaceSchema>;
+
+export const updateWorkspaceSettingsRequestSchema = z.object({
+  id: z.string().min(1),
+  patch: z
+    .object({
+      taskSource: taskSourceSchema.optional(),
+      jiraDefaultIssueType: z.string().optional(),
+    })
+    .strict(),
+});
+export type UpdateWorkspaceSettingsRequest = z.infer<
+  typeof updateWorkspaceSettingsRequestSchema
+>;
 
 export const addWorkspaceRequestSchema = z.object({
   path: z.string().min(1),

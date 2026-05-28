@@ -1,4 +1,4 @@
-import type { WorkspaceKind } from '../contracts/workspace';
+import type { TaskSource, WorkspaceKind } from '../contracts/workspace';
 
 export class WorkspaceDomainError extends Error {
   constructor(
@@ -18,6 +18,8 @@ export class Workspace {
     public readonly createdAt: number,
     public lastOpenedAt: number,
     public readonly kind: WorkspaceKind = 'user',
+    public taskSource: TaskSource = 'local',
+    public jiraDefaultIssueType: string | undefined = undefined,
   ) {
     if (!name.trim()) {
       throw new WorkspaceDomainError('INVALID_NAME', 'workspace name must be non-empty');
@@ -41,6 +43,25 @@ export class Workspace {
     this.name = trimmed;
   }
 
+  updateSettings(patch: {
+    taskSource?: TaskSource;
+    jiraDefaultIssueType?: string;
+  }): void {
+    if (this.kind === 'system') {
+      throw new WorkspaceDomainError(
+        'INVALID_OPERATION',
+        'system workspace settings cannot be updated',
+      );
+    }
+    if (patch.taskSource !== undefined) {
+      this.taskSource = patch.taskSource;
+    }
+    if (patch.jiraDefaultIssueType !== undefined) {
+      const trimmed = patch.jiraDefaultIssueType.trim();
+      this.jiraDefaultIssueType = trimmed.length > 0 ? trimmed : undefined;
+    }
+  }
+
   touch(now: number): void {
     this.lastOpenedAt = now;
   }
@@ -53,6 +74,8 @@ export class Workspace {
       createdAt: this.createdAt,
       lastOpenedAt: this.lastOpenedAt,
       kind: this.kind,
+      taskSource: this.taskSource,
+      jiraDefaultIssueType: this.jiraDefaultIssueType,
     };
   }
 }

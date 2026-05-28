@@ -1,5 +1,6 @@
 import type { Workspace } from '../../../server-state/workspace';
 import { useThemeStore } from '../../shared/theme-store';
+import { WorkspaceSettingsButton } from './WorkspaceSettingsButton';
 
 type Props = {
   workspaces: Workspace[];
@@ -20,6 +21,7 @@ export function WorkspaceTabBar({
 }: Props) {
   const byId = new Map(workspaces.map((w) => [w.id, w]));
   const tabs = openIds.map((id) => byId.get(id)).filter((w): w is Workspace => Boolean(w));
+  const activeWorkspace = activeId ? byId.get(activeId) ?? null : null;
 
   return (
     <div className="app-drag flex h-11 shrink-0 items-center gap-1 border-b border-ink-800 bg-ink-900/95 pl-[88px] pr-2 backdrop-blur">
@@ -72,6 +74,7 @@ export function WorkspaceTabBar({
           </button>
         </li>
       </ul>
+      {activeWorkspace && <WorkspaceSettingsButton workspace={activeWorkspace} />}
       <ThemeToggleButton />
     </div>
   );

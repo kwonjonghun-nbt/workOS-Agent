@@ -4,7 +4,10 @@ import path from 'node:path';
 import { Workspace } from '../domain/workspace';
 import type { WorkspaceRepository } from '../repositories/workspace.repo';
 import { ApiError } from '../infra/error';
-import { SYSTEM_DEFAULT_WORKSPACE_ID } from '../contracts/workspace';
+import {
+  SYSTEM_DEFAULT_WORKSPACE_ID,
+  type TaskSource,
+} from '../contracts/workspace';
 
 export interface CascadeDisposer {
   disposeByWorkspace(workspaceId: string): void;
@@ -96,6 +99,23 @@ export class WorkspaceService {
     const ws = list.find((w) => w.id === id);
     if (!ws) throw new ApiError('NOT_FOUND', `workspace not found: ${id}`);
     ws.rename(name);
+    await this.persist();
+    return ws;
+  }
+
+  async read(id: string): Promise<Workspace | null> {
+    const list = await this.ensureLoaded();
+    return list.find((w) => w.id === id) ?? null;
+  }
+
+  async updateSettings(
+    id: string,
+    patch: { taskSource?: TaskSource; jiraDefaultIssueType?: string },
+  ): Promise<Workspace> {
+    const list = await this.ensureLoaded();
+    const ws = list.find((w) => w.id === id);
+    if (!ws) throw new ApiError('NOT_FOUND', `workspace not found: ${id}`);
+    ws.updateSettings(patch);
     await this.persist();
     return ws;
   }

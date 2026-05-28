@@ -46,6 +46,14 @@ export type ProgressEmitter = {
   emit(workspaceId: string, taskItemId: string, message: string): void;
 };
 
+// workspace 단위 taskSource 설정을 조회하기 위한 좁은 포트.
+// WorkspaceService 전체를 의존하지 않고 read 만 의존하면 충분하다.
+export type WorkspaceLookup = {
+  read(
+    workspaceId: string,
+  ): Promise<{ taskSource: 'local' | 'jira'; jiraDefaultIssueType?: string } | null>;
+};
+
 export type TaskItemCompletionHook = (
   workspaceId: string,
   taskItemId: string,
@@ -62,7 +70,16 @@ export class WorkOSService {
     private readonly terminal: TerminalService,
     private readonly notify: ChangeNotifier,
     private readonly progress: ProgressEmitter = { emit: () => {} },
+    private readonly workspaceLookup: WorkspaceLookup = {
+      read: async () => ({ taskSource: 'local' }),
+    },
   ) {}
+
+  /** 워크스페이스 단위 taskSource 설정 조회. 없으면 'local' 로 폴백. */
+  private async resolveTaskSource(workspaceId: string): Promise<'local' | 'jira'> {
+    const ws = await this.workspaceLookup.read(workspaceId);
+    return ws?.taskSource ?? 'local';
+  }
 
   /**
    * 외부 consumer 가 TaskItem 완료를 구독할 수 있는 hook.
@@ -256,8 +273,6 @@ export class WorkOSService {
       description: req.description ?? '',
       stepIds: req.stepIds ?? [],
       tags: req.tags,
-      taskSource: req.taskSource ?? 'local',
-      jiraDefaultIssueType: req.jiraDefaultIssueType,
       createdAt: now,
       updatedAt: now,
     };
@@ -304,9 +319,11 @@ export class WorkOSService {
     const wf = await r.readWorkflow(req.workflowId);
     if (!wf) throw new ApiError('NOT_FOUND', `workflow not found: ${req.workflowId}`);
 
+    const taskSource = await this.resolveTaskSource(req.workspaceId);
+
     let jiraParentKey: string | undefined;
     let jiraParentType: string | undefined;
-    if (wf.taskSource === 'jira') {
+    if (taskSource === 'jira') {
       if (!req.jiraParentKey) {
         throw new ApiError(
           'VALIDATION',
@@ -322,7 +339,7 @@ export class WorkOSService {
     }
 
     const now = Date.now();
-    const isJira = wf.taskSource === 'jira';
+    const isJira = taskSource === 'jira';
     const v: Task = {
       id: newId(),
       workflowId: req.workflowId,
@@ -391,7 +408,9 @@ export class WorkOSService {
     if (!task) throw new ApiError('NOT_FOUND', `task not found: ${taskId}`);
     if (!task.jiraParentKey) return { updatedItems: 0 };
     const wf = await r.readWorkflow(task.workflowId);
-    if (!wf || wf.taskSource !== 'jira') return { updatedItems: 0 };
+    if (!wf) return { updatedItems: 0 };
+    const taskSource = await this.resolveTaskSource(workspaceId);
+    if (taskSource !== 'jira') return { updatedItems: 0 };
 
     const children = await this.taskSyncPort.listChildren(task.jiraParentKey);
     const items = await r.listTaskItems();
@@ -432,7 +451,7 @@ export class WorkOSService {
   }
 
   /**
-   * Router — taskSource 에 따라 로컬/외부 분해를 위임. 외부 시그니처 유지.
+   * Router — 워크스페이스 단위 taskSource 에 따라 로컬/외부 분해를 위임. 외부 시그니처 유지.
    */
   async decomposeTask(workspaceId: string, taskId: string): Promise<TaskItem[]> {
     const r = await this.repo(workspaceId);
@@ -440,7 +459,8 @@ export class WorkOSService {
     if (!task) throw new ApiError('NOT_FOUND', `task not found: ${taskId}`);
     const wf = await r.readWorkflow(task.workflowId);
     if (!wf) throw new ApiError('NOT_FOUND', `workflow not found: ${task.workflowId}`);
-    return wf.taskSource === 'jira'
+    const taskSource = await this.resolveTaskSource(workspaceId);
+    return taskSource === 'jira'
       ? this.syncFromJiraParent(workspaceId, taskId)
       : this.decomposeFromWorkflow(workspaceId, taskId);
   }
@@ -1019,7 +1039,6 @@ export class WorkOSService {
       name: name.trim(),
       description,
       stepIds,
-      taskSource: 'local',
       createdAt: now,
       updatedAt: now,
     };
@@ -1174,7 +1193,6 @@ export class WorkOSService {
       description:
         'docs/concept.md §6 의 표준 워크플로 — 자유롭게 편집/복제하여 본인 스타일로 다듬으세요.',
       stepIds,
-      taskSource: 'local',
       createdAt: now,
       updatedAt: now,
     };
@@ -1592,7 +1610,6 @@ export class WorkOSService {
       name,
       description,
       stepIds,
-      taskSource: 'local',
       createdAt: now,
       updatedAt: now,
     };

@@ -1,4 +1,5 @@
 export type WorkspaceKind = 'user' | 'system';
+export type TaskSource = 'local' | 'jira';
 
 export type Workspace = {
   id: string;
@@ -7,6 +8,16 @@ export type Workspace = {
   createdAt: number;
   lastOpenedAt: number;
   kind: WorkspaceKind;
+  taskSource: TaskSource;
+  jiraDefaultIssueType?: string;
+};
+
+export type UpdateWorkspaceSettingsRequest = {
+  id: string;
+  patch: {
+    taskSource?: TaskSource;
+    jiraDefaultIssueType?: string;
+  };
 };
 
 export type AddWorkspaceRequest = {

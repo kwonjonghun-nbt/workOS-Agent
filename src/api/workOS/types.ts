@@ -16,8 +16,6 @@ export type Workflow = {
   description: string;
   tags?: string[];
   stepIds: string[];
-  taskSource?: 'local' | 'jira';
-  jiraDefaultIssueType?: string;
   createdAt: number;
   updatedAt: number;
 };
@@ -103,13 +101,11 @@ export type CreateWorkflowRequest = {
   description?: string;
   stepIds?: string[];
   tags?: string[];
-  taskSource?: 'local' | 'jira';
-  jiraDefaultIssueType?: string;
 };
 export type UpdateWorkflowRequest = {
   workspaceId: string;
   id: string;
-  patch: Partial<Pick<Workflow, 'name' | 'description' | 'stepIds' | 'tags' | 'taskSource' | 'jiraDefaultIssueType'>>;
+  patch: Partial<Pick<Workflow, 'name' | 'description' | 'stepIds' | 'tags'>>;
 };
 export type DeleteWorkflowRequest = { workspaceId: string; id: string };
 

@@ -4,6 +4,8 @@ import type {
   RemoveWorkspaceRequest,
   RenameWorkspaceRequest,
   SetActiveWorkspaceRequest,
+  TaskSource,
+  UpdateWorkspaceSettingsRequest,
   Workspace,
   WorkspaceChangedEvent,
 } from './types';
@@ -19,16 +21,19 @@ export const workspaceApi = {
   remove: (req: RemoveWorkspaceRequest) => api().remove(req),
   rename: (req: RenameWorkspaceRequest) => api().rename(req),
   setActive: (req: SetActiveWorkspaceRequest) => api().setActive(req),
+  updateSettings: (req: UpdateWorkspaceSettingsRequest) => api().updateSettings(req),
   openDialog: () => api().openDialog(),
   onChanged: (listener: (event: WorkspaceChangedEvent) => void) => api().onChanged(listener),
 };
 
 export type {
   Workspace,
+  TaskSource,
   AddWorkspaceRequest,
   RemoveWorkspaceRequest,
   RenameWorkspaceRequest,
   SetActiveWorkspaceRequest,
+  UpdateWorkspaceSettingsRequest,
   OpenDialogResponse,
   WorkspaceChangedEvent,
 };

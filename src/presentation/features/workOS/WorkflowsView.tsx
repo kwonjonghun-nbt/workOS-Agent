@@ -286,46 +286,6 @@ function WorkflowEditor({ workspaceId, workflowId }: { workspaceId: string; work
           className="mt-2 w-full resize-none rounded border border-ink-850 bg-ink-950 px-2 py-1 text-sm text-ink-300 outline-none focus:border-claude-500"
           rows={2}
         />
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-wide text-ink-400">Task 소스</span>
-          <div className="flex items-center gap-2 text-xs">
-            {(['local', 'jira'] as const).map((src) => (
-              <label key={src} className="flex cursor-pointer items-center gap-1">
-                <input
-                  type="radio"
-                  name={`taskSource-${wf.id}`}
-                  value={src}
-                  checked={(wf.taskSource ?? 'local') === src}
-                  onChange={() =>
-                    void update.mutateAsync({ workspaceId, id: wf.id, patch: { taskSource: src } })
-                  }
-                  className="accent-claude-500"
-                />
-                <span className="text-ink-300">{src === 'local' ? 'Local' : 'Jira'}</span>
-              </label>
-            ))}
-          </div>
-          {(wf.taskSource ?? 'local') === 'jira' && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-ink-500">기본 이슈 타입:</span>
-              <select
-                value={wf.jiraDefaultIssueType ?? 'Story'}
-                onChange={(e) =>
-                  void update.mutateAsync({
-                    workspaceId,
-                    id: wf.id,
-                    patch: { jiraDefaultIssueType: e.target.value },
-                  })
-                }
-                className="rounded border border-ink-700 bg-ink-950 px-2 py-0.5 text-xs outline-none focus:border-claude-500"
-              >
-                {['Epic', 'Story', 'Task', 'Sub-task'].map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
       </div>
       <div
         className={

@@ -193,6 +193,17 @@ export function registerIpcHandlers(): Container {
         eventBus.broadcast(CHANNELS.mcpEvents.progress, payload);
       },
     },
+    {
+      // taskSource 분기를 위한 워크스페이스 설정 조회 포트.
+      read: async (workspaceId) => {
+        const ws = await workspaceService.read(workspaceId);
+        if (!ws) return null;
+        return {
+          taskSource: ws.taskSource,
+          jiraDefaultIssueType: ws.jiraDefaultIssueType,
+        };
+      },
+    },
   );
 
   // -------- MCP control plane (initialized lazily; do not block IPC setup) --

@@ -6,6 +6,7 @@ export const CHANNELS = {
     rename: 'workspace:rename',
     openDialog: 'workspace:openDialog',
     setActive: 'workspace:setActive',
+    updateSettings: 'workspace:updateSettings',
   },
   workspaceEvents: {
     changed: 'workspace:changed',

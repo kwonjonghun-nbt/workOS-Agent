@@ -17,6 +17,7 @@ import type {
   RemoveWorkspaceRequest,
   RenameWorkspaceRequest,
   SetActiveWorkspaceRequest,
+  UpdateWorkspaceSettingsRequest,
   Workspace,
   WorkspaceChangedEvent,
 } from './workspace/types';
@@ -201,6 +202,7 @@ export type WorkspaceApi = {
   remove: (req: RemoveWorkspaceRequest) => Promise<void>;
   rename: (req: RenameWorkspaceRequest) => Promise<Workspace>;
   setActive: (req: SetActiveWorkspaceRequest) => Promise<void>;
+  updateSettings: (req: UpdateWorkspaceSettingsRequest) => Promise<Workspace>;
   openDialog: () => Promise<OpenDialogResponse>;
   onChanged: (listener: (event: WorkspaceChangedEvent) => void) => () => void;
 };
