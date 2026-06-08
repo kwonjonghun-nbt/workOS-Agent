@@ -43,6 +43,10 @@ import type {
   SessionGateResolveResponse,
 } from './contracts/session-gate';
 import type {
+  CreateTicketBranchRequest,
+  CreateTicketBranchResponse,
+} from './contracts/branch';
+import type {
   LocalStoreRemoveRequest,
   LocalStoreSetRequest,
   LocalStoreSnapshot,
@@ -445,6 +449,11 @@ const sessionGate = {
   },
 };
 
+const branch = {
+  createForTicket: (req: CreateTicketBranchRequest): Promise<CreateTicketBranchResponse> =>
+    ipcRenderer.invoke(CHANNELS.branch.createForTicket, req),
+};
+
 const jiraSnapshot = {
   trigger: (req: TriggerSyncRequest): Promise<TriggerSyncResponse> =>
     ipcRenderer.invoke(CHANNELS.jiraSnapshot.trigger, req),
@@ -595,6 +604,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   extension,
   jira,
   sessionGate,
+  branch,
   jiraSnapshot,
   jiraLabels,
   jiraReports,
@@ -617,6 +627,7 @@ export type ElectronAPI = {
   extension: typeof extension;
   jira: typeof jira;
   sessionGate: typeof sessionGate;
+  branch: typeof branch;
   jiraSnapshot: typeof jiraSnapshot;
   jiraLabels: typeof jiraLabels;
   jiraReports: typeof jiraReports;

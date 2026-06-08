@@ -108,6 +108,10 @@ import type {
   SessionGateResolveResponse,
 } from './session-gate/types';
 import type {
+  CreateTicketBranchRequest,
+  CreateTicketBranchResponse,
+} from './branch/types';
+import type {
   MetaData as JiraSnapshotMeta,
   StoredData as JiraSnapshotStored,
   SyncProgressEvent as JiraSyncProgressEvent,
@@ -320,6 +324,10 @@ export type SessionGateApi = {
   onClose: (listener: (event: SessionGateCloseEvent) => void) => () => void;
 };
 
+export type BranchApi = {
+  createForTicket: (req: CreateTicketBranchRequest) => Promise<CreateTicketBranchResponse>;
+};
+
 export type JiraSnapshotApi = {
   trigger: (req: JiraSnapshotTriggerRequest) => Promise<JiraSnapshotTriggerResponse>;
   getLatest: () => Promise<JiraSnapshotStored | null>;
@@ -466,6 +474,7 @@ declare global {
       extension: ExtensionApi;
       jira: JiraApi;
       sessionGate: SessionGateApi;
+      branch: BranchApi;
       jiraSnapshot: JiraSnapshotApi;
       jiraLabels: JiraLabelsApi;
       jiraReports: JiraReportsApi;

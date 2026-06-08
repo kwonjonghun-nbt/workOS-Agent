@@ -44,6 +44,9 @@ import { registerPreferencesHandlers } from './preferences.handler';
 import { registerLocalStoreHandlers } from './local-store.handler';
 import { registerUpdaterHandlers } from './updater.handler';
 import { registerExtensionHandlers } from './extension.handler';
+import { ClaudeCliRepository } from '../repositories/llm-cli.repo';
+import { TicketBranchService } from '../services/ticket-branch.service';
+import { registerBranchHandlers } from './branch.handler';
 import { HttpJiraRepository } from '../repositories/jira.repo';
 import { JsonJiraSnapshotRepository } from '../repositories/jira-snapshot.repo';
 import { JiraService } from '../services/jira.service';
@@ -230,6 +233,13 @@ export function registerIpcHandlers(): Container {
   const jiraRepo = new HttpJiraRepository();
   const jiraService = new JiraService(jiraRepo, extensionService);
   registerJiraHandlers(jiraService);
+
+  // 새 Jira 티켓 생성 직후 feature 브랜치를 만드는 use-case.
+  // 번역은 헤드리스 claude CLI(WORKOS_GATE=off, 게이트 재귀 방지), git 은 워크스페이스 cwd 기준.
+  const ticketBranchService = new TicketBranchService(new ClaudeCliRepository(), {
+    resolveCwd: (id) => workspaceService.resolveCwd(id),
+  });
+  registerBranchHandlers(ticketBranchService);
 
   const githubPrRepo = new HttpGitHubPrRepository();
   const githubPrService = new GitHubPrService(githubPrRepo, extensionService);

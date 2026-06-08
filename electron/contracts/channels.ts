@@ -117,6 +117,9 @@ export const CHANNELS = {
   sessionGate: {
     resolve: 'sessionGate:resolve',
   },
+  branch: {
+    createForTicket: 'branch:createForTicket',
+  },
   sessionGateEvents: {
     open: 'sessionGate:open',
     close: 'sessionGate:close',

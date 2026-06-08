@@ -7,6 +7,8 @@ export type Epic = { key: string; summary: string };
 export type CreateSubmit = {
   projectKey: string;
   issueTypeId: string;
+  /** 선택된 이슈 타입의 이름. 브랜치 생성 시 Epic/Bug 판별에 쓰인다(Jira 생성 요청엔 포함되지 않음). */
+  issueTypeName: string;
   summary: string;
   descriptionMarkdown?: string;
   parentKey: string;

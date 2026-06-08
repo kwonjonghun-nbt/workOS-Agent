@@ -100,6 +100,7 @@ export function CreateStep({
     onSubmit({
       projectKey: data.projectKey,
       issueTypeId: data.issueTypeId,
+      issueTypeName: standardTypes.find((t) => t.id === data.issueTypeId)?.name ?? '',
       summary: data.summary.trim(),
       descriptionMarkdown: data.descriptionMarkdown?.trim() || undefined,
       parentKey: data.epic.key,
