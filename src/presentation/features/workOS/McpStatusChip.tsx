@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { mcpStatusQuery, mcpToolsQuery, mcpSetupMutation } from '../../../server-state/mcp';
 import { toast } from '../../shared/toast-store';
+import { preferencesApi, type SessionGateMode } from '../../../api/preferences';
 
 type Props = { workspaceId: string };
 
@@ -16,6 +17,24 @@ export function McpStatusChip({ workspaceId }: Props) {
     },
   });
   const [open, setOpen] = useState(false);
+
+  // 세션 게이트 설정(전역 preference). 변경 시 즉시 저장하고, 워크스페이스 훅을
+  // 다시 써넣기 위해 MCP 설정을 재실행한다.
+  const [gateEnabled, setGateEnabled] = useState(
+    () => preferencesApi.getSync().sessionGateHook !== false,
+  );
+  const [gateMode, setGateMode] = useState<SessionGateMode>(
+    () => preferencesApi.getSync().sessionGateMode ?? 'always',
+  );
+  const applyGate = (enabled: boolean, mode: SessionGateMode) => {
+    setGateEnabled(enabled);
+    setGateMode(mode);
+    void (async () => {
+      await preferencesApi.setSessionGateHook(enabled);
+      await preferencesApi.setSessionGateMode(mode);
+      setup.mutate({ workspaceId, force: true });
+    })();
+  };
 
   const s = status.data;
   const ready = !!(s?.server.running && s?.workspace.configured && s?.workspace.sessionFresh);
@@ -74,6 +93,48 @@ export function McpStatusChip({ workspaceId }: Props) {
               세션 파일: <code className="text-ink-400">{s?.workspace.sessionPath}</code> {s?.workspace.sessionFresh ? '✓' : '✗'}
             </li>
           </ul>
+          <div className="mb-3 rounded border border-ink-800 bg-ink-850/40 p-2">
+            <label className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-ink-200">
+                claude 세션 시작 시 Jira 게이트
+              </span>
+              <input
+                type="checkbox"
+                checked={gateEnabled}
+                disabled={setup.isPending}
+                onChange={(e) => applyGate(e.target.checked, gateMode)}
+                className="h-3.5 w-3.5 accent-claude-500"
+              />
+            </label>
+            <div className={`mt-2 space-y-1 ${gateEnabled ? '' : 'opacity-40'}`}>
+              <label className="flex items-center gap-2 text-[11px] text-ink-300">
+                <input
+                  type="radio"
+                  name="gateMode"
+                  checked={gateMode === 'always'}
+                  disabled={!gateEnabled || setup.isPending}
+                  onChange={() => applyGate(gateEnabled, 'always')}
+                  className="accent-claude-500"
+                />
+                항상 (실행마다 게이트 — <code className="text-ink-400">WORKOS_GATE=off claude</code> 로 그 실행만 끔)
+              </label>
+              <label className="flex items-center gap-2 text-[11px] text-ink-300">
+                <input
+                  type="radio"
+                  name="gateMode"
+                  checked={gateMode === 'flag'}
+                  disabled={!gateEnabled || setup.isPending}
+                  onChange={() => applyGate(gateEnabled, 'flag')}
+                  className="accent-claude-500"
+                />
+                플래그일 때만 (<code className="text-ink-400">WORKOS_GATE=on claude</code> 로 켠 실행에서만)
+              </label>
+            </div>
+            <p className="mt-1 text-[10px] text-ink-600">
+              변경하면 이 워크스페이스의 SessionStart 훅을 다시 설정합니다.
+            </p>
+          </div>
+
           <div className="mb-1 text-xs font-semibold text-ink-300">노출 도구 ({tools.data?.length ?? 0})</div>
           <ul className="max-h-56 space-y-1 overflow-auto text-xs text-ink-400">
             {tools.data?.map((t) => (

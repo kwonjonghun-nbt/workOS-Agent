@@ -32,7 +32,8 @@ export class ClaudeCliRepository implements LlmCliRepository {
     return new Promise<string>((resolve, reject) => {
       const child = spawn('claude', args, {
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: process.env,
+        // 내부 기능용 헤드리스 실행 — SessionStart Jira 게이트를 끈다.
+        env: { ...process.env, WORKOS_GATE: 'off' },
       });
       const stdoutChunks: Buffer[] = [];
       const stderrChunks: Buffer[] = [];

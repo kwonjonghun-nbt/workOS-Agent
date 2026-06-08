@@ -6,11 +6,17 @@ import {
   type JiraConfig,
 } from '../domain/jira';
 import type {
+  CreateIssueRequest,
+  CreateIssueResponse,
   GetIssueDetailResponse,
+  ListEpicsResponse,
+  ListIssueTypesResponse,
   ListMyIssuesResponse,
+  ListProjectsResponse,
+  SearchIssuesRequest,
   TestConnectionResponse,
 } from '../contracts/jira';
-import { adfToMarkdown } from '../domain/ticket-template';
+import { adfToMarkdown, markdownToAdf } from '../domain/ticket-template';
 import type { JiraRepository } from '../repositories/jira.repo';
 import type { ExtensionService } from './extension.service';
 
@@ -99,6 +105,77 @@ export class JiraService {
       projectKeys: config.projectKeys,
       matchedIssues: raw.length,
     };
+  }
+
+  async listIssueTypes(projectKey?: string): Promise<ListIssueTypesResponse> {
+    const config = await this.requireConfig();
+    const key = projectKey?.trim() || config.projectKeys[0];
+    LOG('listIssueTypes projectKey=', key);
+    const issueTypes = await this.repo.listIssueTypes(config, key);
+    return { projectKey: key, issueTypes };
+  }
+
+  async createIssue(req: CreateIssueRequest): Promise<CreateIssueResponse> {
+    const config = await this.requireConfig();
+    const descriptionAdf =
+      req.descriptionMarkdown && req.descriptionMarkdown.trim() !== ''
+        ? markdownToAdf(req.descriptionMarkdown)
+        : null;
+    LOG('createIssue projectKey=', req.projectKey, 'type=', req.issueTypeId, 'parent=', req.parentKey ?? '');
+    const { key } = await this.repo.createIssue(config, {
+      projectKey: req.projectKey,
+      issueTypeId: req.issueTypeId,
+      summary: req.summary,
+      descriptionAdf,
+      parentKey: req.parentKey,
+    });
+    return { key, url: `${config.baseUrl}/browse/${key}` };
+  }
+
+  async listProjects(): Promise<ListProjectsResponse> {
+    const config = await this.requireConfig();
+    // 설정된 프로젝트 키를 기준으로 하고, 이름은 best-effort 로 보강한다.
+    const nameByKey = new Map<string, string>();
+    try {
+      const all = await this.repo.listProjects(config);
+      for (const p of all) nameByKey.set(p.key, p.name);
+    } catch (err) {
+      LOG('listProjects name enrich failed (using keys):', err);
+    }
+    const projects = config.projectKeys.map((key) => ({
+      key,
+      name: nameByKey.get(key) || key,
+    }));
+    return { projects };
+  }
+
+  async listEpics(projectKey?: string): Promise<ListEpicsResponse> {
+    const config = await this.requireConfig();
+    const key = projectKey?.trim() || config.projectKeys[0];
+    LOG('listEpics projectKey=', key);
+    const epics = await this.repo.listEpics(config, key);
+    return { projectKey: key, epics };
+  }
+
+  async searchIssues(req: SearchIssuesRequest): Promise<ListMyIssuesResponse> {
+    const config = await this.requireConfig();
+    LOG('searchIssues text=', req.text);
+    const { raw } = await this.repo.searchIssues(config, req.text, req.maxResults);
+    const issues = raw.map((r) => mapAtlassianIssue(r, config.baseUrl));
+    return { issues, total: issues.length };
+  }
+
+  /** 확장이 활성화돼 있고 설정이 완전한지 확인 후 JiraConfig 반환. */
+  private async requireConfig(): Promise<JiraConfig> {
+    const enabled = await this.extensionService.isEnabled(JIRA_EXTENSION_ID);
+    if (!enabled) {
+      throw new ApiError(
+        'VALIDATION',
+        'Jira 확장이 비활성화되어 있습니다. Extensions 패널에서 활성화하세요.',
+      );
+    }
+    const settings = await this.extensionService.getSettings(JIRA_EXTENSION_ID);
+    return this.toConfig(settings);
   }
 
   private toConfig(settings: Record<string, string | number | boolean>): JiraConfig {

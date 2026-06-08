@@ -30,7 +30,18 @@ import type {
   SetupMcpRequest,
   SetupMcpResponse,
 } from './contracts/mcp';
-import type { Preferences, SetThemeRequest } from './contracts/preferences';
+import type {
+  Preferences,
+  SetSessionGateHookRequest,
+  SetSessionGateModeRequest,
+  SetThemeRequest,
+} from './contracts/preferences';
+import type {
+  SessionGateCloseEvent,
+  SessionGateOpenEvent,
+  SessionGateResolveRequest,
+  SessionGateResolveResponse,
+} from './contracts/session-gate';
 import type {
   LocalStoreRemoveRequest,
   LocalStoreSetRequest,
@@ -45,10 +56,18 @@ import type {
   UpdateSettingsRequest,
 } from './contracts/extension';
 import type {
+  CreateIssueRequest,
+  CreateIssueResponse,
   GetIssueDetailRequest,
   GetIssueDetailResponse,
+  ListEpicsRequest,
+  ListEpicsResponse,
+  ListIssueTypesRequest,
+  ListIssueTypesResponse,
   ListMyIssuesRequest,
   ListMyIssuesResponse,
+  ListProjectsResponse,
+  SearchIssuesRequest,
   TestConnectionResponse,
 } from './contracts/jira';
 import type {
@@ -348,6 +367,10 @@ const preferences = {
   getSync: (): Preferences => ipcRenderer.sendSync(CHANNELS.preferences.getSync) as Preferences,
   setTheme: (req: SetThemeRequest): Promise<void> =>
     ipcRenderer.invoke(CHANNELS.preferences.setTheme, req),
+  setSessionGateHook: (req: SetSessionGateHookRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.preferences.setSessionGateHook, req),
+  setSessionGateMode: (req: SetSessionGateModeRequest): Promise<void> =>
+    ipcRenderer.invoke(CHANNELS.preferences.setSessionGateMode, req),
 };
 
 const localStore = {
@@ -395,6 +418,31 @@ const jira = {
     ipcRenderer.invoke(CHANNELS.jira.testConnection),
   getIssueDetail: (req: GetIssueDetailRequest): Promise<GetIssueDetailResponse> =>
     ipcRenderer.invoke(CHANNELS.jira.getIssueDetail, req),
+  listIssueTypes: (req: ListIssueTypesRequest): Promise<ListIssueTypesResponse> =>
+    ipcRenderer.invoke(CHANNELS.jira.listIssueTypes, req),
+  createIssue: (req: CreateIssueRequest): Promise<CreateIssueResponse> =>
+    ipcRenderer.invoke(CHANNELS.jira.createIssue, req),
+  listEpics: (req: ListEpicsRequest): Promise<ListEpicsResponse> =>
+    ipcRenderer.invoke(CHANNELS.jira.listEpics, req),
+  searchIssues: (req: SearchIssuesRequest): Promise<ListMyIssuesResponse> =>
+    ipcRenderer.invoke(CHANNELS.jira.searchIssues, req),
+  listProjects: (): Promise<ListProjectsResponse> =>
+    ipcRenderer.invoke(CHANNELS.jira.listProjects),
+};
+
+const sessionGate = {
+  resolve: (req: SessionGateResolveRequest): Promise<SessionGateResolveResponse> =>
+    ipcRenderer.invoke(CHANNELS.sessionGate.resolve, req),
+  onOpen: (listener: (event: SessionGateOpenEvent) => void): (() => void) => {
+    const wrapped = (_e: IpcRendererEvent, payload: SessionGateOpenEvent) => listener(payload);
+    ipcRenderer.on(CHANNELS.sessionGateEvents.open, wrapped);
+    return () => ipcRenderer.off(CHANNELS.sessionGateEvents.open, wrapped);
+  },
+  onClose: (listener: (event: SessionGateCloseEvent) => void): (() => void) => {
+    const wrapped = (_e: IpcRendererEvent, payload: SessionGateCloseEvent) => listener(payload);
+    ipcRenderer.on(CHANNELS.sessionGateEvents.close, wrapped);
+    return () => ipcRenderer.off(CHANNELS.sessionGateEvents.close, wrapped);
+  },
 };
 
 const jiraSnapshot = {
@@ -546,6 +594,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updater,
   extension,
   jira,
+  sessionGate,
   jiraSnapshot,
   jiraLabels,
   jiraReports,
@@ -567,6 +616,7 @@ export type ElectronAPI = {
   updater: typeof updater;
   extension: typeof extension;
   jira: typeof jira;
+  sessionGate: typeof sessionGate;
   jiraSnapshot: typeof jiraSnapshot;
   jiraLabels: typeof jiraLabels;
   jiraReports: typeof jiraReports;

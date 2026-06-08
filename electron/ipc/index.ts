@@ -30,6 +30,10 @@ import { PreferencesService } from '../services/preferences.service';
 import { LocalStoreService } from '../services/local-store.service';
 import { ExtensionService } from '../services/extension.service';
 import { ExtensionLlmRuntime } from '../services/extension-llm-runtime';
+import { SessionGateRuntime } from '../services/session-gate-runtime';
+import { SessionGateService } from '../services/session-gate.service';
+import { registerSessionGateHandlers } from './session-gate.handler';
+import { SESSION_GATE_ROUTE } from '../contracts/session-gate';
 import { eventBus } from '../infra/event-bus';
 import { McpControlPlane } from '../infra/mcp-control-plane';
 import { registerTerminalHandlers } from './terminal.handler';
@@ -86,7 +90,11 @@ export type Container = {
   preferencesService: PreferencesService;
   extensionService: ExtensionService;
   extensionLlmRuntime: ExtensionLlmRuntime;
+  sessionGateRuntime: SessionGateRuntime;
 };
+
+/** 사용자가 모달에서 선택할 때까지 SessionStart 훅을 막아두는 최대 시간(10분). */
+const SESSION_GATE_TIMEOUT_MS = 10 * 60 * 1000;
 
 export function registerIpcHandlers(): Container {
   const ptyRepo = new NodePtyRepository();
@@ -213,7 +221,7 @@ export function registerIpcHandlers(): Container {
   });
   registerWorkOSHandlers(workOSService);
 
-  registerMcpHandlers(mcpService);
+  registerMcpHandlers(mcpService, preferencesService);
   registerPreferencesHandlers(preferencesService);
   registerLocalStoreHandlers(localStoreService);
   registerUpdaterHandlers();
@@ -231,6 +239,21 @@ export function registerIpcHandlers(): Container {
   // pending requestId → Promise so claude's `workos_extension_llm_result`
   // MCP callback can resolve the awaiting call.
   const extensionLlmRuntime = new ExtensionLlmRuntime();
+
+  // Session-Start Jira Gate. The SessionStart hook long-polls the control plane
+  // route; this runtime holds the pending Promise until the renderer modal
+  // resolves the user's create/select/skip choice.
+  const sessionGateRuntime = new SessionGateRuntime();
+  const sessionGateService = new SessionGateService(
+    sessionGateRuntime,
+    {
+      open: (evt) => eventBus.broadcast(CHANNELS.sessionGateEvents.open, evt),
+      close: (requestId) =>
+        eventBus.broadcast(CHANNELS.sessionGateEvents.close, { requestId }),
+    },
+    SESSION_GATE_TIMEOUT_MS,
+  );
+  registerSessionGateHandlers(sessionGateService);
 
   // The macro extension shares the same terminal-AI plumbing as the Jira
   // extension — claude --dangerously-skip-permissions in the extension's
@@ -356,6 +379,17 @@ export function registerIpcHandlers(): Container {
     });
   });
 
+  // Route for the SessionStart hook. Blocks (long-poll) until the renderer
+  // modal resolves; on timeout the promise rejects → the hook fails open.
+  plane.on(SESSION_GATE_ROUTE, async (body, ctx) => {
+    const b = body as { cwd?: unknown; source?: unknown };
+    return sessionGateService.beginGate({
+      workspaceId: ctx.workspaceId,
+      cwd: typeof b.cwd === 'string' ? b.cwd : '',
+      source: typeof b.source === 'string' ? b.source : 'startup',
+    });
+  });
+
   return {
     workspaceService,
     terminalService,
@@ -365,6 +399,7 @@ export function registerIpcHandlers(): Container {
     preferencesService,
     extensionService,
     extensionLlmRuntime,
+    sessionGateRuntime,
   };
 }
 
@@ -386,28 +421,36 @@ async function bootstrapMcp(
     return;
   }
   try {
-    const scriptPath = await installMcpServerScript();
+    const scriptPath = await installBundledScript('workos-mcp-server.mjs');
     mcpService.setScriptPath(scriptPath);
     console.log(`[workos-agent] MCP server script installed at ${scriptPath}`);
   } catch (err) {
     console.error('[workos-agent] MCP script install failed:', err);
   }
+  try {
+    const hookPath = await installBundledScript('session-start-hook.mjs');
+    mcpService.setHookScriptPath(hookPath);
+    console.log(`[workos-agent] SessionStart hook script installed at ${hookPath}`);
+  } catch (err) {
+    console.error('[workos-agent] SessionStart hook script install failed:', err);
+  }
 }
 
 /**
- * Install the standalone MCP server script to a stable path under userData.
- * The script is pre-bundled (esbuild) into `dist-electron/mcp/workos-mcp-server.mjs`
- * with all SDK code inlined, so we just need to copy it out — no import rewriting.
+ * Install a pre-bundled (esbuild) script from `dist-electron/mcp/<name>` to a
+ * stable path under userData. The scripts have all deps inlined, so we just
+ * copy them out — no import rewriting. Used for both the MCP server and the
+ * SessionStart hook.
  */
-async function installMcpServerScript(): Promise<string> {
-  const target = path.join(app.getPath('userData'), 'mcp', 'workos-mcp-server.mjs');
+async function installBundledScript(name: string): Promise<string> {
+  const target = path.join(app.getPath('userData'), 'mcp', name);
   const appPath = app.getAppPath();
   const cwd = process.cwd();
   const candidates = Array.from(
     new Set([
-      path.join(moduleDir, 'mcp', 'workos-mcp-server.mjs'),
-      path.join(appPath, 'dist-electron', 'mcp', 'workos-mcp-server.mjs'),
-      path.join(cwd, 'dist-electron', 'mcp', 'workos-mcp-server.mjs'),
+      path.join(moduleDir, 'mcp', name),
+      path.join(appPath, 'dist-electron', 'mcp', name),
+      path.join(cwd, 'dist-electron', 'mcp', name),
     ]),
   );
   await fs.mkdir(path.dirname(target), { recursive: true });
@@ -424,7 +467,7 @@ async function installMcpServerScript(): Promise<string> {
   }
   if (!src) {
     throw new Error(
-      'workOS-Agent: bundled MCP server script not found in any of:\n  ' + tried.join('\n  '),
+      `workOS-Agent: bundled script "${name}" not found in any of:\n  ` + tried.join('\n  '),
     );
   }
   await fs.writeFile(target, src, 'utf-8');

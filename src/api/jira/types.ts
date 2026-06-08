@@ -41,3 +41,53 @@ export type GetIssueDetailResponse = {
   parentKey: string | null;
   descriptionMarkdown: string;
 };
+
+export type ListIssueTypesRequest = { projectKey?: string };
+
+export type JiraIssueType = {
+  id: string;
+  name: string;
+  subtask: boolean;
+  hierarchyLevel: number | null;
+};
+
+export type ListIssueTypesResponse = {
+  projectKey: string;
+  issueTypes: JiraIssueType[];
+};
+
+export type CreateIssueRequest = {
+  projectKey: string;
+  issueTypeId: string;
+  summary: string;
+  descriptionMarkdown?: string;
+  parentKey?: string;
+};
+
+export type CreateIssueResponse = {
+  key: string;
+  url: string;
+};
+
+export type ListEpicsRequest = { projectKey?: string };
+
+export type JiraEpic = {
+  key: string;
+  summary: string;
+};
+
+export type ListEpicsResponse = {
+  projectKey: string;
+  epics: JiraEpic[];
+};
+
+export type SearchIssuesRequest = { text: string; maxResults?: number };
+
+export type JiraProject = {
+  key: string;
+  name: string;
+};
+
+export type ListProjectsResponse = {
+  projects: JiraProject[];
+};

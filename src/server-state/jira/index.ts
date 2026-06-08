@@ -1,5 +1,5 @@
 export { jiraKeys } from './keys';
-export { jiraQueries } from './queries';
+export { jiraQueries, jiraMutations } from './queries';
 export {
   jiraSnapshotKeys,
   jiraSnapshotQueries,
@@ -15,7 +15,15 @@ export {
   jiraReportQueries,
   jiraReportMutations,
 } from './reports';
-export type { JiraIssue, ListMyIssuesResponse } from '../../api/jira';
+export type {
+  JiraIssue,
+  JiraIssueType,
+  JiraEpic,
+  JiraProject,
+  ListMyIssuesResponse,
+  CreateIssueRequest,
+  CreateIssueResponse,
+} from '../../api/jira';
 export type {
   MetaData,
   NormalizedIssue,

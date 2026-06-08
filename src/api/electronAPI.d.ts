@@ -87,12 +87,26 @@ import type {
   UpdateSettingsRequest,
 } from './extension/types';
 import type {
+  CreateIssueRequest as JiraCreateIssueRequest,
+  CreateIssueResponse as JiraCreateIssueResponse,
   GetIssueDetailRequest as JiraGetIssueDetailRequest,
   GetIssueDetailResponse as JiraGetIssueDetailResponse,
+  ListEpicsRequest as JiraListEpicsRequest,
+  ListEpicsResponse as JiraListEpicsResponse,
+  ListIssueTypesRequest as JiraListIssueTypesRequest,
+  ListIssueTypesResponse as JiraListIssueTypesResponse,
   ListMyIssuesRequest,
   ListMyIssuesResponse,
+  ListProjectsResponse as JiraListProjectsResponse,
+  SearchIssuesRequest as JiraSearchIssuesRequest,
   TestConnectionResponse,
 } from './jira/types';
+import type {
+  SessionGateCloseEvent,
+  SessionGateOpenEvent,
+  SessionGateResolveRequest,
+  SessionGateResolveResponse,
+} from './session-gate/types';
 import type {
   MetaData as JiraSnapshotMeta,
   StoredData as JiraSnapshotStored,
@@ -254,10 +268,17 @@ export type McpApi = {
 };
 
 export type ThemeMode = 'dark' | 'light';
-export type Preferences = { theme?: ThemeMode };
+export type SessionGateMode = 'always' | 'flag';
+export type Preferences = {
+  theme?: ThemeMode;
+  sessionGateHook?: boolean;
+  sessionGateMode?: SessionGateMode;
+};
 export type PreferencesApi = {
   getSync: () => Preferences;
   setTheme: (req: { theme: ThemeMode }) => Promise<void>;
+  setSessionGateHook: (req: { enabled: boolean }) => Promise<void>;
+  setSessionGateMode: (req: { mode: SessionGateMode }) => Promise<void>;
 };
 
 export type LocalStoreSnapshot = Record<string, string>;
@@ -286,6 +307,17 @@ export type JiraApi = {
   listMyIssues: (req: ListMyIssuesRequest) => Promise<ListMyIssuesResponse>;
   testConnection: () => Promise<TestConnectionResponse>;
   getIssueDetail: (req: JiraGetIssueDetailRequest) => Promise<JiraGetIssueDetailResponse>;
+  listIssueTypes: (req: JiraListIssueTypesRequest) => Promise<JiraListIssueTypesResponse>;
+  createIssue: (req: JiraCreateIssueRequest) => Promise<JiraCreateIssueResponse>;
+  listEpics: (req: JiraListEpicsRequest) => Promise<JiraListEpicsResponse>;
+  searchIssues: (req: JiraSearchIssuesRequest) => Promise<ListMyIssuesResponse>;
+  listProjects: () => Promise<JiraListProjectsResponse>;
+};
+
+export type SessionGateApi = {
+  resolve: (req: SessionGateResolveRequest) => Promise<SessionGateResolveResponse>;
+  onOpen: (listener: (event: SessionGateOpenEvent) => void) => () => void;
+  onClose: (listener: (event: SessionGateCloseEvent) => void) => () => void;
 };
 
 export type JiraSnapshotApi = {
@@ -433,6 +465,7 @@ declare global {
       updater: UpdaterApi;
       extension: ExtensionApi;
       jira: JiraApi;
+      sessionGate: SessionGateApi;
       jiraSnapshot: JiraSnapshotApi;
       jiraLabels: JiraLabelsApi;
       jiraReports: JiraReportsApi;

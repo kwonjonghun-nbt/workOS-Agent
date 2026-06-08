@@ -68,6 +68,7 @@ app.whenReady().then(() => {
   const container = registerIpcHandlers();
   app.on('before-quit', () => {
     container.terminalService.disposeAll();
+    container.sessionGateRuntime.cancelAll();
     container.mcpControlPlane.stop().catch(() => {});
   });
   createWindow();

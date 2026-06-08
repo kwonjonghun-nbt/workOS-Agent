@@ -27,11 +27,36 @@ export function parseProjectKeys(raw: string): string[] {
   );
 }
 
-export function buildSearchJql(projectKeys: string[]): string {
+/** `project = "X"` / `project in ("X", "Y")` clause shared by every search. */
+export function buildProjectScopeClause(projectKeys: string[]): string {
   const quoted = projectKeys.map((k) => `"${k.replace(/"/g, '')}"`).join(', ');
-  const projectClause =
-    projectKeys.length === 1 ? `project = ${quoted}` : `project in (${quoted})`;
-  return `${projectClause} AND assignee = currentUser() ORDER BY updated DESC`;
+  return projectKeys.length === 1 ? `project = ${quoted}` : `project in (${quoted})`;
+}
+
+export function buildSearchJql(projectKeys: string[]): string {
+  return `${buildProjectScopeClause(projectKeys)} AND assignee = currentUser() ORDER BY updated DESC`;
+}
+
+/** Free-text search within the configured projects (summary match + key match). */
+export function buildTextSearchJql(projectKeys: string[], text: string): string {
+  const scope = buildProjectScopeClause(projectKeys);
+  const esc = text.replace(/["\\]/g, '').trim();
+  const clauses: string[] = [];
+  if (esc) {
+    clauses.push(`summary ~ "${esc}*"`);
+    // If the text looks like an issue key, match it exactly too.
+    if (/^[A-Za-z][A-Za-z0-9]+-\d+$/.test(esc)) {
+      clauses.push(`key = "${esc.toUpperCase()}"`);
+    }
+  }
+  const where = clauses.length > 0 ? ` AND (${clauses.join(' OR ')})` : '';
+  return `${scope}${where} ORDER BY updated DESC`;
+}
+
+/** Epics in a single project, newest first. */
+export function buildEpicSearchJql(projectKey: string): string {
+  const key = projectKey.replace(/"/g, '');
+  return `project = "${key}" AND issuetype = Epic ORDER BY created DESC`;
 }
 
 /** Map raw Atlassian REST issue object → our narrowed projection. */

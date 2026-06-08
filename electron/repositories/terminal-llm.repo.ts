@@ -108,8 +108,10 @@ export class TerminalLlmRepository implements LlmCliRepository {
     // Send the WorkOS-style one-liner. The slight delay lets the shell finish
     // drawing its prompt so the input doesn't race with prompt drawing.
     const safePath = promptPath.replace(/"/g, '\\"');
+    // WORKOS_GATE=off: workOS 내부 기능용 claude 실행은 SessionStart Jira 게이트를
+    // 건너뛴다(헤드리스 실행이라 모달이 뜨면 멈춤).
     const line =
-      `claude --dangerously-skip-permissions ` +
+      `WORKOS_GATE=off claude --dangerously-skip-permissions ` +
       `"Read the file at ${safePath} and execute the instructions inside as if they were my next request."`;
     setTimeout(() => {
       try {

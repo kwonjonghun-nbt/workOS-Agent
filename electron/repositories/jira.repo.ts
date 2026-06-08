@@ -1,5 +1,5 @@
 import type { AtlassianIssue, JiraConfig } from '../domain/jira';
-import { buildSearchJql } from '../domain/jira';
+import { buildEpicSearchJql, buildSearchJql, buildTextSearchJql } from '../domain/jira';
 import type { AtlassianIssueRaw } from '../domain/jira-issue';
 import { SNAPSHOT_FIELDS } from '../domain/jira-issue';
 import { ApiError } from '../infra/error';
@@ -77,6 +77,35 @@ export interface JiraRepository {
     issueKey: string,
     descriptionAdf: unknown,
   ): Promise<void>;
+  /** 프로젝트에서 생성 가능한 이슈 타입 목록. */
+  listIssueTypes(
+    config: JiraConfig,
+    projectKey: string,
+  ): Promise<Array<{ id: string; name: string; subtask: boolean; hierarchyLevel: number | null }>>;
+  /** 새 이슈 생성 — 반환은 생성된 이슈 키. parentKey 가 있으면 상위 에픽에 연결. */
+  createIssue(
+    config: JiraConfig,
+    input: {
+      projectKey: string;
+      issueTypeId: string;
+      summary: string;
+      descriptionAdf: unknown;
+      parentKey?: string;
+    },
+  ): Promise<{ key: string }>;
+  /** 접근 가능한 프로젝트 목록(키 + 이름). */
+  listProjects(config: JiraConfig): Promise<Array<{ key: string; name: string }>>;
+  /** 프로젝트의 에픽 목록(키 + 요약). */
+  listEpics(
+    config: JiraConfig,
+    projectKey: string,
+  ): Promise<Array<{ key: string; summary: string }>>;
+  /** 자유 텍스트로 이슈 검색(설정된 프로젝트 범위). */
+  searchIssues(
+    config: JiraConfig,
+    text: string,
+    maxResults: number,
+  ): Promise<{ raw: AtlassianIssue[] }>;
 }
 
 const LOG = (...args: unknown[]) => console.log('[jira.repo]', ...args);
@@ -309,6 +338,135 @@ export class HttpJiraRepository implements JiraRepository {
       method: 'PUT',
       body: JSON.stringify(body),
     });
+  }
+
+  async listIssueTypes(
+    config: JiraConfig,
+    projectKey: string,
+  ): Promise<Array<{ id: string; name: string; subtask: boolean; hierarchyLevel: number | null }>> {
+    // Project-scoped createmeta — modern endpoint. Response: { values: [...] }.
+    const url = `${config.baseUrl}/rest/api/3/issue/createmeta/${encodeURIComponent(
+      projectKey,
+    )}/issuetypes`;
+    LOG('GET', url);
+    const res = await this.request(config, url, { method: 'GET' });
+    const json = (await res.json()) as {
+      values?: Array<{ id?: string; name?: string; subtask?: boolean; hierarchyLevel?: number }>;
+      issueTypes?: Array<{ id?: string; name?: string; subtask?: boolean; hierarchyLevel?: number }>;
+    };
+    const list = json.values ?? json.issueTypes ?? [];
+    const types = list
+      .filter((t) => t.subtask !== true)
+      .map((t) => ({
+        id: String(t.id ?? ''),
+        name: String(t.name ?? ''),
+        subtask: Boolean(t.subtask),
+        hierarchyLevel: typeof t.hierarchyLevel === 'number' ? t.hierarchyLevel : null,
+      }))
+      .filter((t) => t.id !== '' && t.name !== '');
+    LOG('listIssueTypes ok:', types.length, 'type(s) for', projectKey, types.map((t) => `${t.name}(h=${t.hierarchyLevel})`).join(', '));
+    return types;
+  }
+
+  async createIssue(
+    config: JiraConfig,
+    input: {
+      projectKey: string;
+      issueTypeId: string;
+      summary: string;
+      descriptionAdf: unknown;
+      parentKey?: string;
+    },
+  ): Promise<{ key: string }> {
+    const url = `${config.baseUrl}/rest/api/3/issue`;
+    const fields: Record<string, unknown> = {
+      project: { key: input.projectKey },
+      issuetype: { id: input.issueTypeId },
+      summary: input.summary,
+    };
+    if (input.descriptionAdf) {
+      fields.description = input.descriptionAdf;
+    }
+    if (input.parentKey) {
+      fields.parent = { key: input.parentKey };
+    }
+    LOG('POST (create issue)', input.projectKey, 'type=', input.issueTypeId, 'parent=', input.parentKey ?? '(none)');
+    const res = await this.request(config, url, {
+      method: 'POST',
+      body: JSON.stringify({ fields }),
+    });
+    const json = (await res.json()) as { key?: string };
+    const key = String(json.key ?? '');
+    if (key === '') {
+      throw new ApiError('INTERNAL', 'Jira 이슈 생성 응답에 key 가 없습니다.');
+    }
+    LOG('createIssue ok:', key);
+    return { key };
+  }
+
+  async listProjects(
+    config: JiraConfig,
+  ): Promise<Array<{ key: string; name: string }>> {
+    const url = `${config.baseUrl}/rest/api/3/project/search?maxResults=200`;
+    LOG('GET', url);
+    const res = await this.request(config, url, { method: 'GET' });
+    const json = (await res.json()) as {
+      values?: Array<{ key?: string; name?: string }>;
+    };
+    const projects = (json.values ?? [])
+      .map((p) => ({ key: String(p.key ?? ''), name: String(p.name ?? '') }))
+      .filter((p) => p.key !== '');
+    LOG('listProjects ok:', projects.length, 'project(s)');
+    return projects;
+  }
+
+  async listEpics(
+    config: JiraConfig,
+    projectKey: string,
+  ): Promise<Array<{ key: string; summary: string }>> {
+    const url = `${config.baseUrl}/rest/api/3/search/jql`;
+    const jql = buildEpicSearchJql(projectKey);
+    const body = { jql, maxResults: 100, fields: ['summary'] };
+    LOG('listEpics jql=', jql);
+    const res = await this.request(config, url, { method: 'POST', body: JSON.stringify(body) });
+    const json = (await res.json()) as {
+      issues?: Array<{ key?: string; fields?: { summary?: string } }>;
+    };
+    const epics = (json.issues ?? []).map((i) => ({
+      key: String(i.key ?? ''),
+      summary: String(i.fields?.summary ?? ''),
+    }));
+    LOG('listEpics ok:', epics.length, 'epic(s) for', projectKey);
+    return epics;
+  }
+
+  async searchIssues(
+    config: JiraConfig,
+    text: string,
+    maxResults: number,
+  ): Promise<{ raw: AtlassianIssue[] }> {
+    const url = `${config.baseUrl}/rest/api/3/search/jql`;
+    const jql = buildTextSearchJql(config.projectKeys, text);
+    const body = {
+      jql,
+      maxResults,
+      fields: [
+        'summary',
+        'status',
+        'priority',
+        'issuetype',
+        'assignee',
+        'reporter',
+        'created',
+        'updated',
+      ],
+    };
+    LOG('searchIssues jql=', jql);
+    const res = await this.request(config, url, { method: 'POST', body: JSON.stringify(body) });
+    const json = (await res.json()) as { issues?: AtlassianIssue[] };
+    const issues = Array.isArray(json.issues) ? json.issues : [];
+    LOG('searchIssues ok:', issues.length, 'issue(s)');
+    return { raw: issues };
   }
 
   async getMyself(config: JiraConfig): Promise<JiraMyself> {

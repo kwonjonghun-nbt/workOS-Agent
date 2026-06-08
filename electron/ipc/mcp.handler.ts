@@ -10,8 +10,12 @@ import {
 } from '../contracts/mcp';
 import { toApiError } from '../infra/error';
 import type { McpService } from '../services/mcp.service';
+import type { PreferencesService } from '../services/preferences.service';
 
-export function registerMcpHandlers(svc: McpService): void {
+export function registerMcpHandlers(
+  svc: McpService,
+  preferences: PreferencesService,
+): void {
   ipcMain.handle(CHANNELS.mcp.status, async (_e, raw) => {
     try {
       const { workspaceId } = mcpStatusRequestSchema.parse(raw);
@@ -28,7 +32,10 @@ export function registerMcpHandlers(svc: McpService): void {
   ipcMain.handle(CHANNELS.mcp.setup, async (_e, raw): Promise<SetupMcpResponse> => {
     try {
       const { workspaceId, force } = setupMcpRequestSchema.parse(raw);
-      return await svc.setup(workspaceId, force);
+      return await svc.setup(workspaceId, force, {
+        enabled: preferences.isSessionGateEnabled(),
+        mode: preferences.getSessionGateMode(),
+      });
     } catch (err) {
       throw toApiError(err);
     }

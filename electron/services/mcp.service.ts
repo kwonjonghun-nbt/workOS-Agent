@@ -13,9 +13,31 @@ const SERVER_NAME = 'workos-agent';
 const SESSION_REL = path.join('.claude', 'workOS', '.mcp-session.json');
 const MCP_CONFIG_REL = '.mcp.json';
 const GITIGNORE_REL = path.join('.claude', 'workOS', '.gitignore');
+/** Per-user Claude Code settings where we install the SessionStart hook. */
+const CLAUDE_SETTINGS_REL = path.join('.claude', 'settings.local.json');
+/** Filename used to identify our SessionStart hook entry for idempotent add/remove. */
+const HOOK_SCRIPT_NAME = 'session-start-hook.mjs';
+/** Claude SessionStart hook timeout (seconds) — matches the control plane long-poll. */
+const HOOK_TIMEOUT_SEC = 600;
+
+export type SessionGateSetup = {
+  /**
+   * Install the SessionStart Jira gate hook into this cwd's settings.local.json.
+   * MUST be false for extension cwds (their headless `claude` AI runs would
+   * deadlock on the blocking modal). Only user workspaces pass true.
+   */
+  enabled: boolean;
+  /** Trigger mode baked into the hook command (`always` | `flag`). */
+  mode?: 'always' | 'flag';
+};
+
+export type SetupAtOptions = {
+  sessionGate?: SessionGateSetup;
+};
 
 export class McpService {
   private scriptPath: string;
+  private hookScriptPath = '';
 
   constructor(
     private readonly cwd: CwdResolver,
@@ -27,6 +49,10 @@ export class McpService {
 
   setScriptPath(p: string): void {
     this.scriptPath = p;
+  }
+
+  setHookScriptPath(p: string): void {
+    this.hookScriptPath = p;
   }
 
   /** Wait briefly until the control plane is up and the script path is set. */
@@ -86,9 +112,13 @@ export class McpService {
    * session sidecar with current port+token+workspaceId, and adds a
    * .gitignore entry so the sidecar is not committed.
    */
-  async setup(workspaceId: string, force: boolean): Promise<SetupMcpResponse> {
+  async setup(
+    workspaceId: string,
+    force: boolean,
+    sessionGate: SessionGateSetup = { enabled: true, mode: 'always' },
+  ): Promise<SetupMcpResponse> {
     const root = await this.cwd.resolveCwd(workspaceId);
-    const actions = await this.setupAt(root, workspaceId, force);
+    const actions = await this.setupAt(root, workspaceId, force, { sessionGate });
     return { status: await this.workspaceStatus(workspaceId), actions };
   }
 
@@ -101,7 +131,12 @@ export class McpService {
    * receives as `x-workos-workspace` on each tool call. For extension cwds
    * this should be the system-default workspace id.
    */
-  async setupAt(cwd: string, workspaceId: string, force: boolean): Promise<string[]> {
+  async setupAt(
+    cwd: string,
+    workspaceId: string,
+    force: boolean,
+    opts: SetupAtOptions = {},
+  ): Promise<string[]> {
     const configPath = path.join(cwd, MCP_CONFIG_REL);
     const sessionPath = path.join(cwd, SESSION_REL);
     const actions: string[] = [];
@@ -170,7 +205,82 @@ export class McpService {
       // best-effort
     }
 
+    // 4) SessionStart Jira gate hook in .claude/settings.local.json
+    try {
+      const enabled = opts.sessionGate?.enabled === true && this.hookScriptPath !== '';
+      const mode = opts.sessionGate?.mode ?? 'always';
+      const action = await this.syncSessionGateHook(cwd, enabled, mode);
+      if (action) actions.push(action);
+    } catch (err) {
+      // best-effort — gate hook is non-critical; never block MCP setup.
+      actions.push(`session gate hook skipped: ${(err as Error).message}`);
+    }
+
     return actions;
+  }
+
+  /**
+   * Add or remove our SessionStart hook entry in `<cwd>/.claude/settings.local.json`.
+   * Idempotent: identified by the hook command containing {@link HOOK_SCRIPT_NAME}.
+   * Other hooks/settings in the file are preserved. `mode` is baked into the
+   * command as `--mode=<mode>` so the hook knows its trigger semantics.
+   */
+  private async syncSessionGateHook(
+    cwd: string,
+    enabled: boolean,
+    mode: 'always' | 'flag',
+  ): Promise<string | null> {
+    const settingsPath = path.join(cwd, CLAUDE_SETTINGS_REL);
+    const settings = await readJsonOrEmpty(settingsPath);
+
+    const hooks =
+      typeof settings.hooks === 'object' && settings.hooks !== null
+        ? (settings.hooks as Record<string, unknown>)
+        : {};
+    const sessionStart = Array.isArray(hooks.SessionStart)
+      ? (hooks.SessionStart as Array<Record<string, unknown>>)
+      : [];
+
+    const isOurs = (entry: Record<string, unknown>): boolean => {
+      const inner = Array.isArray(entry.hooks) ? entry.hooks : [];
+      return inner.some(
+        (h) =>
+          h &&
+          typeof h === 'object' &&
+          typeof (h as { command?: unknown }).command === 'string' &&
+          ((h as { command: string }).command).includes(HOOK_SCRIPT_NAME),
+      );
+    };
+
+    const others = sessionStart.filter((e) => !isOurs(e));
+    const hadOurs = others.length !== sessionStart.length;
+
+    if (!enabled) {
+      if (!hadOurs) return null; // nothing to remove
+      if (others.length > 0) hooks.SessionStart = others;
+      else delete hooks.SessionStart;
+      if (Object.keys(hooks).length > 0) settings.hooks = hooks;
+      else delete settings.hooks;
+      await writeJsonAtomic(settingsPath, settings);
+      return `removed SessionStart gate hook from ${CLAUDE_SETTINGS_REL}`;
+    }
+
+    const desired = {
+      matcher: 'startup',
+      hooks: [
+        {
+          type: 'command',
+          command: `node ${JSON.stringify(this.hookScriptPath)} --mode=${mode}`,
+          timeout: HOOK_TIMEOUT_SEC,
+        },
+      ],
+    };
+    hooks.SessionStart = [...others, desired];
+    settings.hooks = hooks;
+    await writeJsonAtomic(settingsPath, settings);
+    return hadOurs
+      ? `updated SessionStart gate hook in ${CLAUDE_SETTINGS_REL}`
+      : `installed SessionStart gate hook in ${CLAUDE_SETTINGS_REL}`;
   }
 
   isReady(): boolean {

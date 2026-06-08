@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useWorkOSSync } from '../../../business/workOS/use-workOS';
 import { useWorkOSStore } from '../../../business/workOS/workOS-store';
 import { useHotkey } from '../../shared/use-hotkeys';
-import { WorkflowsView } from './WorkflowsView';
 import { TasksView } from './TasksView';
 import { DiffView } from './DiffView';
 import { HelpOverlay } from './HelpOverlay';
@@ -21,7 +20,6 @@ export function WorkOSShell({ workspaceId, terminalOpen, onToggleTerminal }: Pro
   const [helpOpen, setHelpOpen] = useState(false);
 
   useHotkey('mod+1', () => setView(workspaceId, 'tasks'), [workspaceId]);
-  useHotkey('mod+2', () => setView(workspaceId, 'workflows'), [workspaceId]);
   useHotkey('mod+3', () => setView(workspaceId, 'diff'), [workspaceId]);
   useHotkey('mod+j', () => onToggleTerminal(), [onToggleTerminal]);
   useHotkey('shift+/', () => setHelpOpen((x) => !x));
@@ -35,12 +33,6 @@ export function WorkOSShell({ workspaceId, terminalOpen, onToggleTerminal }: Pro
             shortcut="⌘1"
             active={view === 'tasks'}
             onClick={() => setView(workspaceId, 'tasks')}
-          />
-          <ViewTab
-            label="워크플로"
-            shortcut="⌘2"
-            active={view === 'workflows'}
-            onClick={() => setView(workspaceId, 'workflows')}
           />
           <ViewTab
             label="Diff & 커밋"
@@ -72,9 +64,11 @@ export function WorkOSShell({ workspaceId, terminalOpen, onToggleTerminal }: Pro
         </div>
       </header>
       <div className="min-h-0 flex-1 overflow-hidden bg-ink-900">
-        {view === 'tasks' && <TasksView workspaceId={workspaceId} />}
-        {view === 'workflows' && <WorkflowsView workspaceId={workspaceId} />}
-        {view === 'diff' && <DiffView workspaceId={workspaceId} />}
+        {view === 'diff' ? (
+          <DiffView workspaceId={workspaceId} />
+        ) : (
+          <TasksView workspaceId={workspaceId} />
+        )}
       </div>
       {helpOpen && <HelpOverlay onClose={() => setHelpOpen(false)} />}
     </div>

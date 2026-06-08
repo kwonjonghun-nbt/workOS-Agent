@@ -24,7 +24,7 @@ export function ActivityBar() {
     {
       key: HOME_KEY,
       icon: '⌂',
-      title: '홈 — 워크플로우 보기',
+      title: '홈',
     },
     {
       key: BUILTIN_KEY,

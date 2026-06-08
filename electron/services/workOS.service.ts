@@ -452,7 +452,7 @@ export class WorkOSService {
     // claude CLI 가 없을 수도 있으므로 fallback 메시지 함께 출력.
     // 명령은 1줄로 — 파일 경로만 따옴표로 감싸 안전 전달.
     const safePath = promptFilePath.replace(/"/g, '\\"');
-    const line = `claude --dangerously-skip-permissions "Read the file at ${safePath} and execute the instructions inside as if they were my next request."`;
+    const line = `WORKOS_GATE=off claude --dangerously-skip-permissions "Read the file at ${safePath} and execute the instructions inside as if they were my next request."`;
     // 약간의 지연으로 셸 prompt 가 뜨도록 한다.
     setTimeout(() => {
       try {
@@ -1017,7 +1017,7 @@ export class WorkOSService {
       // ignore
     }
     const safePath = promptFilePath.replace(/"/g, '\\"');
-    const line = `claude --dangerously-skip-permissions "Read the file at ${safePath} and execute the instructions inside as if they were my next request."`;
+    const line = `WORKOS_GATE=off claude --dangerously-skip-permissions "Read the file at ${safePath} and execute the instructions inside as if they were my next request."`;
     setTimeout(() => {
       try {
         this.terminal.write(sessionId, `${line}\n`);
@@ -1225,7 +1225,7 @@ export class WorkOSService {
       // ignore
     }
     const safePath = promptFilePath.replace(/"/g, '\\"');
-    const line = `claude --dangerously-skip-permissions "Read the file at ${safePath} and execute the instructions inside as if they were my next request."`;
+    const line = `WORKOS_GATE=off claude --dangerously-skip-permissions "Read the file at ${safePath} and execute the instructions inside as if they were my next request."`;
     setTimeout(() => {
       try {
         this.terminal.write(sessionId, `${line}\n`);
@@ -1497,7 +1497,7 @@ export class WorkOSService {
       // ignore
     }
     const safePath = promptFilePath.replace(/"/g, '\\"');
-    const line = `claude --dangerously-skip-permissions "Read the file at ${safePath} and execute the instructions inside as if they were my next request."`;
+    const line = `WORKOS_GATE=off claude --dangerously-skip-permissions "Read the file at ${safePath} and execute the instructions inside as if they were my next request."`;
     setTimeout(() => {
       try {
         this.terminal.write(sessionId, `${line}\n`);

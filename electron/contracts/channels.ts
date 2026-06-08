@@ -79,6 +79,8 @@ export const CHANNELS = {
   preferences: {
     getSync: 'preferences:getSync',
     setTheme: 'preferences:setTheme',
+    setSessionGateHook: 'preferences:setSessionGateHook',
+    setSessionGateMode: 'preferences:setSessionGateMode',
   },
   localStore: {
     getAllSync: 'localStore:getAllSync',
@@ -106,6 +108,18 @@ export const CHANNELS = {
     listMyIssues: 'jira:listMyIssues',
     testConnection: 'jira:testConnection',
     getIssueDetail: 'jira:getIssueDetail',
+    listIssueTypes: 'jira:listIssueTypes',
+    createIssue: 'jira:createIssue',
+    listEpics: 'jira:listEpics',
+    searchIssues: 'jira:searchIssues',
+    listProjects: 'jira:listProjects',
+  },
+  sessionGate: {
+    resolve: 'sessionGate:resolve',
+  },
+  sessionGateEvents: {
+    open: 'sessionGate:open',
+    close: 'sessionGate:close',
   },
   jiraSnapshot: {
     trigger: 'jiraSnapshot:trigger',
