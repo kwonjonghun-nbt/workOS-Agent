@@ -1,15 +1,31 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
 import { jiraQueries } from '../../../../server-state/jira';
 import { Field } from '../components/Field';
 import { Footer } from '../components/Footer';
 import { Reveal } from '../components/Reveal';
 import { EpicPicker } from '../components/EpicPicker';
-import { isEpicType, type CreateSubmit, type Epic } from '../types';
+import { isEpicType, type CreateSubmit } from '../types';
+
+// 에픽(parentKey)은 커스텀 picker 라 Epic 객체를 폼 값으로 들고, 제출 시 key 만 뽑는다.
+// nullable 로 두고(필수 검증은 submit 에서 setError), refine 으로 타입을 좁히지 않는다
+// — 좁히면 z.input ≠ z.output 이 되어 RHF defaultValues 타입과 충돌한다.
+const createSchema = z.object({
+  projectKey: z.string().min(1, '프로젝트를 선택하세요'),
+  epic: z.object({ key: z.string(), summary: z.string() }).nullable(),
+  issueTypeId: z.string().min(1, '이슈 타입을 선택하세요'),
+  summary: z.string().trim().min(1, '요약을 입력하세요').max(255),
+  descriptionMarkdown: z.string().optional(),
+});
+type CreateFormValues = z.infer<typeof createSchema>;
 
 /**
- * "새 Jira 티켓 생성" 스텝. 프로젝트→에픽→이슈타입→요약→설명 순으로 순차 공개되고,
- * 에픽 선택은 {@link EpicPicker} 에 위임한다. 폼 상태는 순수 React state.
+ * "새 Jira 티켓 생성" 스텝. react-hook-form + zod 로 폼을 관리하고, 에픽은
+ * {@link EpicPicker}(컨트롤드)를 Controller 로 연결한다. 프로젝트→에픽→이슈타입→
+ * 요약→설명 순으로 순차 공개된다.
  */
 export function CreateStep({
   submitting,
@@ -22,20 +38,37 @@ export function CreateStep({
   onBack: () => void;
   onSubmit: (form: CreateSubmit) => void;
 }) {
-  const [projectKey, setProjectKey] = useState('');
-  const [selectedEpic, setSelectedEpic] = useState<Epic | null>(null);
-  const [issueTypeId, setIssueTypeId] = useState('');
-  const [summary, setSummary] = useState('');
-  const [description, setDescription] = useState('');
-  const [attempted, setAttempted] = useState(false);
+  const {
+    register,
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    setError,
+    formState: { errors },
+  } = useForm<CreateFormValues>({
+    resolver: zodResolver(createSchema),
+    defaultValues: {
+      projectKey: '',
+      epic: null,
+      issueTypeId: '',
+      summary: '',
+      descriptionMarkdown: '',
+    },
+  });
+
+  const projectKey = watch('projectKey');
+  const epic = watch('epic');
+  const issueTypeId = watch('issueTypeId');
+  const summary = watch('summary');
 
   const projectsQuery = useQuery(jiraQueries.projects());
   const typesQuery = useQuery(jiraQueries.issueTypes(projectKey));
 
-  // 기본 프로젝트 = 설정된 첫 프로젝트
+  // 기본 프로젝트 = 설정된 첫 프로젝트(프로그램적 setValue 라 onChange 리셋은 안 탄다)
   useEffect(() => {
     const projects = projectsQuery.data?.projects ?? [];
-    if (!projectKey && projects.length > 0) setProjectKey(projects[0].key);
+    if (!projectKey && projects.length > 0) setValue('projectKey', projects[0].key);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectsQuery.data]);
 
@@ -48,43 +81,42 @@ export function CreateStep({
   // 기본 이슈 타입 = 첫 비에픽 타입(현재 선택이 목록에 없으면 교체)
   useEffect(() => {
     if (standardTypes.length === 0) return;
-    setIssueTypeId((cur) => (standardTypes.some((t) => t.id === cur) ? cur : standardTypes[0].id));
+    const cur = watch('issueTypeId');
+    if (!standardTypes.some((t) => t.id === cur)) setValue('issueTypeId', standardTypes[0].id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typesQuery.data]);
 
-  // 프로젝트 변경 시 하위 선택 초기화(EpicPicker 는 key={projectKey} 로 함께 리마운트)
-  const changeProject = (key: string) => {
-    setProjectKey(key);
-    setSelectedEpic(null);
-    setIssueTypeId('');
-  };
-
   // 순차 공개
   const showEpic = projectKey.trim().length > 0;
-  const showType = showEpic && selectedEpic !== null;
+  const showType = showEpic && epic !== null;
   const showSummary = showType && issueTypeId.trim().length > 0;
   const showFinish = showSummary && summary.trim().length > 0;
-  const epicMissing = attempted && !selectedEpic;
 
-  const handleFormSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    setAttempted(true);
-    if (!projectKey || !selectedEpic || !issueTypeId || !summary.trim()) return;
+  const submit = handleSubmit((data) => {
+    if (!data.epic) {
+      setError('epic', { message: '에픽을 선택하거나 생성하세요' });
+      return;
+    }
     onSubmit({
-      projectKey,
-      issueTypeId,
-      summary: summary.trim(),
-      descriptionMarkdown: description.trim() || undefined,
-      parentKey: selectedEpic.key,
+      projectKey: data.projectKey,
+      issueTypeId: data.issueTypeId,
+      summary: data.summary.trim(),
+      descriptionMarkdown: data.descriptionMarkdown?.trim() || undefined,
+      parentKey: data.epic.key,
     });
-  };
+  });
 
   return (
-    <form onSubmit={handleFormSubmit} className="space-y-3 px-5 py-4">
-      <Field label="프로젝트">
+    <form onSubmit={submit} className="space-y-3 px-5 py-4">
+      <Field label="프로젝트" error={errors.projectKey?.message}>
         <select
-          value={projectKey}
-          onChange={(e) => changeProject(e.target.value)}
+          {...register('projectKey', {
+            // 프로젝트가 바뀌면 하위 선택 초기화
+            onChange: () => {
+              setValue('epic', null, { shouldValidate: false });
+              setValue('issueTypeId', '');
+            },
+          })}
           disabled={projectsQuery.isLoading}
           className="w-full rounded border border-ink-700 bg-ink-950 px-2 py-1.5 text-xs text-ink-100 outline-none focus:border-claude-500 disabled:opacity-50"
         >
@@ -106,20 +138,25 @@ export function CreateStep({
       </Field>
 
       <Reveal show={showEpic}>
-        <EpicPicker
-          key={projectKey}
-          projectKey={projectKey}
-          value={selectedEpic}
-          onChange={setSelectedEpic}
-          error={epicMissing ? '에픽을 선택하거나 생성하세요' : undefined}
+        <Controller
+          name="epic"
+          control={control}
+          render={({ field, fieldState }) => (
+            <EpicPicker
+              key={projectKey}
+              projectKey={projectKey}
+              value={field.value}
+              onChange={field.onChange}
+              error={fieldState.error?.message}
+            />
+          )}
         />
       </Reveal>
 
       <Reveal show={showType}>
-        <Field label="이슈 타입">
+        <Field label="이슈 타입" error={errors.issueTypeId?.message}>
           <select
-            value={issueTypeId}
-            onChange={(e) => setIssueTypeId(e.target.value)}
+            {...register('issueTypeId')}
             disabled={typesQuery.isLoading || standardTypes.length === 0}
             className="w-full rounded border border-ink-700 bg-ink-950 px-2 py-1.5 text-xs text-ink-100 outline-none focus:border-claude-500 disabled:opacity-50"
           >
@@ -139,12 +176,11 @@ export function CreateStep({
       </Reveal>
 
       <Reveal show={showSummary}>
-        <Field label="요약" error={attempted && !summary.trim() ? '요약을 입력하세요' : undefined}>
+        <Field label="요약" error={errors.summary?.message}>
           <input
             type="text"
             placeholder="티켓 제목"
-            value={summary}
-            onChange={(e) => setSummary(e.target.value)}
+            {...register('summary')}
             className="w-full rounded border border-ink-700 bg-ink-950 px-2 py-1.5 text-xs text-ink-100 outline-none focus:border-claude-500"
           />
         </Field>
@@ -154,8 +190,7 @@ export function CreateStep({
         <Field label="설명 (선택, 마크다운)">
           <textarea
             rows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            {...register('descriptionMarkdown')}
             className="w-full resize-none rounded border border-ink-700 bg-ink-950 px-2 py-1.5 text-xs text-ink-100 outline-none focus:border-claude-500"
           />
         </Field>
