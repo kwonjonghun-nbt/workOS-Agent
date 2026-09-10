@@ -1,7 +1,7 @@
 {
   "name": "workos-agent",
   "private": true,
-  "version": "0.0.26",
+  "version": "0.0.27",
   "description": "Desktop agent that orchestrates workOS workflows on the local machine.",
   "author": {
     "name": "Jong-hun Kwon",
