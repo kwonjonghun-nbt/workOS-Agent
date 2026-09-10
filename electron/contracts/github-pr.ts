@@ -64,5 +64,5 @@ export type CreateReleaseTagRequest = z.infer<typeof createReleaseTagRequestSche
 export type CreateReleaseTagResponse = {
   tag: string;
   sha: string;
-  releaseUrl: string;
+  tagUrl: string;
 };

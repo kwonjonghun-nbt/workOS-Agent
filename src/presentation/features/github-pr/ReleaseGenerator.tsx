@@ -71,7 +71,7 @@ export function ReleaseGenerator() {
         </span>
         <p className="text-xs text-ink-400">
           앱에 설정된 GitHub 토큰으로 릴리즈 브랜치 PR을 만들거나 main 의 최신
-          머지 커밋에 태그·릴리즈를 생성합니다. 로컬 체크아웃 없이 GitHub API로
+          머지 커밋에 릴리즈 태그를 찍습니다. 로컬 체크아웃 없이 GitHub API로
           바로 수행됩니다.
         </p>
       </header>
@@ -97,7 +97,7 @@ export function ReleaseGenerator() {
               : 'text-ink-400 hover:text-ink-200'
           }`}
         >
-          🏷 태그 + GitHub Release
+          🏷 릴리즈 태그
         </button>
       </div>
 
@@ -148,9 +148,11 @@ export function ReleaseGenerator() {
               />
             </label>
             <p className="text-[11px] text-ink-500">
-              브랜치명은 KST 기준 <code>release/YYYYMMDD_HHmm</code> 형식으로
-              자동 생성됩니다. PR 본문은 커밋 메시지 기반 템플릿으로
-              채워집니다.
+              브랜치명은 KST 기준 <code>release/YYYYMMDD_HHmm</code>, PR 제목은{' '}
+              <code className="whitespace-nowrap">Release YYYYMMDD_HHmm</code> 으로
+              자동 생성됩니다. PR 본문은{' '}
+              <code className="whitespace-nowrap">## 수정사항</code> 밑에 이번
+              릴리즈에 포함된 PR 번호를 나열합니다.
             </p>
           </>
         ) : (
@@ -166,8 +168,9 @@ export function ReleaseGenerator() {
               />
             </label>
             <p className="text-[11px] text-ink-500">
-              지정 브랜치의 최신 커밋에 KST <code>YYYYMMDD_HHmm</code> 태그를
-              찍고, 동일한 이름으로 GitHub Release(자동 노트)도 생성합니다.
+              지정 브랜치의 최신 커밋에 KST <code>YYYYMMDD_HHmm</code> annotated
+              태그를 찍습니다. 태그 메시지는 <code>Release YYYYMMDD_HHmm</code>.
+              GitHub Release 는 만들지 않습니다.
             </p>
           </>
         )}
@@ -182,7 +185,7 @@ export function ReleaseGenerator() {
             ? '처리 중…'
             : mode === 'branch'
               ? '릴리즈 브랜치 + PR 생성'
-              : '태그 + Release 생성'}
+              : '릴리즈 태그 생성'}
         </button>
       </div>
 
@@ -218,17 +221,17 @@ export function ReleaseGenerator() {
       {run.status === 'tag-ok' && (
         <div className="rounded border border-emerald-500/40 bg-emerald-500/10 p-3 text-[12px] text-emerald-200">
           <div className="font-semibold">
-            태그 + Release 생성됨 · {new Date(run.at).toLocaleTimeString()}
+            태그 생성됨 · {new Date(run.at).toLocaleTimeString()}
           </div>
           <div className="mt-1 text-emerald-300/90">태그: {run.result.tag}</div>
           <div className="text-emerald-300/90">대상 SHA: {run.result.sha.slice(0, 7)}</div>
           <a
-            href={run.result.releaseUrl}
+            href={run.result.tagUrl}
             target="_blank"
             rel="noreferrer"
             className="mt-1 inline-block break-all text-emerald-100 underline hover:text-white"
           >
-            {run.result.releaseUrl}
+            {run.result.tagUrl}
           </a>
         </div>
       )}

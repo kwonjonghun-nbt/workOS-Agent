@@ -58,5 +58,5 @@ export type CreateReleaseTagRequest = {
 export type CreateReleaseTagResponse = {
   tag: string;
   sha: string;
-  releaseUrl: string;
+  tagUrl: string;
 };

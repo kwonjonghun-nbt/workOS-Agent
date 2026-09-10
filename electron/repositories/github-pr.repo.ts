@@ -57,12 +57,6 @@ export interface GitHubPrRepository {
     tag: string,
     sha: string,
   ): Promise<void>;
-  createRelease(
-    config: GitHubPrConfig,
-    owner: string,
-    repo: string,
-    args: { tag: string; targetSha: string; name: string },
-  ): Promise<{ htmlUrl: string }>;
   requestReviewers(
     config: GitHubPrConfig,
     owner: string,
@@ -314,30 +308,6 @@ export class HttpGitHubPrRepository implements GitHubPrRepository {
     }
   }
 
-  async createRelease(
-    config: GitHubPrConfig,
-    owner: string,
-    repo: string,
-    args: { tag: string; targetSha: string; name: string },
-  ): Promise<{ htmlUrl: string }> {
-    const url = `${config.apiUrl}/repos/${owner}/${repo}/releases`;
-    const res = await net.fetch(url, {
-      method: 'POST',
-      headers: { ...this.buildHeaders(config.token), 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tag_name: args.tag,
-        target_commitish: args.targetSha,
-        name: args.name,
-        generate_release_notes: true,
-      }),
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new ApiError('INTERNAL', `릴리즈 생성 실패 ${res.status}: ${text.slice(0, 300)}`);
-    }
-    const data = (await res.json()) as { html_url: string };
-    return { htmlUrl: data.html_url };
-  }
 
   async requestReviewers(
     config: GitHubPrConfig,

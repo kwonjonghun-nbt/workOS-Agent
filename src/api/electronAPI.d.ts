@@ -402,7 +402,7 @@ export type GithubPrApi = {
   }) => Promise<{
     tag: string;
     sha: string;
-    releaseUrl: string;
+    tagUrl: string;
   }>;
 };
 
